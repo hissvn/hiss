@@ -1,0 +1,4 @@
+-cp hiss
+--macro nullSafety("hiss", Strict)
+-main hiss.Repl
+--interp
