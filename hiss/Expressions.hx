@@ -11,8 +11,8 @@ enum HAtom {
 }
 
 class HCons {
- var first: HValue;
- var rest: HValue;
+ public var first: HValue;
+ public var rest: HValue;
 
  public function new(first: HValue, rest: HValue) {
 	this.first = first;
