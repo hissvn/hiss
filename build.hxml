@@ -1,4 +1,5 @@
--cp hiss
---macro nullSafety("hiss", Strict)
--main hiss.Repl
+-lib parsihax
+-cp src
+-D analyzer-optimize
+-main Main
 --interp

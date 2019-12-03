@@ -1,7 +1,5 @@
 package;
 
-import haxe.ds.Either;
-
 enum HAtom {
  Nil;
  Int(value: Int);

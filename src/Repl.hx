@@ -1,7 +1,7 @@
-package hiss;
+package;
 
 import Expressions;
-import Parser;
+import HissParser;
 
 class Repl {
  public static function main() {

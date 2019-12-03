@@ -1,0 +1,14 @@
+{
+    "name": "hiss",
+    "url": "https://github.com/hankvn/hiss",
+    "license": "MIT",
+    "tags": ["cross"],
+    "description": "",
+    "version": "0.0.0",
+    "releasenote": "It isn't safe to use this library yet.",
+    "contributors": ["NQNStudios"],
+    "dependencies": {
+        "utest": "",
+				"lopper": ""
+    }
+}
