@@ -5,11 +5,11 @@ import HissParser;
 
 class Repl {
  public static function main() {
-	var parser = new Parser();
+	var parser = new HissParser();
 	while (true) {
 	 Sys.print(">>> ");
 	 var input = Sys.stdin().readLine();
-	 printValue(parser.parse(input));
+	 printValue(parser.parseString(input));
 	 Sys.print("\n");
 	}
  }

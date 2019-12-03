@@ -1,10 +1,11 @@
 {
 	"version": "0.2.0",
 	"configurations": [
+
 		{
-			"name": "Haxe Interpreter",
+			"name": "build.hxml",
 			"type": "haxe-eval",
-			"request": "launch"
+			"request": "launch",
 		}
 	]
 }
