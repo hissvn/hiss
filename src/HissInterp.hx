@@ -1,37 +1,86 @@
 package;
 
+import haxe.macro.Context;
+import haxe.macro.Expr;
+using haxe.macro.ExprTools;
+using haxe.macro.Expr.Binop;
+
+import sys.io.File;
 import Reflect;
 import Type;
 
 import HissParser;
-import HissFunction;
+import HTypes;
 
 using HissInterp;
 
-typedef VarInfo = {
-    var value: Dynamic;
-    var scope: Dynamic;
-}
-
-typedef HissList = Array<Dynamic>;
 
 class HissInterp {
     public var variables: Map<String, Dynamic> = [];
     private var scopes: Array<Dynamic> = [];
 
+    public static macro function importFixed(f: Expr) {
+        function findFunctionName(e:Expr) {
+	        switch(e.expr) {
+		        case EConst(CIdent(s)) | EField(_, s):
+			        // handle s
+                    return s;
+		        case _:
+			        throw 'improper expression for importing haxe function to interpreter';
+            }
+	    }
+        var name = findFunctionName(f);
+        //trace(f);
+        //var name = "";
+        return macro {
+            variables[$v{name}] = HFunction.Haxe(ArgType.Fixed, $f);            
+        };
+    }
+
+    public static macro function importBinops(prefix: Bool, rest: Array<ExprOf<String>>) {
+        var block = [];
+        for (e in rest) {
+            var s = e.getValue();
+            block.push(macro importBinop($v{s}, $v{prefix}));
+        }
+        return macro $b{block};
+    }
+
+    public static macro function importBinop(op: String, prefix: Bool) {
+        var name = op;
+        if (prefix) {
+            name = 'haxe$name';
+        }
+
+        var code = 'variables["$name"] = HFunction.Haxe(ArgType.Fixed, (a,b) -> a $op b)';
+        trace(code);
+        var expr = Context.parse(code, Context.currentPos());
+        trace(expr);
+        return expr;
+        return macro trace('pass');
+    }
+
     public function new() {
         // The hiss standard library:
         variables['nil'] = null;
         variables['null'] = null;
-        variables['print'] = Sys.print;
-        variables['println'] = Sys.println;
-        // TODO make arithmetic functions vararg list-eaters
-        variables['haxe+'] = (a, b) -> a + b;
-        variables['haxe-'] = (a, b) -> a - b;
-        variables['haxe*'] = (a, b) -> a * b;
-        variables['haxe/'] = (a, b) -> a / b;
 
-        variables['floor'] = Math.floor;
+        // Haxe std io
+        importFixed(Sys.print);
+        importFixed(Sys.println);
+        
+        // Haxe binops
+        importFixed(HissParser.read);
+        importFixed(eval);
+
+        // Haxe math
+        
+        importFixed(Math.round);
+        importFixed(Math.floor);
+        importFixed(Math.ceil);
+
+        // many binary operators are required, but mostly shadowed by Hiss implementations. So they are prefixed with 'haxe'
+        importBinops(true, "+", "-", "/", "*");
     }
 
     public static function first(list: HissList): Dynamic {
@@ -42,7 +91,7 @@ class HissInterp {
         return list.slice(1);
     }
 
-    public static function toHissList(exps: Array<HExpression>): HissList {
+    function evalHissList(exps: Array<HExpression>): HissList {
         return [for (exp in exps) eval(exp)];
     }
 
@@ -88,14 +137,22 @@ class HissInterp {
             case List(exps):
                 var funcInfo = eval(exps[0], true);
 
-                switch (Type.typeof(funcInfo.value)) {
-                    case TClass(c) /*if (c == Class<HissFunction>)*/:
-                        trace("eval hiss function");
+                var func = cast(funcInfo.value, HFunction);
+
+                switch (func) {
+                    case Haxe(t, func):
+                        var args: HissList = evalHissList(exps.slice(1));
+                        switch (t) {
+                            case Var: args = [args];
+                            case Fixed:
+                        }
+                        return Reflect.callMethod(funcInfo.scope, func, args);
+                    
+                    case Hiss(funDef):
                         return null;
-                    case TFunction:
-                        return Reflect.callMethod(funcInfo.scope, funcInfo.value, exps.slice(1).toHissList());
+                        
                     default:
-                        trace("The expression provided is not a function");
+                        throw 'The expression provided is not a function: $funcInfo';
                 }
 
                 //Reflect.callMethod()

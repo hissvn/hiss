@@ -5,19 +5,18 @@ import HissInterp;
 
 class Repl {
  	public static function run() {
-		var parser = new HissParser();
 		var interp = new HissInterp();
-		while (true) {
+		interp.variables['__running__'] = true;
+		interp.variables['quit'] = () -> interp.variables['__running__'] = false;
+		while (interp.variables['__running__']) {
 	 		Sys.print(">>> ");
 	 		var input = Sys.stdin().readLine();
-			var parsed = parser.parseString(input);
-	 		if (parsed.status) {
-				Sys.print(interp.eval(parsed.value));
-				Sys.print('\n');
-			} else {
-				Sys.print("failed to parse");
+			var parsed = HissParser.read(input);
+			try {
+				Sys.println(interp.eval(parsed));
+			} catch (e: String) {
+				Sys.println('error $e');
 			}
-	 		Sys.print("\n");
 		}
  	}
 

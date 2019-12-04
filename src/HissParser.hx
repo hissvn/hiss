@@ -11,30 +11,25 @@ using parsihax.ParseObject;
 
 using HissParser;
 
-enum HAtom {
-    Int(value: Int);
-    Double(value: Float);
-    Symbol(name: String);
-    String(value: String);
-}
-
-enum HExpression {
-    Atom(a: HAtom);
-    Cons(first: HExpression, ?rest: HExpression);
-    List(exps: Array<HExpression>);
-    Quote(exp: HExpression);
-    Quasiquote(exp: HExpression);
-    Unquote(exp: HExpression);
-}
+import HTypes;
 
 class HissParser {
-    public var parseString(default, null): ParseFunction<HExpression>;
+    public static function read(str: String) {
+        if (parseFunction == null) { init(); }
+        var result = parseFunction(str);
+        if (!result.status) {
+            throw 'failed to parse';
+        } else {
+            return result.value;
+        }
+    }
+    static var parseFunction: ParseFunction<HExpression> = null;
 
     private static inline function trim(parser : ParseObject<String>) {
         return parser.skip(optWhitespace());
     }
 
-    public function new() {
+    static function init() {
         var hissExpression: ParseObject<HExpression> = empty();
 
         var hissString = '"'.string().then(~/[^"]*/.regexp()).skip('"'.string()).trim()
@@ -94,6 +89,6 @@ class HissParser {
             //hissCons,
         ].alt();
 
-        parseString = optWhitespace().then(hissExpression).apply;
+        parseFunction = optWhitespace().then(hissExpression).apply;
     }
 }
