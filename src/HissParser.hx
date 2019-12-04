@@ -12,17 +12,19 @@ using parsihax.ParseObject;
 using HissParser;
 
 enum HAtom {
- Int(value: Int);
- Double(value: Float);
- Symbol(name: String);
- String(value: String);
+    Int(value: Int);
+    Double(value: Float);
+    Symbol(name: String);
+    String(value: String);
 }
 
 enum HExpression {
- Atom(a: HAtom);
- Cons(first: HExpression, rest: HExpression);
- List(exps: Array<HExpression>);
- ParseError(badToken: String);
+    Atom(a: HAtom);
+    Cons(first: HExpression, ?rest: HExpression);
+    List(exps: Array<HExpression>);
+    Quote(exp: HExpression);
+    Quasiquote(exp: HExpression);
+    Unquote(exp: HExpression);
 }
 
 class HissParser {
@@ -39,7 +41,15 @@ class HissParser {
             .map((r) -> HExpression.Atom(HAtom.String(r)))
             .as('string literal');
 
-        var hissSymbol = ~/[a-zA-Z_-][a-zA-Z0-9_-]*/.regexp().trim()
+        // Allow more characters than the Parsihax lisp example per https://www.gnu.org/software/emacs/manual/html_node/elisp/Symbol-Type.html
+        // -+=*/
+        // _~!@$%^&:<>{}?
+        var punctuation = "[=\\+\\*\\/!@$%^&:<>{}\\?_-]";
+        var number = "[0-9]";
+        var letter = "[a-zA-z]";
+        var symbolRegex = new EReg('($letter|$punctuation)($letter|$punctuation|$number)*', '');
+
+        var hissSymbol = symbolRegex.regexp().trim()
             .map((r) -> HExpression.Atom(HAtom.Symbol(r)))
             .as('symbol');
 
@@ -63,10 +73,22 @@ class HissParser {
             .skip(')'.string().trim())
             .map((r) -> HExpression.List(r));
 
+        var hissQuasiquote = '`'.string().then(hissExpression)
+            .map((r) -> HExpression.Quasiquote(r));
+
+        var hissQuote = "'".string().then(hissExpression)
+            .map((r) -> HExpression.Quote(r));
+
+        var hissUnquote = ",".string().then(hissExpression)
+            .map((r) -> HExpression.Unquote(r)); 
+
         hissExpression.apply = [
+            hissQuasiquote,
+            hissQuote,
+            hissUnquote,
             hissSymbol,
-            hissInt,
             hissDouble,
+            hissInt,
             hissString,
             hissList,
             //hissCons,
