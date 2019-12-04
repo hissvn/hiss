@@ -6,10 +6,14 @@ import Type;
 import HissParser;
 import HissFunction;
 
+using HissInterp;
+
 typedef VarInfo = {
     var value: Dynamic;
     var scope: Dynamic;
 }
+
+typedef HissList = Array<Dynamic>;
 
 class HissInterp {
     public var variables: Map<String, Dynamic> = [];
@@ -19,13 +23,27 @@ class HissInterp {
         // The hiss standard library:
         variables['nil'] = null;
         variables['null'] = null;
-        variables['trace'] = Sys.println;
+        variables['print'] = Sys.print;
+        variables['println'] = Sys.println;
         // TODO make arithmetic functions vararg list-eaters
-        variables['+'] = (a, b) -> a + b;
-        variables['-'] = (a, b) -> a - b;
-        variables['*'] = (a, b) -> a * b;
-        variables['/'] = (a, b) -> a / b;
+        variables['haxe+'] = (a, b) -> a + b;
+        variables['haxe-'] = (a, b) -> a - b;
+        variables['haxe*'] = (a, b) -> a * b;
+        variables['haxe/'] = (a, b) -> a / b;
+
         variables['floor'] = Math.floor;
+    }
+
+    public static function first(list: HissList): Dynamic {
+        return list[0];
+    }
+
+    public static function rest(list: HissList): HissList {
+        return list.slice(1);
+    }
+
+    public static function toHissList(exps: Array<HExpression>): HissList {
+        return [for (exp in exps) eval(exp)];
     }
 
     public function haxeFuncall(fun: String, args: Dynamic) {
@@ -75,7 +93,7 @@ class HissInterp {
                         trace("eval hiss function");
                         return null;
                     case TFunction:
-                        return Reflect.callMethod(funcInfo.scope, funcInfo.value, [for (argExp in exps.slice(1)) eval(argExp)]);
+                        return Reflect.callMethod(funcInfo.scope, funcInfo.value, exps.slice(1).toHissList());
                     default:
                         trace("The expression provided is not a function");
                 }
