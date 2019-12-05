@@ -1,13 +1,17 @@
 package;
 
+import haxe.CallStack;
+
 import HissParser;
 import HissInterp;
+import HTypes;
+
 
 class Repl {
  	public static function run() {
 		var interp = new HissInterp();
 		interp.variables['__running__'] = true;
-		interp.variables['quit'] = () -> interp.variables['__running__'] = false;
+		interp.variables['quit'] = HFunction.Haxe(ArgType.Fixed, () -> { interp.variables['__running__'] = false; });
 		while (interp.variables['__running__']) {
 	 		Sys.print(">>> ");
 	 		var input = Sys.stdin().readLine();
@@ -16,6 +20,7 @@ class Repl {
 				Sys.println(interp.eval(parsed));
 			} catch (e: String) {
 				Sys.println('error $e');
+				Sys.println(CallStack.exceptionStack());
 			}
 		}
  	}

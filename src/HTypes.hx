@@ -22,10 +22,11 @@ enum ArgType {
 enum HFunction {
     Haxe(t: ArgType, f: Dynamic);
     Hiss(f: FunDef);
+    Macro(f: HFunction);
 }
 
 typedef FunDef = {
-    var argsNames: Array<String>;
+    var argNames: Array<String>;
     var body: ExpList;
 }
 
