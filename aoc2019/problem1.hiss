@@ -1,0 +1,3 @@
+(print "some day")
+---
+(print (getContent "aoc2019/input1-1.txt"))

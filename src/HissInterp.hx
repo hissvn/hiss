@@ -45,7 +45,13 @@ class HissInterp {
                     throw "it's an expression but not a list expression";
             } 
         } catch (s: Dynamic) {
-            throw 'value cannot be coerced to HissList';
+            try {
+                var list = cast(v, HissList);
+                return list;
+            }
+            catch (s: Dynamic) {
+                throw 'value cannot be coerced';
+            }
         }
     }
 
@@ -105,7 +111,7 @@ class HissInterp {
     }
 
     // TODO optional docstrings lollll
-    function defun(args: ExpList): HFunction {
+    function defun(args: ExpList, isMacro = false): HFunction {
         var name = symbolName(args[0]);
 
         var argNames = new Array<String>();
@@ -120,7 +126,14 @@ class HissInterp {
         var expressions: ExpList = args.slice(2);
         var def: FunDef = { argNames: argNames, body: expressions};
         variables[name] = HFunction.Hiss(def);
+        if (isMacro) {
+            variables[name] = HFunction.Macro(variables[name]);
+        }
         return variables[name];
+    }
+
+    function defmacro(args: ExpList): HFunction {
+        return defun(args, true);
     }
 
     public static macro function importFixed(f: Expr) {
@@ -208,6 +221,7 @@ class HissInterp {
         importBinops(false, "%");  
 
         variables['defun'] = HFunction.Macro(HFunction.Haxe(ArgType.Var, defun));
+        variables['defmacro'] = HFunction.Macro(HFunction.Haxe(ArgType.Var, defmacro));
 
         importFixed(length);
 
@@ -215,6 +229,50 @@ class HissInterp {
 
         importFixed(resolve);
         importFixed(funcall);
+        importFixed(loadFile);
+        importFixed(sys.io.File.getContent);
+        
+        variables['split'] = HFunction.Haxe(ArgType.Fixed, (s, d) -> {s.split(d);});
+
+        variables['push'] = HFunction.Haxe(ArgType.Fixed, (l, v) -> {l.push(v); return l;});
+
+        variables['scope-in'] = HFunction.Haxe(ArgType.Fixed, () -> {scopes.push(new Map<String, Dynamic>());});
+        variables['scope-out'] = HFunction.Haxe(ArgType.Fixed, () -> {scopes.pop();});
+        function setq (list) {
+            var name = symbolName(list[0]);
+            var value = eval(list[1]);
+            variables[name] = value;
+            if (list.length > 2) {
+                setq(list.slice(2));
+            }
+        };
+
+        variables['setq'] = HFunction.Macro(HFunction.Haxe(ArgType.Var, setq));
+        
+        function setlocal (list) {
+            trace(list);
+            var name = symbolName(list[0]);
+            var value = eval(list[1]);
+            var scope = if (scopes.length > 0) {
+                cast(scopes[scopes.length-1], Map<String,Dynamic>);
+            } else {
+                variables;
+            }
+            scope[name] = value;
+            if (list.length > 2) {
+                setlocal(list.slice(2));
+            }
+        };
+
+        variables['setlocal'] = HFunction.Macro(HFunction.Haxe(ArgType.Var, setlocal));
+        variables['dolist'] = HFunction.Macro(HFunction.Haxe(ArgType.Fixed, (arr, func) -> {
+            var arrrr = cast(eval(arr), HissList);            
+            for (v in arrrr) {
+                var funcInfo = resolve(symbolName(func));
+                trace('calling ${funcInfo} with arg ${v}');
+                funcall(funcInfo, [v.toHissList()]);
+            }
+        }));
 
         loadFile('src/std.hiss');
     }
@@ -235,7 +293,15 @@ class HissInterp {
         switch (funcInfo.value) {
             case Macro(func):
                 var nestedInfo: VarInfo = { name: 'macroexpansion of $funcInfo.name', value: func, scope: funcInfo.scope };
-                return funcall(nestedInfo, args, false);
+                var val = funcall(nestedInfo, args, false);
+                switch (func) {
+                    case Haxe(_, _):
+                        return val;
+                    case Hiss(_):
+                        return eval(val);
+                    case Macro(_):
+                        throw 'eawerae';
+                }       
             default:
         }
         var argVals: HissList = args;
@@ -249,7 +315,7 @@ class HissInterp {
             argVals = evalHissList(args);
         }
 
-        trace('calling ${funcInfo.name} with args ${argVals}');
+        // trace('calling ${funcInfo.name} with args ${argVals}');
 
         switch (funcInfo.value) {
             case Haxe(t, func):
@@ -260,7 +326,7 @@ class HissInterp {
                 //trace(argVals);
                 var result = Reflect.callMethod(funcInfo.scope, func, argVals);
 
-                trace('returning ${result} from ${funcInfo.name}');
+                // trace('returning ${result} from ${funcInfo.name}');
 
                 return result;
     
@@ -268,19 +334,26 @@ class HissInterp {
                 var oldScopes = scopes;
 
                 var argScope: Map<String, Dynamic> = [];
-                var idx = 0;
-                for (arg in funDef.argNames) {
+                var valIdx = 0;
+                var nameIdx = 0;
+                while (nameIdx < funDef.argNames.length) {
+                    var arg = funDef.argNames[nameIdx];
                     if (arg == "&rest") {
                         //trace(argVals);
-                        argScope[funDef.argNames[idx+1]] = argVals.slice(idx);
+                        argScope[funDef.argNames[++nameIdx]] = argVals.slice(valIdx);
+                        break;
+                    } else if (arg == "&optional") {
+                        nameIdx++;
+                        for (val in argVals.slice(valIdx)) {
+                            argScope[funDef.argNames[nameIdx++]] = val;
+                        }
                         break;
                     } else {
-                        argScope[arg] = argVals[idx++];
+                        argScope[arg] = argVals[valIdx++];
                     }
                 }
 
                 scopes = [argScope];
-                //trace(argScope);
                 
                 var lastResult = null;
                 for (expression in funDef.body) {
@@ -289,7 +362,7 @@ class HissInterp {
 
                 scopes = oldScopes;
 
-                trace('returning ${lastResult} from ${funcInfo.name}');
+                // trace('returning ${lastResult} from ${funcInfo.name}');
 
                 return lastResult;
             default:
@@ -318,7 +391,14 @@ class HissInterp {
         return { name: name, value: variables[name], scope: null };
     }
 
-    public function eval(expr: HExpression, returnScope: Bool = false): Dynamic {
+    public function eval(exprOrList: Dynamic, returnScope: Bool = false): Dynamic {
+        var expr = null;
+        try {
+            expr = cast(exprOrList, HExpression);
+        } catch (s: Dynamic) {
+            expr = HExpression.List(exprOrList);
+        }
+        trace(expr);
         switch (expr) {
             case Atom(a):
                 switch (a) {
