@@ -31,6 +31,7 @@ typedef FunDef = {
 }
 
 typedef VarInfo = {
+    var name: String;
     var value: Dynamic;
     var scope: Dynamic;
 }

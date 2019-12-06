@@ -15,8 +15,8 @@ class Repl {
 		while (interp.variables['__running__']) {
 	 		Sys.print(">>> ");
 	 		var input = Sys.stdin().readLine();
-			var parsed = HissParser.read(input);
 			try {
+				var parsed = HissParser.read(input);
 				Sys.println(interp.eval(parsed));
 			} catch (e: String) {
 				Sys.println('error $e');

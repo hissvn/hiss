@@ -39,7 +39,7 @@ class HissParser {
         // Allow more characters than the Parsihax lisp example per https://www.gnu.org/software/emacs/manual/html_node/elisp/Symbol-Type.html
         // -+=*/
         // _~!@$%^&:<>{}?
-        var punctuation = "[=\\+\\*\\/!@$%^&:<>{}\\?_-]";
+        var punctuation = "[=\\+\\*\\/\\|!@$%^&:<>{}\\?_-]";
         var number = "[0-9]";
         var letter = "[a-zA-z]";
         var symbolRegex = new EReg('($letter|$punctuation)($letter|$punctuation|$number)*', '');
@@ -48,7 +48,7 @@ class HissParser {
             .map((r) -> HExpression.Atom(HAtom.Symbol(r)))
             .as('symbol');
 
-        var hissInt = ~/[+-]?[1-9][0-9]*/.regexp().trim()
+        var hissInt = ~/[+-]?[0-9][0-9]*/.regexp().trim()
             .map((r) -> HExpression.Atom(HAtom.Int(Std.parseInt(r))))
             .as('integer literal');
 

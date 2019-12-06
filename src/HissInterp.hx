@@ -27,6 +27,83 @@ class HissInterp {
         };
     }
 
+    public function loadFile(file: String) {
+        var fileLines = sys.io.File.getContent(file).split('\n---\n');
+        for (line in fileLines) {
+            eval(HissParser.read(line));
+        }
+    }
+
+    static function toHissList(v: Dynamic): HissList {
+        if (!truthy(v)) return new HissList();
+        try {
+            var exp = cast(v, HExpression);
+            switch (exp) {
+                case HExpression.List(l):
+                    return l;
+                default:
+                    throw "it's an expression but not a list expression";
+            } 
+        } catch (s: Dynamic) {
+            throw 'value cannot be coerced to HissList';
+        }
+    }
+
+    static function truthy(cond: Dynamic) {
+        if (cond != null) {
+            var truthy = true;
+            switch (Type.typeof(cond)) {
+                case TBool:
+                    truthy = cond;
+                // 0 is usually truthy in lisps, but for use in Hank, we want a read-count of 0 to yield false
+                case TInt:
+                    truthy = (cond != 0);
+                case TEnum(e):
+                    switch (cond) {
+                        case HExpression.List(l) if (l.length == 0):
+                            truthy = false;
+                        default:
+                            
+                    }
+                default:
+                    try {
+                        if (length(cond) == 0) {
+                            truthy = false;
+                        }
+                    } catch (s: Dynamic) {
+                                
+                    }
+            }
+            return truthy;
+        }
+        return false;
+    }
+
+    function hissIf(condition, thenExp, elseExp) {
+        var cond: Dynamic = eval(condition);
+        //trace(cond);
+        if (truthy(cond)) {
+            return eval(thenExp);
+        }
+        return eval(elseExp);
+    }
+
+    static function length(arg:Dynamic): Int {
+        try { 
+            cast(arg, HExpression);
+        
+            switch (arg) {
+                case HExpression.List(l):
+                    return l.length;
+                default:
+                    throw "can't take length of non-list HExpression";
+            }
+        } catch (e: Dynamic) {
+            return Reflect.getProperty(arg, "length");
+            //return arg.length;
+        }
+    }
+
     // TODO optional docstrings lollll
     function defun(args: ExpList): HFunction {
         var name = symbolName(args[0]);
@@ -84,12 +161,22 @@ class HissInterp {
         return expr;
     }
 
+    static function cons(v: Dynamic, h: HissList) {
+        var copy = h.copy();
+        copy.insert(0, v);
+        return copy;
+    }
+
     public function new() {
         // The hiss standard library:
         variables['nil'] = null;
         variables['null'] = null;
+        variables['false'] = null;
+        variables['t'] = true;
         variables['true'] = true;
-        variables['false'] = false;
+
+        // Control flow
+        variables['if'] = HFunction.Macro(HFunction.Haxe(ArgType.Fixed, hissIf));
 
         // Haxe std io
         importFixed(Sys.print);
@@ -104,13 +191,15 @@ class HissInterp {
         importFixed(Math.floor);
         importFixed(Math.ceil);
 
+        importFixed(first);
+        importFixed(rest);
+
         // most haxe binary operators are non-binary (like me!) in most Lisps.
         // They can take any number of arguments.
         // Since we still need haxe to run the computations, Hiss imports those binary
         // operators, but hides them with the prefix 'haxe' to it can provide its own
         // lispy operator functions.
-        importBinops(true, "+", "-", "/", "*", ">", ">=", "<", "<=");
-        variables['haxe='] = HFunction.Haxe(ArgType.Fixed, (a, b) -> a == b); // = is for comparison by lisp conventions
+        importBinops(true, "+", "-", "/", "*", ">", ">=", "<", "<=", "==");
 
         // Still more binary operators just don't exist in lisp because they are named functions like `and` or `or`
         importBinops(true, "&&", "||", "...");
@@ -119,6 +208,15 @@ class HissInterp {
         importBinops(false, "%");  
 
         variables['defun'] = HFunction.Macro(HFunction.Haxe(ArgType.Var, defun));
+
+        importFixed(length);
+
+        importFixed(cons);
+
+        importFixed(resolve);
+        importFixed(funcall);
+
+        loadFile('src/std.hiss');
     }
 
     public static function first(list: HissList): Dynamic {
@@ -133,49 +231,69 @@ class HissInterp {
         return [for (exp in exps) eval(exp)];
     }
 
-    public function funcall(funcInfo: VarInfo, argExps: ExpList, evalArgs: Bool = true) {
-        var args: ExpList = argExps;
-        
+    public function funcall(funcInfo: VarInfo, args: Dynamic, evalArgs: Bool = true) {
         switch (funcInfo.value) {
             case Macro(func):
-                var nestedInfo: VarInfo = { value: func, scope: funcInfo.scope };
+                var nestedInfo: VarInfo = { name: 'macroexpansion of $funcInfo.name', value: func, scope: funcInfo.scope };
                 return funcall(nestedInfo, args, false);
             default:
-                var argVals: HissList = argExps;
-                if (evalArgs) {
-                    argVals = evalHissList(argExps);
+        }
+        var argVals: HissList = args;
+        var areTheyExpressions = try {
+            cast(args[0], HExpression);
+            true;
+        } catch (s: Dynamic) {
+            false;
+        }
+        if (evalArgs && areTheyExpressions) {
+            argVals = evalHissList(args);
+        }
+
+        trace('calling ${funcInfo.name} with args ${argVals}');
+
+        switch (funcInfo.value) {
+            case Haxe(t, func):
+                switch (t) {
+                    case Var: argVals = [argVals];
+                    case Fixed:
                 }
-                switch (funcInfo.value) {
-                    case Haxe(t, func):
-                        switch (t) {
-                            case Var: argVals = [argVals];
-                            case Fixed:
-                        }
-                        return Reflect.callMethod(funcInfo.scope, func, argVals);
-            
-                    case Hiss(funDef):
-                        var oldScopes = scopes;
+                //trace(argVals);
+                var result = Reflect.callMethod(funcInfo.scope, func, argVals);
 
-                        var argScope: Map<String, Dynamic> = [];
-                        var idx = 0;
-                        for (arg in funDef.argNames) {
-                            argScope[arg] = argVals[idx++];
-                        }
+                trace('returning ${result} from ${funcInfo.name}');
 
-                        scopes = [argScope];
-                        trace(argScope);
-                        
-                        var lastResult = null;
-                        for (expression in funDef.body) {
-                            lastResult = eval(expression);
-                        }
+                return result;
+    
+            case Hiss(funDef):
+                var oldScopes = scopes;
 
-                        scopes = oldScopes;
-
-                        return lastResult;
-                    default:
-                        throw 'Nested macros?S?S?S?';
+                var argScope: Map<String, Dynamic> = [];
+                var idx = 0;
+                for (arg in funDef.argNames) {
+                    if (arg == "&rest") {
+                        //trace(argVals);
+                        argScope[funDef.argNames[idx+1]] = argVals.slice(idx);
+                        break;
+                    } else {
+                        argScope[arg] = argVals[idx++];
+                    }
                 }
+
+                scopes = [argScope];
+                //trace(argScope);
+                
+                var lastResult = null;
+                for (expression in funDef.body) {
+                    lastResult = eval(expression);
+                }
+
+                scopes = oldScopes;
+
+                trace('returning ${lastResult} from ${funcInfo.name}');
+
+                return lastResult;
+            default:
+                throw 'Nested macros?S?S?S?';
         }
     }
 
@@ -185,21 +303,19 @@ class HissInterp {
             var scope = scopes[idx--];
             var potentialValue = Reflect.getProperty(scope, name);
             if (potentialValue != null) {
-                return { value: potentialValue, scope: scope };
+                return { name: name, value: potentialValue, scope: scope };
             }
             try {
                 potentialValue = cast(scope, Map<String, Dynamic>)[name];
                 if (potentialValue != null) {
-                    return { value: potentialValue, scope: scope };
+                    return { name: name, value: potentialValue, scope: scope };
                 }
             } catch (e: Dynamic) {
                 // It's not a dict
             }
-            
-            
         }
 
-        return { value: variables[name], scope: null };
+        return { name: name, value: variables[name], scope: null };
     }
 
     public function eval(expr: HExpression, returnScope: Bool = false): Dynamic {
@@ -220,12 +336,22 @@ class HissInterp {
                             return varInfo.value;
                         }
                 }
+            case List([]):
+                return null;
             case List(exps):
                 var funcInfo = eval(exps[0], true);
 
                 return funcall(funcInfo, exps.slice(1));
             case Quote(exp):
-                return exp;
+                try {
+                    var e = cast (exp, HExpression);
+                    switch (e) {
+                        case HExpression.List(l): return l;
+                        default: throw 'not a list';
+                    }
+                } catch (d: Dynamic) {
+                    return exp;
+                }
             case Quasiquote(HExpression.List(exps)):
                 var afterEvalUnquotes = exps.map((exp) -> switch (exp) {
                     case HExpression.Unquote(innerExp):
