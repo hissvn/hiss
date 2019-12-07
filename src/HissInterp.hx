@@ -211,6 +211,8 @@ class HissInterp {
 
         importFixed(first);
         importFixed(rest);
+        importFixed(nth);
+        importFixed(slice);
 
         // most haxe binary operators are non-binary (like me!) in most Lisps.
         // They can take any number of arguments.
@@ -274,7 +276,11 @@ class HissInterp {
 
         variables['setlocal'] = HFunction.Macro(HFunction.Haxe(ArgType.Var, setlocal));
         variables['dolist'] = HFunction.Macro(HFunction.Haxe(ArgType.Fixed, (arr, func) -> {
-            var arrrr = cast(eval(arr), HissList);            
+            trace(arr);
+            var arrr = eval(arr);
+            trace(arrr);
+            var arrrr: HissList = toHissList(arrr);
+            trace (arrrr);
             for (v in arrrr) {
                 var funcInfo = resolve(symbolName(func));
                 //trace('calling ${funcInfo} with arg ${v}');
@@ -298,12 +304,20 @@ class HissInterp {
         load('src/std.hiss');
     }
 
-    public static function first(list: HissList): Dynamic {
-        return list[0];
+    public static function first(list: Dynamic): Dynamic {
+        return list.toHissList()[0];
     }
 
     public static function rest(list: HissList): HissList {
-        return list.slice(1);
+        return list.toHissList().slice(1);
+    }
+
+    public static function nth(list: Dynamic, idx: Int) {
+        return list.toHissList()[idx];
+    }
+
+    public static function slice(list: Dynamic, idx: Int) {
+        return list.toHissList()[idx];
     }
 
     function evalHissList(exps: Array<HExpression>): HissList {
@@ -322,13 +336,25 @@ class HissInterp {
                     case Haxe(_, _):
                         return val;
                     case Hiss(_):
+                        trace('macro ${funcInfo.name} expanded to ${val}');
                         return eval(val);
                     case Macro(_):
                         throw 'eawerae';
                 }       
             default:
         }
-        var argVals: HissList = args;
+        var argVals: HissList = null;
+        try {
+            cast(args, HExpression);
+            switch (args) {
+                case HExpression.List(l):
+                    argVals = l;
+                default:
+                    throw 'funcall on $args';
+            }
+        } catch (s: Dynamic) {
+            argVals = args;
+        }
         var areTheyExpressions = try {
             cast(args[0], HExpression);
             true;
@@ -346,8 +372,8 @@ class HissInterp {
                 switch (t) {
                     case Var: argVals = [argVals];
                     case Fixed:
-                }
-                //trace(argVals);
+                }//trace(
+                // trace(argVals);trace(
                 var result = Reflect.callMethod(funcInfo.scope, func, argVals);
 
                 // trace('returning ${result} from ${funcInfo.name}');
@@ -460,16 +486,24 @@ class HissInterp {
                 }
             case Quasiquote(HExpression.List(exps)):
                 var afterEvalUnquotes = exps.map((exp) -> switch (exp) {
+                    case HExpression.Quote(h):
+                        return Quote(eval(HExpression.Quasiquote(h)));
                     case HExpression.Unquote(innerExp):
                         return eval(innerExp);
+                    case HExpression.List(exps):
+                        return eval(HExpression.Quasiquote(HExpression.List(exps)));
                     default:
                         return exp;
                 });
                 return HExpression.List(afterEvalUnquotes);
+            case Quasiquote(HExpression.Unquote(h)):
+                return HExpression.Quote(eval(h));
             case Quasiquote(exp):
                 return exp;
+            case Unquote(exp):
+                return eval(exp);
             default:
-                return "Eval for that type is not yet implemented";
+                return 'Eval for type of expression ${expr} is not yet implemented';
         }
     }
 }

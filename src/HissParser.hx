@@ -18,7 +18,7 @@ class HissParser {
         if (parseFunction == null) { init(); }
         var result = parseFunction(str);
         if (!result.status) {
-            throw 'failed to parse';
+            throw 'failed to parse. expected ${result.expected}';
         } else {
             return result.value;
         }

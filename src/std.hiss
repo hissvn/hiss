@@ -16,6 +16,6 @@
 (defmacro let (bindings &rest body)
     `(progn 
         (scope-in)
-        (dolist ,bindings setlocal)
-        (dolist ,body eval)
+        (dolist ',bindings bind)
+        (dolist ',body eval)
         (scope-out)))
