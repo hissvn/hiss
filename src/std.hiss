@@ -19,7 +19,3 @@
         (dolist ,bindings setlocal)
         (dolist ,body eval)
         (scope-out)))
----
-(defun map (list func &optional result)
-    (        
-    ))

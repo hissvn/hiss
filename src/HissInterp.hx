@@ -27,7 +27,7 @@ class HissInterp {
         };
     }
 
-    public function loadFile(file: String) {
+    public function load(file: String) {
         var fileLines = sys.io.File.getContent(file).split('\n---\n');
         for (line in fileLines) {
             eval(HissParser.read(line));
@@ -50,7 +50,8 @@ class HissInterp {
                 return list;
             }
             catch (s: Dynamic) {
-                throw 'value cannot be coerced';
+                return [v];
+                throw 'value $v cannot be coerced';
             }
         }
     }
@@ -162,6 +163,7 @@ class HissInterp {
         return macro $b{block};
     }
 
+// TODO -[int] literals are broken (parsing as symbols)
     public static macro function importBinop(op: String, prefix: Bool) {
         var name = op;
         if (prefix) {
@@ -195,6 +197,9 @@ class HissInterp {
         importFixed(Sys.print);
         importFixed(Sys.println);
         
+        importFixed(Std.parseInt);
+        importFixed(Std.parseFloat);
+
         // Haxe binops
         importFixed(HissParser.read);
         importFixed(eval);
@@ -229,10 +234,13 @@ class HissInterp {
 
         importFixed(resolve);
         importFixed(funcall);
-        importFixed(loadFile);
+        importFixed(load);
         importFixed(sys.io.File.getContent);
         
         variables['split'] = HFunction.Haxe(ArgType.Fixed, (s, d) -> {s.split(d);});
+        // TODO escape sequences aren't parsed so this needs its own function:
+        variables['splitLines'] = HFunction.Haxe(ArgType.Fixed, (s) -> {s.split("\n");});
+
 
         variables['push'] = HFunction.Haxe(ArgType.Fixed, (l, v) -> {l.push(v); return l;});
 
@@ -250,7 +258,7 @@ class HissInterp {
         variables['setq'] = HFunction.Macro(HFunction.Haxe(ArgType.Var, setq));
         
         function setlocal (list) {
-            trace(list);
+            //trace(list);
             var name = symbolName(list[0]);
             var value = eval(list[1]);
             var scope = if (scopes.length > 0) {
@@ -269,12 +277,25 @@ class HissInterp {
             var arrrr = cast(eval(arr), HissList);            
             for (v in arrrr) {
                 var funcInfo = resolve(symbolName(func));
-                trace('calling ${funcInfo} with arg ${v}');
+                //trace('calling ${funcInfo} with arg ${v}');
                 funcall(funcInfo, [v.toHissList()]);
             }
         }));
+        variables['map'] = HFunction.Macro(HFunction.Haxe(ArgType.Fixed, (arr, func) -> {
+            var arrrr = cast(eval(arr), HissList);            
+            //trace(arrrr);
+            var mappedValues = [];
+            // trace('fuck me ${arrrr}');
+            for (v in arrrr) {
+                // trace(v);
+                mappedValues.push(funcall(resolve(symbolName(func)), v.toHissList()));
+                // trace(mappedValues);
+            }
+            // trace(mappedValues);
+            return mappedValues;
+        }));
 
-        loadFile('src/std.hiss');
+        load('src/std.hiss');
     }
 
     public static function first(list: HissList): Dynamic {
@@ -290,6 +311,9 @@ class HissInterp {
     }
 
     public function funcall(funcInfo: VarInfo, args: Dynamic, evalArgs: Bool = true) {
+        if (funcInfo.value == null) {
+            throw 'Tried to call undefined function ${funcInfo.name}';
+        }
         switch (funcInfo.value) {
             case Macro(func):
                 var nestedInfo: VarInfo = { name: 'macroexpansion of $funcInfo.name', value: func, scope: funcInfo.scope };
@@ -315,7 +339,7 @@ class HissInterp {
             argVals = evalHissList(args);
         }
 
-        // trace('calling ${funcInfo.name} with args ${argVals}');
+        //trace('calling ${funcInfo.name} with args ${argVals}');
 
         switch (funcInfo.value) {
             case Haxe(t, func):
@@ -350,6 +374,7 @@ class HissInterp {
                         break;
                     } else {
                         argScope[arg] = argVals[valIdx++];
+                        nameIdx++;
                     }
                 }
 
@@ -386,6 +411,7 @@ class HissInterp {
             } catch (e: Dynamic) {
                 // It's not a dict
             }
+            //trace("in this loop");
         }
 
         return { name: name, value: variables[name], scope: null };
@@ -398,7 +424,7 @@ class HissInterp {
         } catch (s: Dynamic) {
             expr = HExpression.List(exprOrList);
         }
-        trace(expr);
+        //trace(expr);
         switch (expr) {
             case Atom(a):
                 switch (a) {
