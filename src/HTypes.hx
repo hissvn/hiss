@@ -1,7 +1,7 @@
 @:using(HissTools.HissTools)
 enum HAtom {
     Int(value: Int);
-    Double(value: Float);
+    Float(value: Float);
     Symbol(name: String);
     String(value: String);
 }

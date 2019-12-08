@@ -53,7 +53,7 @@ class HissParser {
             .as('integer literal');
 
         var hissDouble = ~/[+-]?[0-9]*\.[0-9]+/.regexp().trim()
-            .map((r) -> Atom(Double(Std.parseFloat(r))))
+            .map((r) -> Atom(Float(Std.parseFloat(r))))
             .as('double literal');
 
         var hissList = '('.string().trim()

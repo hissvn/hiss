@@ -111,6 +111,24 @@ class HissInterp {
         };
     }
 
+    public static macro function importWrapped(f: Expr) {
+        function findFunctionName(e:Expr) {
+	        switch(e.expr) {
+		        case EConst(CIdent(s)) | EField(_, s):
+			        // handle s
+                    return s;
+		        case _:
+			        throw 'improper expression for importing haxe function to interpreter';
+            }
+	    }
+        var name = findFunctionName(f);
+        //var name = "";
+        return macro variables[$v{name}] = Function(Haxe(Fixed, (v: HValue) -> {
+            return $f(valueOf(v)).toHValue();
+        }));            
+        
+    }
+
     public static function toInt(v: HValue): Int {
         return HissTools.extract(v, Atom(Int(i)) => i);
     }
@@ -131,7 +149,7 @@ class HissInterp {
         return switch (hv) {
             case Atom(Int(v)):
                 v;
-            case Atom(Double(v)):
+            case Atom(Float(v)):
                 v;
             case Atom(String(v)):
                 v;
@@ -144,11 +162,20 @@ class HissInterp {
             case TInt:
                 Atom(Int(v));
             case TFloat:
-                Atom(Double(v));
+                Atom(Float(v));
             case TBool:
                 if (v) T else Nil;
-            case TClass(c) if (Type.getClassName(c) == "String"):
-                Atom(String(v));
+            case TClass(c):
+                var name = Type.getClassName(c);
+                return switch (name) {
+                    case "String":
+                        Atom(String(v));
+                    case "Array":
+                        var va = cast(v, Array<Dynamic>);
+                        List([for (e in va) e.toHValue()]);
+                    default:
+                        Object(name, v);
+                }
             default:
                 throw 'value $v cannot be wrapped as an HValue';
         }
@@ -192,6 +219,8 @@ class HissInterp {
             return exps.toList().pop();
         }));
 
+
+
         // Haxe std io
         function print(value: HValue) {
             try {
@@ -209,22 +238,24 @@ class HissInterp {
         importFixed(print);
         importFixed(println);
         
-        importFixed(Std.parseInt);
-        importFixed(Std.parseFloat);
+        importWrapped(Std.parseInt);
+        importWrapped(Std.parseFloat);
 
         // Haxe binops
         importFixed(HissParser.read);
         importFixed(eval);
 
         // Haxe math
-        importFixed(Math.round);
-        importFixed(Math.floor);
-        importFixed(Math.ceil);
+        importWrapped(Math.round);
+        importWrapped(Math.floor);
+        importWrapped(Math.ceil);
 
         importFixed(first);
         importFixed(rest);
         importFixed(nth);
         importFixed(slice);
+
+        variables['symbol-name'] = Function(Haxe(Fixed, symbolName));
 
         // most haxe binary operators are non-binary (like me!) in most Lisps.
         // They can take any number of arguments.
@@ -250,17 +281,16 @@ class HissInterp {
         importFixed(resolve);
         importFixed(funcall);
         importFixed(load);
-        importFixed(sys.io.File.getContent);
+        importWrapped(sys.io.File.getContent);
         
-        variables['split'] = Function(Haxe(Fixed, (s, d) -> {s.split(d);}));
+        variables['split'] = Function(Haxe(Fixed, (s: HValue, d: HValue) -> {s.toString().split(d.toString()).toHValue();}));
         // TODO escape sequences aren't parsed so this needs its own function:
-        variables['splitLines'] = Function(Haxe(Fixed, (s) -> {s.split("\n");}));
+        variables['split-lines'] = Function(Haxe(Fixed, (s: HValue) -> {s.toString().split("\n").toHValue();}));
 
         variables['push'] = Function(Haxe(Fixed, (l, v) -> {l.toList().push(v); return l;}));
 
         variables['scope-in'] = Function(Haxe(Fixed, () -> {stackFrames.push(new HMap()); return null; }));
         variables['scope-out'] = Function(Haxe(Fixed, () -> {stackFrames.pop(); return null;}));
-        
         
         function setq (l: HValue) {
             var list = l.toList();
@@ -273,9 +303,6 @@ class HissInterp {
         };
 
         variables['setq'] = Function(Macro(Haxe(Var, setq)));
-        
-        
-
         variables['setlocal'] = Function(Macro(Haxe(Var, setlocal)));
 
         variables['set-nth'] = Function(Haxe(Fixed, (arr: HValue, idx: HValue, val: HValue) -> { arr.toList()[idx.toInt()] = val;}));
@@ -470,7 +497,7 @@ class HissInterp {
                 return switch (a) {
                     case Int(v):
                         expr;
-                    case Double(v):
+                    case Float(v):
                         expr;
                     case String(v):
                         expr;

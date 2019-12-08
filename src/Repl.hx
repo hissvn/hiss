@@ -29,35 +29,4 @@ class Repl {
 			}
 		}
  	}
-
-	/*
- 	static function printValue(v: HExpression) {
-		switch (v) {
-	 		case Atom(a):
-	  			switch (a) {
-		 			case Int(value):
-		  				Sys.print(value);
-		 			case Double(value):
-		  				Sys.print(value);
-		 			case Symbol(name):
-		  				Sys.print(name);
-		 			case String(value):
-		  				Sys.print('"$value"');
-				}
-	 		case Cons(first, rest):
-	  			Sys.print("(");
-	  			printValue(first);
-	  			Sys.print(" . ");
-	  			printValue(rest);
-	  			Sys.print(")");
-			case List(a):
-				Sys.print("(");
-				for (exp in a) {
-					printValue(exp);
-					Sys.print(" ");
-				}
-				Sys.print(")");
-		 }
- 	}
-	*/
 }
