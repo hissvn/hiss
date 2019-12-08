@@ -5,17 +5,19 @@
             0
             (if (haxe== (length args) 2)
                 (haxe+ (first args) (first (rest args)))
-                (+ (+ (first args) (first (rest args))) (funcall (resolve "+") (rest (rest args))))))))
----
+                (+ (+ (first args) (first (rest args))) (funcall + (rest (rest args))))))))
+
 (defmacro bind (pair)
     `(setlocal ,(first pair) ,(first (rest pair))))
----
-(defun progn (&rest exps)
-    (if (haxe== (length exps) 1) (first exps) (eval (cons 'progn (rest exps)))))
----
+
 (defmacro let (bindings &rest body)
     `(progn 
         (scope-in)
         (dolist ',bindings bind)
         (dolist ',body eval)
         (scope-out)))
+
+(defun range (arg1 &optional arg2)
+    (if arg2
+        (haxe... arg1 arg2)
+        (haxe... 0 arg1)))

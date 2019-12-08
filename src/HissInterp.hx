@@ -5,6 +5,8 @@ import haxe.macro.Expr;
 using haxe.macro.ExprTools;
 using haxe.macro.Expr.Binop;
 
+using Lambda;
+
 import sys.io.File;
 import Reflect;
 import Type;
@@ -13,27 +15,23 @@ import HissParser;
 import HTypes;
 
 using HissInterp;
-
+import HissTools;
 
 class HissInterp {
-    public var variables: Map<String, Dynamic> = [];
-    private var scopes: Array<Dynamic> = [];
+    public var variables: HMap = [];
+    private var stackFrames: Array<HMap> = [];
 
     // TODO import needs to turn camel case into lisp-case
-    static function symbolName(symbol: HExpression): String {
-        switch (symbol) {
-            case HExpression.Atom(HAtom.Symbol(name)): return name;
-            default: throw 'expected a symbol';
-        };
+    static function symbolName(v: HValue): HValue {
+        return Atom(String(HissTools.extract(v, Atom(Symbol(name)) => name)));
     }
 
-    public function load(file: String) {
-        var fileLines = sys.io.File.getContent(file).split('\n---\n');
-        for (line in fileLines) {
-            eval(HissParser.read(line));
-        }
+    public function load(file: HValue) {
+        var contents = sys.io.File.getContent(HissTools.extract(file, Atom(String(s)) => s));
+        eval(HissParser.read('(progn ${contents})'));
     }
 
+    /*
     static function toHissList(v: Dynamic): HissList {
         if (!truthy(v)) return new HissList();
         try {
@@ -55,11 +53,21 @@ class HissInterp {
             }
         }
     }
+    */
 
-    static function truthy(cond: Dynamic) {
-        if (cond != null) {
-            var truthy = true;
-            switch (Type.typeof(cond)) {
+    /**
+     * Behind the scenes, this function evaluates the truthiness of an HValue
+     **/
+    public static function truthy(cond: HValue): Bool {
+        return switch (cond) {
+            case Nil: false;
+            case Atom(Int(i)) if (i == 0): false;
+            case List(l) if (l.length == 0): false;
+            default: true;
+        }
+    }
+                
+                /*
                 case TBool:
                     truthy = cond;
                 // 0 is usually truthy in lisps, but for use in Hank, we want a read-count of 0 to yield false
@@ -84,57 +92,57 @@ class HissInterp {
             return truthy;
         }
         return false;
-    }
+    }*/
 
-    function hissIf(condition, thenExp, elseExp) {
-        var cond: Dynamic = eval(condition);
-        //trace(cond);
-        if (truthy(cond)) {
-            return eval(thenExp);
+    /**
+     * Implementation of the `if` macro. Returns value of `thenExp` if condition is truthy, else * evaluates `elseExp`
+     **/
+    function hissIf(condExp: HValue, thenExp: HValue, elseExp: HValue) {
+        var cond = eval(condExp);
+        return if (truthy(cond)) {
+            eval(thenExp);
+        } else {
+            eval(elseExp);
         }
-        return eval(elseExp);
     }
 
-    static function length(arg:Dynamic): Int {
-        try { 
-            cast(arg, HExpression);
+    static function length(arg:HValue): HValue {
+        return switch (arg) {
+            case Atom(String(s)): Atom(Int(s.length));
+            case List(l): Atom(Int(l.length));
+            default: throw 'HValue $arg has no length';
+        }
+    }
+
+    function lambda(args: HValue): HValue {
+        var argNames = first(args).toList().map(s -> symbolName(s).toString());
         
-            switch (arg) {
-                case HExpression.List(l):
-                    return l.length;
-                default:
-                    throw "can't take length of non-list HExpression";
-            }
-        } catch (e: Dynamic) {
-            return Reflect.getProperty(arg, "length");
-            //return arg.length;
-        }
+        var body: HList = rest(args).toList();
+        var def: HFunDef = {
+            argNames: argNames,
+            body: body
+        };
+
+        return Function(Hiss(def));
+    }
+
+    static function toHFunction(hv: HValue) {
+        return HissTools.extract(hv, Function(f) => f);
     }
 
     // TODO optional docstrings lollll
-    function defun(args: ExpList, isMacro = false): HFunction {
-        var name = symbolName(args[0]);
-
-        var argNames = new Array<String>();
-        switch (args[1]) {
-            case HExpression.List(exps):
-                for (argExp in exps) {
-                    argNames.push(symbolName(argExp));
-                }
-            default: throw 'expected a list of arg names';
+    function defun(args: HValue, isMacro: HValue = Nil) {
+        var name = symbolName(first(args)).toString();
+        var fun = lambda(rest(args));
+        if (truthy(isMacro)) {
+            fun = Function(Macro(fun.toHFunction()));
         }
-
-        var expressions: ExpList = args.slice(2);
-        var def: FunDef = { argNames: argNames, body: expressions};
-        variables[name] = HFunction.Hiss(def);
-        if (isMacro) {
-            variables[name] = HFunction.Macro(variables[name]);
-        }
-        return variables[name];
+        variables[name] = fun;
+        return fun;
     }
 
-    function defmacro(args: ExpList): HFunction {
-        return defun(args, true);
+    function defmacro(args: HValue): HValue {
+        return defun(args, T);
     }
 
     public static macro function importFixed(f: Expr) {
@@ -150,8 +158,12 @@ class HissInterp {
         var name = findFunctionName(f);
         //var name = "";
         return macro {
-            variables[$v{name}] = HFunction.Haxe(ArgType.Fixed, $f);            
+            variables[$v{name}] = Function(Haxe(Fixed, $f));            
         };
+    }
+
+    public static function toInt(v: HValue): Int {
+        return HissTools.extract(v, Atom(Int(i)) => i);
     }
 
     public static macro function importBinops(prefix: Bool, rest: Array<ExprOf<String>>) {
@@ -163,35 +175,73 @@ class HissInterp {
         return macro $b{block};
     }
 
-// TODO -[int] literals are broken (parsing as symbols)
+    /**
+     * Behind the scenes function to HissTools.extract a haxe binop-compatible value from an HValue
+     **/
+    static function valueOf(hv: HValue): Dynamic {
+        return switch (hv) {
+            case Atom(Int(v)):
+                v;
+            case Atom(Double(v)):
+                v;
+            case Atom(String(v)):
+                v;
+            default: throw 'hvalue $hv cannot be unwrapped for a binary operation';
+        }
+    }
+
+    static function toHValue(v: Dynamic): HValue {
+        return switch (Type.typeof(v)) {
+            case TInt:
+                Atom(Int(v));
+            case TFloat:
+                Atom(Double(v));
+            case TBool:
+                if (v) T else Nil;
+            case TClass(c) if (Type.getClassName(c) == "String"):
+                Atom(String(v));
+            default:
+                throw 'value $v cannot be wrapped as an HValue';
+        }
+    }
+
+    // TODO -[int] literals are broken (parsing as symbols)
     public static macro function importBinop(op: String, prefix: Bool) {
         var name = op;
         if (prefix) {
             name = 'haxe$name';
         }
 
-        var code = 'variables["$name"] = HFunction.Haxe(ArgType.Fixed, (a,b) -> a $op b)';
+        var code = 'variables["$name"] = Function(Haxe(Fixed, (a,b) -> toHValue(valueOf(a) $op valueOf(b))))';
 
         var expr = Context.parse(code, Context.currentPos());
         return expr;
     }
 
-    static function cons(v: Dynamic, h: HissList) {
-        var copy = h.copy();
-        copy.insert(0, v);
-        return copy;
+    static function cons(hv: HValue, hl: HValue): HValue {
+        var l = hl.toList().copy();
+        l.insert(0, hv);
+        return List(l);
+    }
+
+    static function toString(hv: HValue) {
+        return HissTools.extract(hv, Atom(String(s)) => s);
     }
 
     public function new() {
         // The hiss standard library:
-        variables['nil'] = null;
-        variables['null'] = null;
-        variables['false'] = null;
-        variables['t'] = true;
-        variables['true'] = true;
+        variables['nil'] = Nil;
+        variables['null'] = Nil;
+        variables['false'] = Nil;
+        variables['t'] = T;
+        variables['true'] = T;
 
         // Control flow
-        variables['if'] = HFunction.Macro(HFunction.Haxe(ArgType.Fixed, hissIf));
+        variables['if'] = Function(Macro(Haxe(Fixed, hissIf)));
+
+        variables['progn'] = Function(Haxe(Var, (exps: HValue) -> {
+            return exps.toList().pop();
+        }));
 
         // Haxe std io
         importFixed(Sys.print);
@@ -227,8 +277,9 @@ class HissInterp {
         // Some binary operators are Lisp-compatible as-is
         importBinops(false, "%");  
 
-        variables['defun'] = HFunction.Macro(HFunction.Haxe(ArgType.Var, defun));
-        variables['defmacro'] = HFunction.Macro(HFunction.Haxe(ArgType.Var, defmacro));
+        variables['lambda'] = Function(Macro(Haxe(Var, lambda)));
+        variables['defun'] = Function(Macro(Haxe(Var, defun)));
+        variables['defmacro'] = Function(Macro(Haxe(Var, defmacro)));
 
         importFixed(length);
 
@@ -239,102 +290,120 @@ class HissInterp {
         importFixed(load);
         importFixed(sys.io.File.getContent);
         
-        variables['split'] = HFunction.Haxe(ArgType.Fixed, (s, d) -> {s.split(d);});
+        variables['split'] = Function(Haxe(Fixed, (s, d) -> {s.split(d);}));
         // TODO escape sequences aren't parsed so this needs its own function:
-        variables['splitLines'] = HFunction.Haxe(ArgType.Fixed, (s) -> {s.split("\n");});
+        variables['splitLines'] = Function(Haxe(Fixed, (s) -> {s.split("\n");}));
 
+        variables['push'] = Function(Haxe(Fixed, (l, v) -> {l.toList().push(v); return l;}));
 
-        variables['push'] = HFunction.Haxe(ArgType.Fixed, (l, v) -> {l.push(v); return l;});
-
-        variables['scope-in'] = HFunction.Haxe(ArgType.Fixed, () -> {scopes.push(new Map<String, Dynamic>());});
-        variables['scope-out'] = HFunction.Haxe(ArgType.Fixed, () -> {scopes.pop();});
-        function setq (list) {
-            var name = symbolName(list[0]);
+        variables['scope-in'] = Function(Haxe(Fixed, () -> {stackFrames.push(new HMap()); return null; }));
+        variables['scope-out'] = Function(Haxe(Fixed, () -> {stackFrames.pop(); return null;}));
+        
+        
+        function setq (l: HValue) {
+            var list = l.toList();
+            var name = symbolName(list[0]).toString();
             var value = eval(list[1]);
             variables[name] = value;
             if (list.length > 2) {
-                setq(list.slice(2));
+                setq(List(list.slice(2)));
             }
         };
 
-        variables['setq'] = HFunction.Macro(HFunction.Haxe(ArgType.Var, setq));
+        variables['setq'] = Function(Macro(Haxe(Var, setq)));
         
-        function setlocal (list) {
-            //trace(list);
-            var name = symbolName(list[0]);
-            var value = eval(list[1]);
-            var scope = if (scopes.length > 0) {
-                cast(scopes[scopes.length-1], Map<String,Dynamic>);
-            } else {
-                variables;
+        
+
+        variables['setlocal'] = Function(Macro(Haxe(Var, setlocal)));
+
+        variables['set-nth'] = Function(Haxe(Fixed, (arr: HValue, idx: HValue, val: HValue) -> { arr.toList()[idx.toInt()] = val;}));
+
+        /*variables['for'] = Function(Macro(Haxe(Fixed, (iterator: HValue, func: HValue) -> {
+            var it: IntIterator = eval(iterator);
+            var f = resolve(symbolName(func));
+            for (v in it) {
+                trace('innter funcall');
+                funcall(f, [v]);
             }
-            scope[name] = value;
-            if (list.length > 2) {
-                setlocal(list.slice(2));
-            }
-        };
+        })));
+        */
 
-        variables['setlocal'] = HFunction.Macro(HFunction.Haxe(ArgType.Var, setlocal));
-
-        variables['set-nth'] = HFunction.Haxe(ArgType.Fixed, (arr, idx, val) -> { arr[idx] = val;});
-
-        variables['dolist'] = HFunction.Macro(HFunction.Haxe(ArgType.Fixed, (arr, func) -> {
-            trace(arr);
-            var arrr = eval(arr);
-            trace(arrr);
-            var arrrr: HissList = toHissList(arrr);
-            trace (arrrr);
-            for (v in arrrr) {
-                var funcInfo = resolve(symbolName(func));
+        variables['dolist'] = Function(Macro(Haxe(Fixed, (lSymbol: HValue, func, HValue) -> {
+            var lVal = eval(lSymbol);
+            for (v in lVal.toList()) {
+                
                 //trace('calling ${funcInfo} with arg ${v}');
-                funcall(funcInfo, [v.toHissList()]);
+                funcall(func, v);
             }
-        }));
-        variables['map'] = HFunction.Macro(HFunction.Haxe(ArgType.Fixed, (arr, func) -> {
-            var arrrr = cast(eval(arr), HissList);            
-            //trace(arrrr);
-            var mappedValues = [];
-            // trace('fuck me ${arrrr}');
-            for (v in arrrr) {
-                // trace(v);
-                mappedValues.push(funcall(resolve(symbolName(func)), v.toHissList()));
-                // trace(mappedValues);
-            }
-            // trace(mappedValues);
-            return mappedValues;
-        }));
+        })));
+        variables['map'] = Function(Macro(Haxe(Fixed, (arr: HValue, func: HValue) -> {
+            return List([for (v in arr.toList()) funcall(eval(func), v)]);
+        })));
 
-        load('src/std.hiss');
+        load(Atom(String('src/std.hiss')));
     }
 
-    public static function first(list: Dynamic): Dynamic {
-        return list.toHissList()[0];
-    }
-
-    public static function rest(list: HissList): HissList {
-        return list.toHissList().slice(1);
-    }
-
-    public static function nth(list: Dynamic, idx: Int) {
-        return list.toHissList()[idx];
-    }
-
-    public static function slice(list: Dynamic, idx: Int) {
-        return list.toHissList()[idx];
-    }
-
-    function evalHissList(exps: Array<HExpression>): HissList {
-        return [for (exp in exps) eval(exp)];
-    }
-
-    public function funcall(funcInfo: VarInfo, args: Dynamic, evalArgs: Bool = true) {
-        if (funcInfo.value == null) {
-            throw 'Tried to call undefined function ${funcInfo.name}';
+    function setlocal (l: HValue) {
+        //trace(list);
+        var list = l.toList();
+        var name = symbolName(list[0]).toString();
+        var value = eval(list[1]);
+        var stackFrame: HMap = variables;
+        if (stackFrames.length > 0) {
+            stackFrame = stackFrames[stackFrames.length-1];
         }
-        switch (funcInfo.value) {
-            case Macro(func):
-                var nestedInfo: VarInfo = { name: 'macroexpansion of $funcInfo.name', value: func, scope: funcInfo.scope };
-                var val = funcall(nestedInfo, args, false);
+        stackFrame[name] = value;
+        if (list.length > 2) {
+            setlocal(List(list.slice(2)));
+        }
+    };
+
+
+    public static function first(list: HValue): HValue {
+        return list.toList()[0];
+    }
+
+    public static function rest(list: HValue): HValue {
+        return List(list.toList().slice(1));
+    }
+
+    public static function nth(list: HValue, idx: HValue) {
+        return list.toList()[idx.toInt()];
+    }
+
+    public static function slice(list: HValue, idx: HValue) {
+        return HissTools.extract(list, List(l) => l).slice(idx.toInt());
+    }
+
+    public static function toList(list: HValue): HList {
+        return HissTools.extract(list, List(l) => l);
+    }
+
+    function evalAll(hl: HValue): HValue {
+        return List([for (exp in hl.toList()) eval(exp)]);
+    }
+
+    public function funcall(funcOrPointer: HValue, args: HValue, evalArgs: HValue = T): HValue {
+        var container = null;
+        var name = "anonymous";
+        var func = funcOrPointer;
+        switch (funcOrPointer) {    
+            case VarInfo(v):
+                name = v.name;
+                container = v.container;
+                func = v.value;
+            default:
+        }
+
+        // trace('calling function $name whose value is $func');
+
+        switch (func) {
+            case Function(Macro(func)):
+                var macroExpansion = funcall(Function(func), args, Nil);
+
+                return eval(macroExpansion);
+            
+                /*
                 switch (func) {
                     case Haxe(_, _):
                         return val;
@@ -343,175 +412,149 @@ class HissInterp {
                         return eval(val);
                     case Macro(_):
                         throw 'eawerae';
-                }       
+                }*/      
             default:
         }
-        var argVals: HissList = null;
-        try {
-            cast(args, HExpression);
-            switch (args) {
-                case HExpression.List(l):
-                    argVals = l;
-                default:
-                    throw 'funcall on $args';
-            }
-        } catch (s: Dynamic) {
-            argVals = args;
-        }
-        var areTheyExpressions = try {
-            cast(args[0], HExpression);
-            true;
-        } catch (s: Dynamic) {
-            false;
-        }
-        if (evalArgs && areTheyExpressions) {
-            argVals = evalHissList(args);
+        
+        var argVals = args;
+        if (truthy(evalArgs)) {
+            // trace('evaling args $args for $name');
+            argVals = evalAll(args);
+            // trace('they were $argVals');
         }
 
-        trace('calling ${funcInfo.name} with args ${argVals}');
+        var argList: HList = argVals.toList();
 
-        switch (funcInfo.value) {
-            case Haxe(t, func):
+        // TODO trace the args
+
+        trace('convert $func to h function');
+        var hfunc = func.toHFunction();
+
+        switch (hfunc) {
+            case Haxe(t, hxfunc):
                 switch (t) {
-                    case Var: argVals = [argVals];
+                    case Var: 
+                        // trace('varargs -- putting them in a list');
+                        argList = [List(argList)];
                     case Fixed:
-                }//trace(
-                // trace(argVals);trace(
-                var result = Reflect.callMethod(funcInfo.scope, func, argVals);
+                }
+
+                // trace('calling haxe function with $argList');
+                var result: HValue = Reflect.callMethod(container, hxfunc, argList);
 
                 // trace('returning ${result} from ${funcInfo.name}');
 
                 return result;
     
             case Hiss(funDef):
-                var oldScopes = scopes;
+                var oldStackFrames = stackFrames;
 
-                var argScope: Map<String, Dynamic> = [];
+                var argStackFrame: HMap = [];
                 var valIdx = 0;
                 var nameIdx = 0;
                 while (nameIdx < funDef.argNames.length) {
                     var arg = funDef.argNames[nameIdx];
                     if (arg == "&rest") {
-                        //trace(argVals);
-                        argScope[funDef.argNames[++nameIdx]] = argVals.slice(valIdx);
+                        argStackFrame[funDef.argNames[++nameIdx]] = List(argList.slice(valIdx));
                         break;
                     } else if (arg == "&optional") {
                         nameIdx++;
-                        for (val in argVals.slice(valIdx)) {
-                            argScope[funDef.argNames[nameIdx++]] = val;
+                        for (val in argList.slice(valIdx)) {
+                            argStackFrame[funDef.argNames[nameIdx++]] = val;
                         }
                         break;
                     } else {
-                        argScope[arg] = argVals[valIdx++];
+                        argStackFrame[arg] = argList[valIdx++];
                         nameIdx++;
                     }
                 }
 
-                scopes = [argScope];
+                stackFrames = [argStackFrame];
                 
                 var lastResult = null;
                 for (expression in funDef.body) {
                     lastResult = eval(expression);
                 }
 
-                scopes = oldScopes;
+                stackFrames = oldStackFrames;
 
                 // trace('returning ${lastResult} from ${funcInfo.name}');
 
                 return lastResult;
-            default:
-                throw 'Nested macros?S?S?S?';
+            default: throw 'cannot call $funcOrPointer as a function';
         }
     }
 
-    public function resolve(name: String): VarInfo {
-        var idx = scopes.length-1;
-        while (idx >= 0) {
-            var scope = scopes[idx--];
-            var potentialValue = Reflect.getProperty(scope, name);
-            if (potentialValue != null) {
-                return { name: name, value: potentialValue, scope: scope };
-            }
-            try {
-                potentialValue = cast(scope, Map<String, Dynamic>)[name];
-                if (potentialValue != null) {
-                    return { name: name, value: potentialValue, scope: scope };
-                }
-            } catch (e: Dynamic) {
-                // It's not a dict
-            }
-            //trace("in this loop");
+    /**
+     * Behind the scenes function to retrieve the value and "address" of a variable,
+     * using lexical scoping
+     **/
+    public function resolve(name: String): HVarInfo {
+        var idx = stackFrames.length-1;
+        var value = null;
+        var frame = null;
+        while (value == null && idx >= 0) {
+            frame = stackFrames[idx--];
+            value = frame[name];
         }
+        if (value == null) value = variables[name];
 
-        return { name: name, value: variables[name], scope: null };
+        return { name: name, value: value, container: frame };
     }
 
-    public function eval(exprOrList: Dynamic, returnScope: Bool = false): Dynamic {
-        if (exprOrList == null) return null;
-        try {
-            var num = cast(exprOrList, Int);
-            return num;
-        } catch (s: Dynamic) {}
-        var expr = null;
-        try {
-            expr = cast(exprOrList, HExpression);
-        } catch (s: Dynamic) {
-            expr = HExpression.List(exprOrList);
-        }
-        //trace(expr);
-        switch (expr) {
+    public function eval(expr: HValue, returnScope: HValue = Nil): HValue {
+        return switch (expr) {
             case Atom(a):
-                switch (a) {
+                return switch (a) {
                     case Int(v):
-                        return v;
+                        expr;
                     case Double(v):
-                        return v;
+                        expr;
                     case String(v):
-                        return v;
-                    case Symbol(v):
-                        var varInfo = resolve(v);
-                        if (returnScope) {
-                            return varInfo;
+                        expr;
+                    case Symbol(name):
+                        var varInfo = resolve(name);
+                        if (varInfo.value == null) {
+                            throw 'Tried to access undefined variable $name with stackFrames $stackFrames';
+                        }
+                        if (truthy(returnScope)) {
+                            VarInfo(varInfo);
                         } else {
-                            return varInfo.value;
+                            varInfo.value;
                         }
                 }
             case List([]):
-                return null;
+                Nil;
             case List(exps):
-                var funcInfo = eval(exps[0], true);
+                var funcInfo = eval(first(expr), T);
+                var args = rest(expr);
 
-                return funcall(funcInfo, exps.slice(1));
+                // trace('calling funcall $funcInfo with $args');
+                return funcall(funcInfo, args);
             case Quote(exp):
-                try {
-                    var e = cast (exp, HExpression);
-                    switch (e) {
-                        case HExpression.List(l): return l;
-                        default: throw 'not a list';
-                    }
-                } catch (d: Dynamic) {
-                    return exp;
-                }
-            case Quasiquote(HExpression.List(exps)):
+                exp;
+            case Quasiquote(List(exps)):
                 var afterEvalUnquotes = exps.map((exp) -> switch (exp) {
-                    case HExpression.Quote(h):
-                        return Quote(eval(HExpression.Quasiquote(h)));
-                    case HExpression.Unquote(innerExp):
-                        return eval(innerExp);
-                    case HExpression.List(exps):
-                        return eval(HExpression.Quasiquote(HExpression.List(exps)));
+                    case Quote(h):
+                        Quote(eval(Quasiquote(h)));
+                    case Unquote(innerExp):
+                        eval(innerExp);
+                    case List(exps):
+                        eval(Quasiquote(List(exps)));
                     default:
-                        return exp;
+                        exp;
                 });
-                return HExpression.List(afterEvalUnquotes);
-            case Quasiquote(HExpression.Unquote(h)):
-                return HExpression.Quote(eval(h));
+                List(afterEvalUnquotes);
+            case Quasiquote(Unquote(h)):
+                Quote(eval(h));
             case Quasiquote(exp):
-                return exp;
+                exp;
             case Unquote(exp):
-                return eval(exp);
+                eval(exp);
+            case Function(f):
+                expr;
             default:
-                return 'Eval for type of expression ${expr} is not yet implemented';
+                throw 'Eval for type of expression ${expr} is not yet implemented';
         }
     }
 }

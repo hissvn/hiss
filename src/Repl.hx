@@ -6,19 +6,18 @@ import HissParser;
 import HissInterp;
 import HTypes;
 
-
 class Repl {
  	public static function run() {
 		var interp = new HissInterp();
-		interp.variables['__running__'] = true;
-		interp.variables['quit'] = HFunction.Haxe(ArgType.Fixed, () -> { interp.variables['__running__'] = false; });
-		while (interp.variables['__running__']) {
+		interp.variables['__running__'] = T;
+		interp.variables['quit'] = Function(Haxe(Fixed, () -> { interp.variables['__running__'] = Nil; }));
+		while (interp.variables['__running__'].truthy()) {
 	 		Sys.print(">>> ");
 	 		var input = Sys.stdin().readLine();
 			try {
 				var parsed = HissParser.read(input);
 				Sys.println(interp.eval(parsed));
-			} catch (e: String) {
+			} catch (e: Dynamic) {
 				Sys.println('error $e');
 				Sys.println(CallStack.exceptionStack());
 			}
