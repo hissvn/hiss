@@ -31,30 +31,6 @@ class HissInterp {
         eval(HissParser.read('(progn ${contents})'));
     }
 
-    /*
-    static function toHissList(v: Dynamic): HissList {
-        if (!truthy(v)) return new HissList();
-        try {
-            var exp = cast(v, HExpression);
-            switch (exp) {
-                case HExpression.List(l):
-                    return l;
-                default:
-                    throw "it's an expression but not a list expression";
-            } 
-        } catch (s: Dynamic) {
-            try {
-                var list = cast(v, HissList);
-                return list;
-            }
-            catch (s: Dynamic) {
-                return [v];
-                throw 'value $v cannot be coerced';
-            }
-        }
-    }
-    */
-
     /**
      * Behind the scenes, this function evaluates the truthiness of an HValue
      **/
@@ -66,33 +42,6 @@ class HissInterp {
             default: true;
         }
     }
-                
-                /*
-                case TBool:
-                    truthy = cond;
-                // 0 is usually truthy in lisps, but for use in Hank, we want a read-count of 0 to yield false
-                case TInt:
-                    truthy = (cond != 0);
-                case TEnum(e):
-                    switch (cond) {
-                        case HExpression.List(l) if (l.length == 0):
-                            truthy = false;
-                        default:
-                            
-                    }
-                default:
-                    try {
-                        if (length(cond) == 0) {
-                            truthy = false;
-                        }
-                    } catch (s: Dynamic) {
-                                
-                    }
-            }
-            return truthy;
-        }
-        return false;
-    }*/
 
     /**
      * Implementation of the `if` macro. Returns value of `thenExp` if condition is truthy, else * evaluates `elseExp`
@@ -178,7 +127,7 @@ class HissInterp {
     /**
      * Behind the scenes function to HissTools.extract a haxe binop-compatible value from an HValue
      **/
-    static function valueOf(hv: HValue): Dynamic {
+    public static function valueOf(hv: HValue): Dynamic {
         return switch (hv) {
             case Atom(Int(v)):
                 v;
@@ -244,8 +193,21 @@ class HissInterp {
         }));
 
         // Haxe std io
-        importFixed(Sys.print);
-        importFixed(Sys.println);
+        function print(value: HValue) {
+            try {
+				var primitiveVal = HissInterp.valueOf(value);
+				Sys.print(primitiveVal);
+			} catch (e: Dynamic) {
+				Sys.print(value);
+			}
+            return value;
+        }
+        function println(value: HValue) {
+            print(value);
+            Sys.print("\n");
+        }
+        importFixed(print);
+        importFixed(println);
         
         importFixed(Std.parseInt);
         importFixed(Std.parseFloat);
@@ -328,17 +290,16 @@ class HissInterp {
         })));
         */
 
-        variables['dolist'] = Function(Macro(Haxe(Fixed, (lSymbol: HValue, func, HValue) -> {
-            var lVal = eval(lSymbol);
-            for (v in lVal.toList()) {
+        variables['dolist'] = Function(Haxe(Fixed, (list: HValue, func, HValue) -> {
+            for (v in list.toList()) {
                 
                 //trace('calling ${funcInfo} with arg ${v}');
-                funcall(func, v);
+                funcall(func, List([v]));
             }
-        })));
-        variables['map'] = Function(Macro(Haxe(Fixed, (arr: HValue, func: HValue) -> {
-            return List([for (v in arr.toList()) funcall(eval(func), v)]);
-        })));
+        }));
+        variables['map'] = Function(Haxe(Fixed, (arr: HValue, func: HValue) -> {
+            return List([for (v in arr.toList()) funcall(func, List([v]))]);
+        }));
 
         load(Atom(String('src/std.hiss')));
     }
@@ -380,6 +341,7 @@ class HissInterp {
     }
 
     function evalAll(hl: HValue): HValue {
+        //trace(hl);
         return List([for (exp in hl.toList()) eval(exp)]);
     }
 
@@ -427,7 +389,7 @@ class HissInterp {
 
         // TODO trace the args
 
-        trace('convert $func to h function');
+        //trace('convert $func to h function');
         var hfunc = func.toHFunction();
 
         switch (hfunc) {

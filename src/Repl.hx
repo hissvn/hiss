@@ -16,7 +16,13 @@ class Repl {
 	 		var input = Sys.stdin().readLine();
 			try {
 				var parsed = HissParser.read(input);
-				Sys.println(interp.eval(parsed));
+				var hval = interp.eval(parsed);
+				try {
+					var primitiveVal = HissInterp.valueOf(hval);
+					Sys.println(primitiveVal);
+				} catch (e: Dynamic) {
+					Sys.println(hval);
+				}
 			} catch (e: Dynamic) {
 				Sys.println('error $e');
 				Sys.println(CallStack.exceptionStack());
