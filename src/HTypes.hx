@@ -18,6 +18,7 @@ enum HValue {
     Function(f: HFunction);
     Map(n: HMap);
     VarInfo(i: HVarInfo);
+    Error(m: String);
     Nil;
     T;
 }

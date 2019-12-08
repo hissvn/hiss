@@ -39,6 +39,7 @@ class HissInterp {
             case Nil: false;
             case Atom(Int(i)) if (i == 0): false;
             case List(l) if (l.length == 0): false;
+            case Error(m): false;
             default: true;
         }
     }
@@ -46,12 +47,15 @@ class HissInterp {
     /**
      * Implementation of the `if` macro. Returns value of `thenExp` if condition is truthy, else * evaluates `elseExp`
      **/
-    function hissIf(condExp: HValue, thenExp: HValue, elseExp: HValue) {
+    function hissIf(condExp: HValue, thenExp: HValue, elseExp: Null<HValue>) {
         var cond = eval(condExp);
         return if (truthy(cond)) {
             eval(thenExp);
-        } else {
+        } else if (elseExp != null) {
+            trace('else exp is $elseExp');
             eval(elseExp);
+        } else {
+            Nil;
         }
     }
 
@@ -147,6 +151,8 @@ class HissInterp {
      **/
     public static function valueOf(hv: HValue): Dynamic {
         return switch (hv) {
+            case Nil: false;
+            case T: true;
             case Atom(Int(v)):
                 v;
             case Atom(Float(v)):
@@ -211,6 +217,8 @@ class HissInterp {
         variables['false'] = Nil;
         variables['t'] = T;
         variables['true'] = T;
+
+        variables['not'] = Function(Haxe(Fixed, v -> (!truthy(v)).toHValue()));
 
         // Control flow
         variables['if'] = Function(Macro(Haxe(Fixed, hissIf)));
@@ -355,6 +363,7 @@ class HissInterp {
 
 
     public static function first(list: HValue): HValue {
+        trace('calling first on $list');
         return list.toList()[0];
     }
 
@@ -423,7 +432,7 @@ class HissInterp {
 
         // TODO trace the args
 
-        //trace('convert $func to h function');
+        trace('convert $name: $func to h function');
         var hfunc = func.toHFunction();
 
         switch (hfunc) {
@@ -498,6 +507,20 @@ class HissInterp {
         return { name: name, value: value, container: frame };
     }
 
+    public function evalUnquotes(expr: HValue): HValue {
+        return switch (expr) {
+            case List(exps):
+                List(exps.map((exp) -> evalUnquotes(exp)));
+            case Quote(exp):
+                evalUnquotes(exp);
+            case Unquote(h):
+                eval(h);
+            case Quasiquote(exp):
+                exp;
+            default: expr;
+        };
+    }
+
     public function eval(expr: HValue, returnScope: HValue = Nil): HValue {
         // trace('eval called on $expr');
         return switch (expr) {
@@ -512,7 +535,7 @@ class HissInterp {
                     case Symbol(name):
                         var varInfo = resolve(name);
                         if (varInfo.value == null) {
-                            throw 'Tried to access undefined variable $name with stackFrames $stackFrames';
+                            return Error('Tried to access undefined variable $name with stackFrames $stackFrames');
                         }
                         if (truthy(returnScope)) {
                             VarInfo(varInfo);
@@ -530,22 +553,8 @@ class HissInterp {
                 return funcall(funcInfo, args);
             case Quote(exp):
                 exp;
-            case Quasiquote(List(exps)):
-                var afterEvalUnquotes = exps.map((exp) -> switch (exp) {
-                    case Quote(h):
-                        Quote(eval(Quasiquote(h)));
-                    case Unquote(innerExp):
-                        eval(innerExp);
-                    case List(exps):
-                        eval(Quasiquote(List(exps)));
-                    default:
-                        exp;
-                });
-                List(afterEvalUnquotes);
-            case Quasiquote(Unquote(h)):
-                Quote(eval(h));
             case Quasiquote(exp):
-                exp;
+                evalUnquotes(exp);
             case Unquote(exp):
                 eval(exp);
             case Function(f):

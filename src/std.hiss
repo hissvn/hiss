@@ -1,3 +1,14 @@
+(defmacro default (var value)
+    `(setq ,var
+        (if ,var
+            ,var
+            ,value)))
+(defmacro case (form &rest case-list)
+    (setq case--first (first case-list))
+    (setq case--rest (rest case-list))
+    `(if (haxe|| (haxe== ,(first case--first) t) (haxe== ,(first case--first) (eval ,form)))
+        (progn ,(rest case--first))
+        (case ,form ,case--rest )))
 (defun + (&rest args)
     (if (haxe== (length args) 1)
         (first args)
