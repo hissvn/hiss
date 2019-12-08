@@ -275,6 +275,9 @@ class HissInterp {
         };
 
         variables['setlocal'] = HFunction.Macro(HFunction.Haxe(ArgType.Var, setlocal));
+
+        variables['set-nth'] = HFunction.Haxe(ArgType.Fixed, (arr, idx, val) -> { arr[idx] = val;});
+
         variables['dolist'] = HFunction.Macro(HFunction.Haxe(ArgType.Fixed, (arr, func) -> {
             trace(arr);
             var arrr = eval(arr);
@@ -365,7 +368,7 @@ class HissInterp {
             argVals = evalHissList(args);
         }
 
-        //trace('calling ${funcInfo.name} with args ${argVals}');
+        trace('calling ${funcInfo.name} with args ${argVals}');
 
         switch (funcInfo.value) {
             case Haxe(t, func):
@@ -444,6 +447,11 @@ class HissInterp {
     }
 
     public function eval(exprOrList: Dynamic, returnScope: Bool = false): Dynamic {
+        if (exprOrList == null) return null;
+        try {
+            var num = cast(exprOrList, Int);
+            return num;
+        } catch (s: Dynamic) {}
         var expr = null;
         try {
             expr = cast(exprOrList, HExpression);
