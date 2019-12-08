@@ -234,6 +234,7 @@ class HissInterp {
         function println(value: HValue) {
             print(value);
             Sys.print("\n");
+            return value;
         }
         importFixed(print);
         importFixed(println);
@@ -255,7 +256,7 @@ class HissInterp {
         importFixed(nth);
         importFixed(slice);
 
-        variables['symbol-name'] = Function(Haxe(Fixed, symbolName));
+        importFixed(symbolName);
 
         // most haxe binary operators are non-binary (like me!) in most Lisps.
         // They can take any number of arguments.
@@ -296,9 +297,30 @@ class HissInterp {
             var list = l.toList();
             var name = symbolName(list[0]).toString();
             var value = eval(list[1]);
+            // trace('done evaling the list');
+            // trace('setting $name to $value');
             variables[name] = value;
             if (list.length > 2) {
-                setq(List(list.slice(2)));
+                return setq(List(list.slice(2)));
+            } else {
+                return Quote(value);
+            }
+        };
+
+        function setlocal (l: HValue) {
+            //trace(list);
+            var list = l.toList();
+            var name = symbolName(list[0]).toString();
+            var value = eval(list[1]);
+            var stackFrame: HMap = variables;
+            if (stackFrames.length > 0) {
+                stackFrame = stackFrames[stackFrames.length-1];
+            }
+            stackFrame[name] = value;
+            if (list.length > 2) {
+                return setlocal(List(list.slice(2)));
+            } else {
+                return Quote(value);
             }
         };
 
@@ -330,21 +352,6 @@ class HissInterp {
 
         load(Atom(String('src/std.hiss')));
     }
-
-    function setlocal (l: HValue) {
-        //trace(list);
-        var list = l.toList();
-        var name = symbolName(list[0]).toString();
-        var value = eval(list[1]);
-        var stackFrame: HMap = variables;
-        if (stackFrames.length > 0) {
-            stackFrame = stackFrames[stackFrames.length-1];
-        }
-        stackFrame[name] = value;
-        if (list.length > 2) {
-            setlocal(List(list.slice(2)));
-        }
-    };
 
 
     public static function first(list: HValue): HValue {
@@ -389,7 +396,7 @@ class HissInterp {
         switch (func) {
             case Function(Macro(func)):
                 var macroExpansion = funcall(Function(func), args, Nil);
-
+                // trace('macroexpansion is $macroExpansion');
                 return eval(macroExpansion);
             
                 /*
@@ -428,7 +435,7 @@ class HissInterp {
                     case Fixed:
                 }
 
-                // trace('calling haxe function with $argList');
+                // trace('calling haxe function $name with $argList');
                 var result: HValue = Reflect.callMethod(container, hxfunc, argList);
 
                 // trace('returning ${result} from ${funcInfo.name}');
@@ -492,6 +499,7 @@ class HissInterp {
     }
 
     public function eval(expr: HValue, returnScope: HValue = Nil): HValue {
+        // trace('eval called on $expr');
         return switch (expr) {
             case Atom(a):
                 return switch (a) {
