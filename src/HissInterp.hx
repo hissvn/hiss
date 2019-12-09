@@ -301,8 +301,8 @@ class HissInterp {
 
         variables['push'] = Function(Haxe(Fixed, (l, v) -> {l.toList().push(v); return l;}));
 
-        variables['scope-in'] = Function(Haxe(Fixed, () -> {stackFrames.push(new HMap()); return null; }));
-        variables['scope-out'] = Function(Haxe(Fixed, () -> {stackFrames.pop(); return null;}));
+        variables['scope-in'] = Function(Haxe(Fixed, () -> {stackFrames.push(new HMap()); return Nil; }));
+        variables['scope-out'] = Function(Haxe(Fixed, () -> {stackFrames.pop(); return Nil;}));
         
         function setq (l: HValue) {
             var list = l.toList();

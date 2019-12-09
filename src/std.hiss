@@ -1,5 +1,5 @@
 (defmacro default (var value)
-    `(setq ,var
+    `(setlocal ,var
         (if ,var
             ,var
             ,value)))
@@ -21,18 +21,10 @@
             (0 ,zero-case)
             (1 ,one-case)
             (2 (,base-function (nth args 0) (nth args 1)))
-            (t (,symbol (cons (funcall ,symbol (take args 2)) (slice args 2)))))))
+            (t (funcall ,symbol (cons (funcall ,base-function (take args 2)) (slice args 2)))))))
 
 (variadic-binop - haxe- 0 (haxe- 0 (first args)))
-
-(defun + (&rest args)
-    (if (haxe== (length args) 1)
-        (first args)
-        (if (haxe== (length args) 0)
-            0
-            (if (haxe== (length args) 2)
-                (haxe+ (first args) (first (rest args)))
-                (+ (+ (first args) (first (rest args))) (funcall + (rest (rest args))))))))
+(variadic-binop + haxe+)
 
 (defmacro bind (pair)
     `(setlocal ,(first pair) ,(first (rest pair))))
