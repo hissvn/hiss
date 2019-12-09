@@ -13,7 +13,7 @@ enum HValue {
     Quote(exp: HValue);
     Quasiquote(exp: HValue);
     Unquote(exp: HValue);
-    // If you're going to store arbitrary objects in Hiss variables, do yourself a favor and give them a descriptive label because Haxe runtime type info can be squirrely
+    // If you're going to store arbitrary objects in Hiss variables, do yourself a favor and give them a descriptive label because Haxe runtime type info can be squirrely on different platforms
     Object(t: String, v: Dynamic);
     Function(f: HFunction);
     Map(n: HMap);

@@ -52,7 +52,7 @@ class HissInterp {
         return if (truthy(cond)) {
             eval(thenExp);
         } else if (elseExp != null) {
-            trace('else exp is $elseExp');
+            //trace('else exp is $elseExp');
             eval(elseExp);
         } else {
             Nil;
@@ -227,7 +227,9 @@ class HissInterp {
             return exps.toList().pop();
         }));
 
-
+        variables['list'] = Function(Haxe(Var, (exps: HValue) -> {
+            return exps;
+        }));
 
         // Haxe std io
         function print(value: HValue) {
@@ -363,8 +365,10 @@ class HissInterp {
 
 
     public static function first(list: HValue): HValue {
-        trace('calling first on $list');
-        return list.toList()[0];
+        //trace('calling first on ${list.toPrint()}');
+        var v = list.toList()[0];
+        if (v == null) v = Nil;
+        return v;
     }
 
     public static function rest(list: HValue): HValue {
@@ -403,9 +407,10 @@ class HissInterp {
         // trace('calling function $name whose value is $func');
 
         switch (func) {
-            case Function(Macro(func)):
-                var macroExpansion = funcall(Function(func), args, Nil);
-                // trace('macroexpansion is $macroExpansion');
+            case Function(Macro(m)):
+                //trace('macroexpanding $m');
+                var macroExpansion = funcall(Function(m), args, Nil);
+                //trace('macroexpansion is ${macroExpansion.toPrint()}');
                 return eval(macroExpansion);
             
                 /*
@@ -432,7 +437,7 @@ class HissInterp {
 
         // TODO trace the args
 
-        trace('convert $name: $func to h function');
+        //trace('convert $name: ${func} to h function');
         var hfunc = func.toHFunction();
 
         switch (hfunc) {
@@ -483,7 +488,7 @@ class HissInterp {
 
                 stackFrames = oldStackFrames;
 
-                // trace('returning ${lastResult} from ${funcInfo.name}');
+                //trace('returning ${lastResult.toPrint()} from ${func.toPrint()}');
 
                 return lastResult;
             default: throw 'cannot call $funcOrPointer as a function';
@@ -516,7 +521,7 @@ class HissInterp {
             case Unquote(h):
                 eval(h);
             case Quasiquote(exp):
-                exp;
+                evalUnquotes(exp);
             default: expr;
         };
     }
@@ -558,6 +563,8 @@ class HissInterp {
             case Unquote(exp):
                 eval(exp);
             case Function(f):
+                expr;
+            case Nil | T:
                 expr;
             default:
                 throw 'Eval for type of expression ${expr} is not yet implemented';

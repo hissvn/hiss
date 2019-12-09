@@ -6,6 +6,8 @@ import HissParser;
 import HissInterp;
 import HTypes;
 
+using HissTools;
+
 class Repl {
  	public static function run() {
 		var interp = new HissInterp();
@@ -17,12 +19,8 @@ class Repl {
 			try {
 				var parsed = HissParser.read(input);
 				var hval = interp.eval(parsed);
-				try {
-					var primitiveVal = HissInterp.valueOf(hval);
-					Sys.println(primitiveVal);
-				} catch (e: Dynamic) {
-					Sys.println(hval);
-				}
+				
+				Sys.println(hval.toPrint());
 			} catch (e: Dynamic) {
 				Sys.println('error $e');
 				Sys.println(CallStack.exceptionStack());
