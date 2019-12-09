@@ -1,4 +1,120 @@
-(defun make-point (x y)
-    `(x ,x y ,y))
+; Points are in the form '(x y)
+; Lines are in the form '(point-a point-b)
 
-(defun point-p (p)
+(setq origin '(0 0))
+(defun x (point) (nth point 0))
+(defun y (point) (nth point 1))
+
+(defun point-a (line) (nth line 0))
+(defun point-b (line) (nth line 1))
+
+(defun vertical (line)
+    (= (x (point-a line)) (x (point-b line))))
+
+(defun horizontal (line)
+    (not (vertical line)))
+
+(defun line-y1 (vertical-line)
+    (y (point-a vertical-line)))
+
+(defun line-y2 (vertical-line)
+    (y (point-b vertical-line)))
+
+(defun line-x (vertical-line)
+    (x (point-a vertical-line)))
+
+(defun line-x1 (horizontal-line)
+    (x (point-a horizontal-line)))
+
+(defun line-x2 (horizontal-line)
+    (x (point-b horizontal-line)))
+
+(defun line-y (horizontal-line)
+    (y (point-a horizontal-line)))
+
+(defun intersection (line-a line-b)
+    (let ((a-vertical (vertical line-a))
+        (b-vertical (vertical line-b)))
+        (if (not (= a-vertical b-vertical)) (progn
+            (setlocal h--line (if a-vertical line-b line-a))
+            (setlocal v--line (if a-vertical line-a line-b))
+            (setlocal h--y (line-y h--line))
+            (setlocal h--x1 (line-x1 h--line))
+            (setlocal h--x2 (line-x2 h--line))
+            (setlocal v--x (line-x v--line))
+            (setlocal v--y1 (line-y1 v--line))
+            (setlocal v--y2 (line-y2 v--line))
+            (setlocal ix (if (between-exclusive h--x1 v--x h--x2) v--x))
+            (setlocal iy (if (between-exclusive v--y1 h--y v--y2) h--y))
+            (if (and ix iy) `(,ix ,iy))))))
+
+(defun point-eq (point-a point-b)
+    (and 
+        (= 
+            (x point-a) 
+            (x point-b)) 
+        (= 
+            (y point-a) 
+            (y point-b))))
+
+(defun add (point-a point-b)
+    `(,(+ (x point-a) (x point-b)) ,(+ (y point-a) (y point-b))))
+
+(defun distance (point-a point-b)
+    (println point-a)
+    (println point-b)
+    (+
+        (abs (- (x point-a) (x point-b)))
+        (abs (- (y point-a) (y point-b)))))
+
+(defun move (point movement)
+    (let ((dir (charAt movement 0))
+        (dist (parseInt (substr movement 1))))
+        (add
+            point
+            (case dir
+                ("U" `(0 ,dist))
+                ("D" `(0 ,(- dist)))
+                ("L" `(,(- dist) 0))
+                ("R" `(,dist 0))))))
+
+(setq wire-data-lines (split-lines (getContent "aoc/input3.txt")))
+
+(defun wire-lines (wire)
+    (setq wire--location origin)
+    (map (split wire ",")
+        (lambda (movement)
+            `(,wire--location ,(setq wire--location (move wire--location movement))))))
+
+(defun test-funs ()
+    (let ((line-a `(,origin ,(move origin "L3")))
+        (line-b `(,origin ,(move origin "R3")))
+        (line-c `(,origin ,(move origin "U5"))))
+            (println (vertical line-a))
+            (println (vertical line-b))
+            (println (vertical line-c))
+            (println (intersection line-a line-b))
+            (println (intersection line-a line-c))))
+
+(defun part1 ()
+    (setq closest-intersection nil)
+    (setq wire1 (wire-lines (nth wire-data-lines 0)))
+    (setq wire2 (wire-lines (nth wire-data-lines 1)))
+    (dolist wire1
+        (lambda (line)
+            ;(print line)
+            (setq line--a line)
+            (dolist wire2
+                (lambda (line)
+                    ;(print line)
+                    (setq line--b line)
+                    (setlocal this-intersection (intersection line--a line--b))
+                    (if this-intersection
+                        (progn 
+                            (println this-intersection)
+                            (setlocal dist (distance this-intersection))
+                            (setq closest-intersection 
+                                (if (not closest-intersection) 
+                                    dist
+                                    (min dist closest-intersection)))
+                            (println closest-intersection))))))))

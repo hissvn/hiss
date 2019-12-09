@@ -28,8 +28,19 @@
 (variadic-binop + haxe+)
 (variadic-binop / haxe/ (error "can't divide without an operand") (/ 1 val))
 (variadic-binop * haxe* 1)
+
+(variadic-binop < haxe< (error "cannot evaluate less-than without operands") t (if (fun val1 val2) val2))
+(variadic-binop > haxe> (error "cannot evaluate less-than without operands") t (if (fun val1 val2) val2))
+(defun between-exclusive (a b c)
+    (or (< a b c) (> a b c)))
+
+(variadic-binop min < (error "cannot find min of 0 elements") val (if (fun val1 val2) val1 val2))
+(variadic-binop max > (error "cannot find min of 0 elements") val (if (fun val1 val2) val1 val2))
+
 (variadic-binop = haxe== (error "can't check equality without an operand") t (if (fun val1 val2) val1 nil))
 ; TODO add advice to this function to coerce to t or nil to avoid errors, although technically it *does* return truthy when it should
+
+(variadic-binop and haxe&& t)
 
 (defmacro bind (pair)
     `(setlocal ,(first pair) ,(first (rest pair))))
@@ -50,3 +61,17 @@
     (setq sum--total 0)
     (dolist args (lambda (arg) (setq sum--total (+ sum--total arg))))
     sum--total)
+
+(defun filter (list &optional criterion)
+    (default criterion (lambda (val) val))
+    (setq filter--criterion criterion)
+    (setq filter--result '())
+    (dolist list (lambda (val)
+        ;(print val)
+        (if (funcall filter--criterion '(val))
+            (push filter--result val))))
+    filter--result)
+
+; Temp functions -- eventually these will need to account for not knowing if hiss is run from repo root
+(defun lstd () (load "src/std.hiss"))
+(defun lp (num) (load (+ "aoc/p" num ".hiss")))

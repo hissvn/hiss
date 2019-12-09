@@ -37,7 +37,7 @@ class HissInterp {
     public static function truthy(cond: HValue): Bool {
         return switch (cond) {
             case Nil: false;
-            case Atom(Int(i)) if (i == 0): false;
+            //case Atom(Int(i)) if (i == 0): false; /* 0 being falsy will be useful for Hank read-counts */
             case List(l) if (l.length == 0): false;
             case Error(m): false;
             default: true;
@@ -235,7 +235,7 @@ class HissInterp {
         variables['t'] = T;
         variables['true'] = T;
 
-        variables['not'] = Function(Haxe(Fixed, v -> (!truthy(v)).toHValue()));
+        variables['not'] = Function(Haxe(Fixed, (v: HValue) -> if (truthy(v)) Nil else T));
 
         // Control flow
         variables['if'] = Function(Macro(false, Haxe(Fixed, hissIf)));
@@ -306,7 +306,22 @@ class HissInterp {
         importBinops(true, "+", "-", "/", "*", ">", ">=", "<", "<=", "==");
 
         // Still more binary operators just don't exist in lisp because they are named functions like `and` or `or`
-        importBinops(true, "&&", "||", "...");
+        importBinops(true, /* "&&",*/ "||", "...");
+
+        variables['haxe&&'] = Function(Haxe(Fixed, (a: HValue, b: HValue) -> {
+            if (truthy(a) && truthy(b)) T else Nil;
+        }));
+
+        function or(args: HValue) {
+            return if (args.toList().length == 0) {
+                Nil;
+            } else if (truthy(eval(first(args)))) {
+                T;
+            } else {
+                or(rest(args));
+            }
+        }
+        variables['or'] = Function(Macro(false, Haxe(Var, or)));
 
         // Some binary operators are Lisp-compatible as-is
         importBinops(false, "%");  
@@ -328,7 +343,7 @@ class HissInterp {
         // TODO escape sequences aren't parsed so this needs its own function:
         variables['split-lines'] = Function(Haxe(Fixed, (s: HValue) -> {s.toString().split("\n").toHValue();}));
 
-        variables['push'] = Function(Haxe(Fixed, (l, v) -> {l.toList().push(v); return l;}));
+        variables['push'] = Function(Haxe(Fixed, (l:HValue, v:HValue) -> {l.toList().push(v); return l;}));
 
         variables['scope-in'] = Function(Haxe(Fixed, () -> {stackFrames.push(new HMap()); return Nil; }));
         variables['scope-out'] = Function(Haxe(Fixed, () -> {stackFrames.pop(); return Nil;}));
@@ -388,7 +403,7 @@ class HissInterp {
         variables['setq'] = Function(Macro(false, Haxe(Var, setq)));
         variables['setlocal'] = Function(Macro(false, Haxe(Var, setlocal)));
 
-        variables['set-nth'] = Function(Haxe(Fixed, (arr: HValue, idx: HValue, val: HValue) -> { arr.toList()[idx.toInt()] = val;}));
+        variables['set-nth'] = Function(Haxe(Fixed, (arr: HValue, idx: HValue, val: HValue) -> { arr.toList()[idx.toInt()] = val; return arr;}));
 
         /*variables['for'] = Function(Macro(Haxe(Fixed, (iterator: HValue, func: HValue) -> {
             var it: IntIterator = eval(iterator);
@@ -400,11 +415,11 @@ class HissInterp {
         })));
         */
 
-        variables['dolist'] = Function(Haxe(Fixed, (list: HValue, func, HValue) -> {
+        variables['dolist'] = Function(Haxe(Fixed, (list: HValue, func: HValue) -> {
             for (v in list.toList()) {
                 
                 //trace('calling ${funcInfo} with arg ${v}');
-                funcall(func, List([v]));
+                funcall(func, List([v]), Nil);
             }
             return Nil;
         }));
@@ -412,7 +427,11 @@ class HissInterp {
             return List([for (v in arr.toList()) funcall(func, List([v]))]);
         }));
 
-        load(Atom(String('src/std.hiss')));
+        try {
+            load(Atom(String('src/std.hiss')));
+        } catch (s: Dynamic) {
+            trace('Error loading the standard library: $s');
+        }
     }
 
 
@@ -427,15 +446,15 @@ class HissInterp {
         return List(list.toList().slice(1));
     }
 
-    public static function nth(list: HValue, idx: HValue) {
+    public static function nth(list: HValue, idx: HValue):HValue {
         return list.toList()[idx.toInt()];
     }
 
-    public static function slice(list: HValue, idx: HValue) {
+    public static function slice(list: HValue, idx: HValue):HValue {
         return List(list.toList().slice(idx.toInt()));
     }
 
-    public static function take(list: HValue, n: HValue) {
+    public static function take(list: HValue, n: HValue):HValue {
         return List(list.toList().slice(0, n.toInt()));
     }
 
@@ -460,7 +479,28 @@ class HissInterp {
             default:
         }
 
-        var watchedFunctions = ['=', 'haxe=='];
+        var watchedFunctions = [];
+        //watchedFunctions = ["distance", "anonymous"];
+        // watchedFunctions = ["intersection", "and", "not"];
+        //watchedFunctions = ["dolist"];
+
+
+        function charAt (str: HValue, idx: HValue) {
+            return Atom(String(str.toString().charAt(idx.toInt())));
+        }
+        importFixed(charAt);
+        
+        variables['substr'] = Function(Haxe(Var, (args: HValue) -> {
+            var l = args.toList();
+            var str = l[0].toString();
+            var start = l[1].toInt();
+            var len = null;
+            if (l.length > 2) len = l[2].toInt();
+            return Atom(String(str.substr(start, len)));
+        }));
+
+
+        //var watchedFunctions = ['=', 'haxe=='];
         //var watchedFunctions = ["variadic-binop", "-", "haxe-", "funcall"];
         var watched = watchedFunctions.indexOf(name) != -1;
 
@@ -495,9 +535,8 @@ class HissInterp {
         if (truthy(evalArgs)) {
             // trace('evaling args ${argVals.toPrint()} for $name');
             argVals = evalAll(args);
-            if (watched) trace('calling $name with args ${argVals.toPrint()}');
         }
-
+        
         var argList: HList = argVals.toList();
 
         // TODO trace the args
@@ -505,64 +544,72 @@ class HissInterp {
         //trace('convert $name: ${func} to h function');
         var hfunc = func.toHFunction();
 
-        switch (hfunc) {
-            case Haxe(t, hxfunc):
-                switch (t) {
-                    case Var: 
-                        // trace('varargs -- putting them in a list');
-                        argList = [List(argList)];
-                    case Fixed:
-                }
+        var message = 'calling $name: $hfunc with args ${argVals.toPrint()}';
+        if (watched) trace(message);
 
-                // trace('calling haxe function $name with $argList');
-                var result: HValue = Reflect.callMethod(container, hxfunc, argList);
+        try {
+            switch (hfunc) {
+                case Haxe(t, hxfunc):
+                    switch (t) {
+                        case Var: 
+                            // trace('varargs -- putting them in a list');
+                            argList = [List(argList)];
+                        case Fixed:
+                    }
 
-                if (watched) trace('returning ${result.toPrint()} from ${name}');
+                    // trace('calling haxe function $name with $argList');
+                    var result: HValue = Reflect.callMethod(container, hxfunc, argList);
 
-                return result;
-    
-            case Hiss(funDef):
-                var oldStackFrames = stackFrames;
+                    if (watched) trace('returning ${result.toPrint()} from ${name}');
 
-                var argStackFrame: HMap = [];
-                var valIdx = 0;
-                var nameIdx = 0;
-                while (nameIdx < funDef.argNames.length) {
-                    var arg = funDef.argNames[nameIdx];
-                    if (arg == "&rest") {
-                        argStackFrame[funDef.argNames[++nameIdx]] = List(argList.slice(valIdx));
-                        break;
-                    } else if (arg == "&optional") {
-                        nameIdx++;
-                        for (val in argList.slice(valIdx)) {
-                            if (nameIdx > funDef.argNames.length-1) throw 'Supplied too many arguments for ${funDef.argNames}: $argList';
-                            argStackFrame[funDef.argNames[nameIdx++]] = val;
+                    return result;
+        
+                case Hiss(funDef):
+                    var oldStackFrames = stackFrames;
+
+                    var argStackFrame: HMap = [];
+                    var valIdx = 0;
+                    var nameIdx = 0;
+                    while (nameIdx < funDef.argNames.length) {
+                        var arg = funDef.argNames[nameIdx];
+                        if (arg == "&rest") {
+                            argStackFrame[funDef.argNames[++nameIdx]] = List(argList.slice(valIdx));
+                            break;
+                        } else if (arg == "&optional") {
+                            nameIdx++;
+                            for (val in argList.slice(valIdx)) {
+                                if (nameIdx > funDef.argNames.length-1) throw 'Supplied too many arguments for ${funDef.argNames}: $argList';
+                                argStackFrame[funDef.argNames[nameIdx++]] = val;
+                            }
+                            break;
+                        } else {
+                            argStackFrame[arg] = argList[valIdx++];
+                            nameIdx++;
                         }
-                        break;
-                    } else {
-                        argStackFrame[arg] = argList[valIdx++];
-                        nameIdx++;
                     }
-                }
 
-                stackFrames = [argStackFrame];
-                
-                var lastResult = null;
-                for (expression in funDef.body) {
-                    try {
-                        lastResult = eval(expression);
-                    } catch (e: Dynamic) {
-                        stackFrames = oldStackFrames;
-                        throw e;
+                    stackFrames = [argStackFrame];
+                    
+                    var lastResult = null;
+                    for (expression in funDef.body) {
+                        try {
+                            lastResult = eval(expression);
+                        }/* catch (e: Dynamic) {
+                            stackFrames = oldStackFrames;
+                            throw e;
+                        }*/
                     }
-                }
 
-                stackFrames = oldStackFrames;
+                    stackFrames = oldStackFrames;
 
-                //trace('returning ${lastResult.toPrint()} from ${func.toPrint()}');
+                    //trace('returning ${lastResult.toPrint()} from ${func.toPrint()}');
 
-                return lastResult;
-            default: throw 'cannot call $funcOrPointer as a function';
+                    return lastResult;
+                default: throw 'cannot call $funcOrPointer as a function';
+            }
+        } catch (s: Dynamic) {
+            trace('error $s while $message');
+            return Error(${Std.string(s)});
         }
     }
 
@@ -599,9 +646,9 @@ class HissInterp {
 
     public function eval(expr: HValue, returnScope: HValue = Nil): HValue {
         // trace('eval called on $expr');
-        return switch (expr) {
+        var value = switch (expr) {
             case Atom(a):
-                return switch (a) {
+                switch (a) {
                     case Int(v):
                         expr;
                     case Float(v):
@@ -611,7 +658,8 @@ class HissInterp {
                     case Symbol(name):
                         var varInfo = resolve(name);
                         if (varInfo.value == null) {
-                            return Error('Tried to access undefined variable $name with stackFrames $stackFrames');
+                            //trace('Tried to access undefined variable $name with stackFrames $stackFrames');
+                            return Nil;
                         }
                         if (truthy(returnScope)) {
                             VarInfo(varInfo);
@@ -626,13 +674,13 @@ class HissInterp {
                 var value = switch (funcInfo) {
                     case VarInfo(v):
                         v.value;
-                    default: throw '$funcInfo is not a function pointer';
+                    default: return Error('${expr.toPrint()}: ${funcInfo.toPrint()} is not a function pointer');
                 }
                 if (funcInfo == null || value == null) { trace(funcInfo); }
                 var args = rest(expr);
 
                 // trace('calling funcall $funcInfo with args (before evaluation): $args');
-                return funcall(funcInfo, args);
+                funcall(funcInfo, args);
             case Quote(exp):
                 exp;
             case Quasiquote(exp):
@@ -643,8 +691,19 @@ class HissInterp {
                 expr;
             case Nil | T:
                 expr;
+            case Error(m):
+                expr;
             default:
                 throw 'Eval for type of expression ${expr} is not yet implemented';
+        };
+        if (value == null) {
+            throw('Expression evaluated null: ${expr.toPrint()}');
+        }
+        //trace(value);
+        switch (value) {
+            case Error(m):
+                throw '$m';
+            default: return value;
         }
     }
 }
