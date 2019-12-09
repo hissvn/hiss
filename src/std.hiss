@@ -13,20 +13,23 @@
             ,(cons 'case (cons form case--rest)))
         nil))
 
-(defmacro variadic-binop (symbol base-function &optional zero-case one-case)
+(defmacro variadic-binop (symbol base-function &optional zero-case one-case two-case)
     (default zero-case 0)
     (default one-case 'val)
+    (default two-case '(fun val1 val2))
     `(defun ,symbol (&rest args)
         (case (length args)
             (0 ,zero-case)
             (1 (let ((val (first args))) ,one-case))
-            (2 (,base-function (nth args 0) (nth args 1)))
-            (t (funcall ,symbol (cons (funcall ,base-function (take args 2)) (slice args 2)))))))
+            (2 (let ((val1 (nth args 0)) (val2 (nth args 1)) (fun ,base-function)) ,two-case))
+            (t (funcall ,symbol (cons (funcall ,symbol (take args 2)) (slice args 2)))))))
 
 (variadic-binop - haxe- 0 (haxe- 0 val))
 (variadic-binop + haxe+)
 (variadic-binop / haxe/ (error "can't divide without an operand") (/ 1 val))
 (variadic-binop * haxe* 1)
+(variadic-binop = haxe== (error "can't check equality without an operand") t (if (fun val1 val2) val1 nil))
+; TODO add advice to this function to coerce to t or nil to avoid errors, although technically it *does* return truthy when it should
 
 (defmacro bind (pair)
     `(setlocal ,(first pair) ,(first (rest pair))))

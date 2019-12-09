@@ -115,6 +115,23 @@ class HissInterp {
         };
     }
 
+    public static macro function importPredicate(f: Expr) {
+        function findFunctionName(e:Expr) {
+	        switch(e.expr) {
+		        case EConst(CIdent(s)) | EField(_, s):
+			        // handle s
+                    return s;
+		        case _:
+			        throw 'improper expression for importing haxe function to interpreter';
+            }
+	    }
+        var name = findFunctionName(f);
+        //var name = "";
+        return macro {
+            variables[$v{name} + "?"] = Function(Haxe(Fixed, $f));            
+        };
+    }
+
     public static macro function importWrapped(f: Expr) {
         function findFunctionName(e:Expr) {
 	        switch(e.expr) {
@@ -231,6 +248,17 @@ class HissInterp {
             return exps;
         }));
 
+        function int(value: HValue) {
+            try {
+                value.toInt();
+                return T;
+            } catch (s: Dynamic) {
+                return Nil;
+            }
+        }
+        importPredicate(int);
+
+
         // Haxe std io
         function print(value: HValue) {
             try {
@@ -260,6 +288,7 @@ class HissInterp {
         importWrapped(Math.round);
         importWrapped(Math.floor);
         importWrapped(Math.ceil);
+        importWrapped(Math.abs);
 
         importFixed(first);
         importFixed(rest);
@@ -431,7 +460,7 @@ class HissInterp {
             default:
         }
 
-        var watchedFunctions = [];
+        var watchedFunctions = ['=', 'haxe=='];
         //var watchedFunctions = ["variadic-binop", "-", "haxe-", "funcall"];
         var watched = watchedFunctions.indexOf(name) != -1;
 
@@ -506,6 +535,7 @@ class HissInterp {
                     } else if (arg == "&optional") {
                         nameIdx++;
                         for (val in argList.slice(valIdx)) {
+                            if (nameIdx > funDef.argNames.length-1) throw 'Supplied too many arguments for ${funDef.argNames}: $argList';
                             argStackFrame[funDef.argNames[nameIdx++]] = val;
                         }
                         break;

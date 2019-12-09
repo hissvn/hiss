@@ -1,0 +1,4 @@
+(defun make-point (x y)
+    `(x ,x y ,y))
+
+(defun point-p (p)

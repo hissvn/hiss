@@ -17,7 +17,7 @@ class Repl {
 	 		Sys.print(">>> ");
 	 		var input = Sys.stdin().readLine();
 			try {
-				var parsed = HissParser.read(input);
+				var parsed = HissParser.read(input+ "\n");
 				var hval = interp.eval(parsed);
 				
 				Sys.println(hval.toPrint());

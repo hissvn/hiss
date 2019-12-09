@@ -70,7 +70,11 @@ class HissParser {
         var hissUnquote = ",".string().then(hissExpression)
             .map((r) -> Unquote(r)); 
 
+        var comment = ~/;.*\n/.regexp().trim()
+            .map((r) -> Nil);
+
         hissExpression.apply = [
+            comment,
             hissQuasiquote,
             hissQuote,
             hissUnquote,
