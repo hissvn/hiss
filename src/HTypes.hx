@@ -32,7 +32,7 @@ enum HArgType {
 enum HFunction {
     Haxe(t: HArgType, f: Dynamic);
     Hiss(f: HFunDef);
-    Macro(f: HFunction);
+    Macro(evalResult: Bool, f: HFunction);
 }
 
 typedef HMap = Map<String, HValue>;

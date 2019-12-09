@@ -88,7 +88,7 @@ class HissInterp {
         var name = symbolName(first(args)).toString();
         var fun = lambda(rest(args));
         if (truthy(isMacro)) {
-            fun = Function(Macro(fun.toHFunction()));
+            fun = Function(Macro(true, fun.toHFunction()));
         }
         variables[name] = fun;
         return fun;
@@ -221,7 +221,7 @@ class HissInterp {
         variables['not'] = Function(Haxe(Fixed, v -> (!truthy(v)).toHValue()));
 
         // Control flow
-        variables['if'] = Function(Macro(Haxe(Fixed, hissIf)));
+        variables['if'] = Function(Macro(false, Haxe(Fixed, hissIf)));
 
         variables['progn'] = Function(Haxe(Var, (exps: HValue) -> {
             return exps.toList().pop();
@@ -265,6 +265,7 @@ class HissInterp {
         importFixed(rest);
         importFixed(nth);
         importFixed(slice);
+        importFixed(take);
 
         importFixed(symbolName);
 
@@ -281,9 +282,9 @@ class HissInterp {
         // Some binary operators are Lisp-compatible as-is
         importBinops(false, "%");  
 
-        variables['lambda'] = Function(Macro(Haxe(Var, lambda)));
-        variables['defun'] = Function(Macro(Haxe(Var, defun)));
-        variables['defmacro'] = Function(Macro(Haxe(Var, defmacro)));
+        variables['lambda'] = Function(Macro(false, Haxe(Var, lambda)));
+        variables['defun'] = Function(Macro(false, Haxe(Var, defun)));
+        variables['defmacro'] = Function(Macro(false, Haxe(Var, defmacro)));
 
         importFixed(length);
 
@@ -313,7 +314,7 @@ class HissInterp {
             if (list.length > 2) {
                 return setq(List(list.slice(2)));
             } else {
-                return Quote(value);
+                return value;
             }
         };
 
@@ -330,12 +331,28 @@ class HissInterp {
             if (list.length > 2) {
                 return setlocal(List(list.slice(2)));
             } else {
-                return Quote(value);
+                return value;
             }
         };
 
-        variables['setq'] = Function(Macro(Haxe(Var, setq)));
-        variables['setlocal'] = Function(Macro(Haxe(Var, setlocal)));
+        function append(args: HValue) {
+            var firstList: HList = first(args).toList();
+
+            return if (truthy(rest(args))) {
+                var nextList = first(rest(args)).toList();
+                var newFirst = firstList.concat(nextList);
+                var newArgs = rest(rest(args)).toList();
+                newArgs.insert(0, List(newFirst));
+                append(List(newArgs));
+            } else {
+                List(firstList);
+            }
+        };
+
+        variables['append'] = Function(Haxe(Var, append));
+
+        variables['setq'] = Function(Macro(false, Haxe(Var, setq)));
+        variables['setlocal'] = Function(Macro(false, Haxe(Var, setlocal)));
 
         variables['set-nth'] = Function(Haxe(Fixed, (arr: HValue, idx: HValue, val: HValue) -> { arr.toList()[idx.toInt()] = val;}));
 
@@ -380,7 +397,11 @@ class HissInterp {
     }
 
     public static function slice(list: HValue, idx: HValue) {
-        return HissTools.extract(list, List(l) => l).slice(idx.toInt());
+        return List(list.toList().slice(idx.toInt()));
+    }
+
+    public static function take(list: HValue, n: HValue) {
+        return List(list.toList().slice(0, n.toInt()));
     }
 
     public static function toList(list: HValue): HList {
@@ -404,14 +425,22 @@ class HissInterp {
             default:
         }
 
+        var watchedFunctions = [];
+        var watchedFunctions = ["variadic-binop", "-", "haxe-", "funcall"];
+        var watched = watchedFunctions.indexOf(name) != -1;
+
         // trace('calling function $name whose value is $func');
 
         switch (func) {
-            case Function(Macro(m)):
+            case Function(Macro(e, m)):
                 //trace('macroexpanding $m');
                 var macroExpansion = funcall(Function(m), args, Nil);
-                //trace('macroexpansion is ${macroExpansion.toPrint()}');
-                return eval(macroExpansion);
+                if (watched) trace('macroexpansion $name ${func.toPrint()} -> ${macroExpansion.toPrint()}');
+                return if (e) {
+                    eval(macroExpansion);
+                } else {
+                    macroExpansion;
+                };
             
                 /*
                 switch (func) {
@@ -426,11 +455,12 @@ class HissInterp {
             default:
         }
         
+
         var argVals = args;
         if (truthy(evalArgs)) {
-            // trace('evaling args $args for $name');
+            // trace('evaling args ${argVals.toPrint()} for $name');
             argVals = evalAll(args);
-            // trace('they were $argVals');
+            if (watched) trace('calling $name with args ${argVals.toPrint()}');
         }
 
         var argList: HList = argVals.toList();
@@ -452,7 +482,7 @@ class HissInterp {
                 // trace('calling haxe function $name with $argList');
                 var result: HValue = Reflect.callMethod(container, hxfunc, argList);
 
-                // trace('returning ${result} from ${funcInfo.name}');
+                if (watched) trace('returning ${result.toPrint()} from ${name}');
 
                 return result;
     
@@ -483,7 +513,12 @@ class HissInterp {
                 
                 var lastResult = null;
                 for (expression in funDef.body) {
-                    lastResult = eval(expression);
+                    try {
+                        lastResult = eval(expression);
+                    } catch (e: Dynamic) {
+                        stackFrames = oldStackFrames;
+                        throw e;
+                    }
                 }
 
                 stackFrames = oldStackFrames;
@@ -517,7 +552,7 @@ class HissInterp {
             case List(exps):
                 List(exps.map((exp) -> evalUnquotes(exp)));
             case Quote(exp):
-                evalUnquotes(exp);
+                Quote(evalUnquotes(exp));
             case Unquote(h):
                 eval(h);
             case Quasiquote(exp):
@@ -552,9 +587,15 @@ class HissInterp {
                 Nil;
             case List(exps):
                 var funcInfo = eval(first(expr), T);
+                var value = switch (funcInfo) {
+                    case VarInfo(v):
+                        v.value;
+                    default: throw 'fuck';
+                }
+                if (funcInfo == null || value == null) { trace(funcInfo); }
                 var args = rest(expr);
 
-                // trace('calling funcall $funcInfo with $args');
+                // trace('calling funcall $funcInfo with args (before evaluation): $args');
                 return funcall(funcInfo, args);
             case Quote(exp):
                 exp;

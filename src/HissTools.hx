@@ -40,8 +40,8 @@ class HissTools {
                 '[hxfunction]';
             case Function(Hiss(f)):
                 '[hissfunction ${f.argNames}]';
-            case Function(Macro(f)):
-                '[macro ${Function(f).toPrint()}]';
+            case Function(Macro(e,f)):
+                '[${if (!e) "special " else ""}macro ${Function(f).toPrint()}]';
             case Error(m):
                 '!$m!';
             case Nil:

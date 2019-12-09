@@ -3,6 +3,7 @@
         (if ,var
             ,var
             ,value)))
+
 (defmacro case (form &rest case-list)
     (setq case--first (first case-list))
     (setq case--rest (rest case-list))
@@ -11,6 +12,19 @@
             ,(cons 'progn (rest case--first))
             ,(cons 'case (cons form case--rest)))
         nil))
+
+(defmacro variadic-binop (symbol base-function &optional zero-case one-case)
+    (default zero-case 0)
+    (default one-case '(first args))
+    `(defun ,symbol (&rest args)
+        (case (length args)
+            (0 ,zero-case)
+            (1 ,one-case)
+            (2 (,base-function (nth args 0) (nth args 1)))
+            (t (,symbol (cons (funcall ,symbol (take args 2)) (slice args 2)))))))
+
+(variadic-binop - haxe- 0 (haxe- 0 (first args)))
+
 (defun + (&rest args)
     (if (haxe== (length args) 1)
         (first args)
