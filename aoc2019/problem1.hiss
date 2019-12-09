@@ -4,4 +4,4 @@
     (if (haxe< number 0) 
         0
         (+ number (fuel number))))
-(println (eval (cons '+ (map modules fuel))))
+(println (sum (map modules fuel)))

@@ -303,7 +303,12 @@ class HissInterp {
 
         variables['scope-in'] = Function(Haxe(Fixed, () -> {stackFrames.push(new HMap()); return Nil; }));
         variables['scope-out'] = Function(Haxe(Fixed, () -> {stackFrames.pop(); return Nil;}));
+        variables['scope-return'] = Function(Haxe(Fixed, (v: HValue) -> { stackFrames.pop(); return v;}));
         
+        variables['error'] = Function(Haxe(Fixed, (message: HValue) -> {return Error(message.toString());}));
+
+        // TODO strings with interpolation
+
         function setq (l: HValue) {
             var list = l.toList();
             var name = symbolName(list[0]).toString();
@@ -372,6 +377,7 @@ class HissInterp {
                 //trace('calling ${funcInfo} with arg ${v}');
                 funcall(func, List([v]));
             }
+            return Nil;
         }));
         variables['map'] = Function(Haxe(Fixed, (arr: HValue, func: HValue) -> {
             return List([for (v in arr.toList()) funcall(func, List([v]))]);
@@ -426,7 +432,7 @@ class HissInterp {
         }
 
         var watchedFunctions = [];
-        var watchedFunctions = ["variadic-binop", "-", "haxe-", "funcall"];
+        //var watchedFunctions = ["variadic-binop", "-", "haxe-", "funcall"];
         var watched = watchedFunctions.indexOf(name) != -1;
 
         // trace('calling function $name whose value is $func');
@@ -590,7 +596,7 @@ class HissInterp {
                 var value = switch (funcInfo) {
                     case VarInfo(v):
                         v.value;
-                    default: throw 'fuck';
+                    default: throw '$funcInfo is not a function pointer';
                 }
                 if (funcInfo == null || value == null) { trace(funcInfo); }
                 var args = rest(expr);

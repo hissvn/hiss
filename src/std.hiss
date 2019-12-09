@@ -15,28 +15,35 @@
 
 (defmacro variadic-binop (symbol base-function &optional zero-case one-case)
     (default zero-case 0)
-    (default one-case '(first args))
+    (default one-case 'val)
     `(defun ,symbol (&rest args)
         (case (length args)
             (0 ,zero-case)
-            (1 ,one-case)
+            (1 (let ((val (first args))) ,one-case))
             (2 (,base-function (nth args 0) (nth args 1)))
             (t (funcall ,symbol (cons (funcall ,base-function (take args 2)) (slice args 2)))))))
 
-(variadic-binop - haxe- 0 (haxe- 0 (first args)))
+(variadic-binop - haxe- 0 (haxe- 0 val))
 (variadic-binop + haxe+)
+(variadic-binop / haxe/ (error "can't divide without an operand") (/ 1 val))
+(variadic-binop * haxe* 1)
 
 (defmacro bind (pair)
     `(setlocal ,(first pair) ,(first (rest pair))))
 
 (defmacro let (bindings &rest body)
-    `(progn 
+    `(progn
         (scope-in)
         (dolist ',bindings bind)
-        (dolist ',body eval)
-        (scope-out)))
+        (setlocal result ,(cons 'progn body))
+        (scope-return result)))
 
 (defun range (arg1 &optional arg2)
     (if arg2
         (haxe... arg1 arg2)
         (haxe... 0 arg1)))
+
+(defun sum (args)
+    (setq sum--total 0)
+    (dolist args (lambda (arg) (setq sum--total (+ sum--total arg))))
+    sum--total)
