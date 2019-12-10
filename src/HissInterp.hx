@@ -237,6 +237,13 @@ class HissInterp {
 
         variables['not'] = Function(Haxe(Fixed, (v: HValue) -> if (truthy(v)) Nil else T));
 
+        variables['read-line'] = Function(Haxe(Var, (args: HValue) -> {
+            if (args.toList().length == 1) {
+                Sys.print(first(args).toString());
+            }
+            return Atom(String(Sys.stdin().readLine()));
+        }));
+
         // Control flow
         variables['if'] = Function(Macro(false, Haxe(Fixed, hissIf)));
 
