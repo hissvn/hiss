@@ -12,7 +12,7 @@ class Repl {
  	public static function run() {
 		var interp = new HissInterp();
 		interp.variables['__running__'] = T;
-		interp.variables['quit'] = Function(Haxe(Fixed, () -> { interp.variables['__running__'] = Nil; }));
+		interp.variables['quit'] = Function(Haxe(Fixed, () -> { interp.variables['__running__' ] = Nil; Sys.exit(0);}));
 		while (interp.variables['__running__'].truthy()) {
 	 		Sys.print(">>> ");
 	 		var input = Sys.stdin().readLine();

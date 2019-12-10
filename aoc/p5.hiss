@@ -1,0 +1,3 @@
+(load "aoc/intcode-comp.hiss")
+(defun p1 ()
+    (execute 5))

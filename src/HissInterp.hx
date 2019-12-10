@@ -255,6 +255,10 @@ class HissInterp {
             return exps;
         }));
 
+        variables['quote'] = Function(Macro(false, Haxe(Fixed, (exp: HValue) -> {
+            return exp;
+        })));
+
         function int(value: HValue) {
             try {
                 value.toInt();
@@ -275,23 +279,22 @@ class HissInterp {
         }
         importPredicate(list);
 
+        function symbol(value: HValue) {
+            try {
+                symbolName(value);
+                return T;
+            } catch (s: Dynamic) {
+                return Nil;
+            }
+        }
+        importPredicate(symbol);
+
         // Haxe std io
         function print(value: HValue) {
-            try {
-				var primitiveVal = HissInterp.valueOf(value);
-				Sys.print(primitiveVal);
-			} catch (e: Dynamic) {
-				Sys.print(value);
-			}
-            return value;
-        }
-        function println(value: HValue) {
-            print(value);
-            Sys.print("\n");
+            Sys.println(value.toPrint());
             return value;
         }
         importFixed(print);
-        importFixed(println);
         
         importWrapped(Std.parseInt);
         importWrapped(Std.parseFloat);
@@ -326,6 +329,10 @@ class HissInterp {
 
         variables['haxe&&'] = Function(Haxe(Fixed, (a: HValue, b: HValue) -> {
             if (truthy(a) && truthy(b)) T else Nil;
+        }));
+
+        variables['eq'] = Function(Haxe(Fixed, (a: HValue, b: HValue) -> {
+            return if (Type.enumEq(a, b)) T else Nil;
         }));
 
         function or(args: HValue) {
@@ -369,7 +376,16 @@ class HissInterp {
 
         // TODO strings with interpolation
 
-        function setq (l: HValue) {
+        function string(l: HValue): HValue {
+            return Atom(String(try {
+                valueOf(l).toString();
+            } catch (s: Dynamic) {
+                Std.string(valueOf(l));
+            }));
+        }
+        importFixed(string);
+
+        function setq (l: HValue): HValue {
             var list = l.toList();
             var name = symbolName(list[0]).toString();
             var value = eval(list[1]);
@@ -419,19 +435,40 @@ class HissInterp {
         variables['setq'] = Function(Macro(false, Haxe(Var, setq)));
         variables['setlocal'] = Function(Macro(false, Haxe(Var, setlocal)));
 
-        variables['set-nth'] = Function(Haxe(Fixed, (arr: HValue, idx: HValue, val: HValue) -> { arr.toList()[idx.toInt()] = val; return arr;}));
+        variables['set-nth'] = Function(Haxe(Fixed, (arr: HValue, idx: HValue, val: HValue) -> { 
+            arr.toList()[idx.toInt()] = val; return arr;
+        }));
 
         variables['for'] = Function(Macro(false, Haxe(Var, (args: HValue) -> {
             var argList = args.toList();
             var name = argList[0];
-            var it: IntIterator = cast(eval(argList[1]).toObject(), IntIterator);
-            var body: HValue = List(argList.slice(2));
-            return List([for (v in it) {
-                setlocal(List([name, Atom(Int(v))]));
+            var coll = eval(argList[1]);
+            //var coll = argList[1];
 
-                //trace('innter funcall');
-                eval(cons(Atom(Symbol("progn")), body));
-            }]);
+
+            var body: HValue = List(argList.slice(2));
+            return switch (coll) {
+                case Object("IntIterator", o):
+                    var it: IntIterator = cast(eval(argList[1]).toObject(), IntIterator);
+            
+                    List([for (v in it) {
+                        setlocal(List([name, Atom(Int(v))]));
+
+                        //trace('innter funcall');
+                        eval(cons(Atom(Symbol("progn")), body));
+                    }]);
+                case List(l):
+                    List([for (v in l) {
+                        setlocal(List([name, v]));
+
+                        //trace('innter funcall');
+                        eval(cons(Atom(Symbol("progn")), body));
+                    }]);
+                default:
+                    Error('cannot call for loop on ${coll.toPrint()}');
+            }
+
+            
             //return Nil;
         })));
 
@@ -516,6 +553,7 @@ class HissInterp {
         }
 
         var watchedFunctions = [];
+        //watchedFunctions = ["nth", "set-nth", "+", "progn"];
         //watchedFunctions = ["distance", "anonymous"];
         // watchedFunctions = ["intersection", "and", "not"];
         //watchedFunctions = ["dolist"];
