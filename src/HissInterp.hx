@@ -327,9 +327,9 @@ class HissInterp {
         // Still more binary operators just don't exist in lisp because they are named functions like `and` or `or`
         importBinops(true, /* "&&",*/ "||", "...");
 
-        variables['haxe&&'] = Function(Haxe(Fixed, (a: HValue, b: HValue) -> {
+        /* variables['haxe&&'] = Function(Haxe(Fixed, (a: HValue, b: HValue) -> {
             if (truthy(a) && truthy(b)) T else Nil;
-        }));
+        })); */
 
         variables['eq'] = Function(Haxe(Fixed, (a: HValue, b: HValue) -> {
             return if (Type.enumEq(a, b)) T else Nil;
@@ -662,7 +662,16 @@ class HissInterp {
                         }
                     }
 
-                    stackFrames = [argStackFrame];
+                    // Functions bodies should be executed in their own cut-off stack frame.
+                    stackFrames = if (truthy(evalArgs)) {
+                        [argStackFrame];
+                    } 
+                    //  Macros should not!
+                    else {
+                        var copy = stackFrames.copy();
+                        copy.push(argStackFrame);
+                        copy;
+                    }
                     
                     var lastResult = null;
                     for (expression in funDef.body) {
