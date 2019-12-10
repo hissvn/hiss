@@ -428,6 +428,18 @@ class HissInterp {
             //return Nil;
         })));
 
+        variables['while'] = Function(Macro(false, Haxe(Var, (args: HValue) -> {
+            var argList = args.toList();
+            var cond = argList[0];
+            var body: HValue = List(argList.slice(1));
+            
+            while (truthy(eval(cond))) {
+                //trace('innter funcall');
+                eval(cons(Atom(Symbol("progn")), body));
+            }
+            return Nil;
+        })));
+
         variables['dolist'] = Function(Haxe(Fixed, (list: HValue, func: HValue) -> {
             for (v in list.toList()) {
                 

@@ -6,16 +6,17 @@
 (defun execute (input-num noun verb)
     (load-intcode input-num)
     (setq counter 0)
+    (setq running t)
     (set-nth program 1 noun)
     (set-nth program 2 verb)
-    (println (run)))
+    (while running (run)))
 
 (setq instructions '(
     ; (code num-args body...)
-    ; body can reference args by index with (n) form
-    (99 0 (nth program 0))
-    (1 3 (set-nth program (2) (+ (nth program (0)) (nth program (1)))))
-    (2 3 (set-nth program (2) (* (nth program (0)) (nth program (1)))))))
+    ; body can reference args by index with (nth args n) form
+    (99 0 (print (nth program 0)) (setq running nil))
+    (1 3 (set-nth program (nth args 2) (+ (nth program (nth args 0)) (nth program (nth args 1)))))
+    (2 3 (set-nth program (nth args 2) (* (nth program (nth args 0)) (nth program (nth args 1)))))))
 
 (defun run ()
     (setq instruction (nth program counter))
@@ -25,4 +26,9 @@
                 (num-args (nth definition 1))
                 (body (slice definition 2)))
             (if (= opcode instruction)
-                (print (+ "running opcode " opcode)))))))
+                ; (print (+ "running opcode " opcode)
+                (let ((args (for i (range num-args) (nth program (+ counter 1 i)))))
+                    ;(println opcode)
+                    ;(println args)
+                    (eval (cons 'progn body))
+                    (setq counter (+ counter 1 num-args)))))))))
