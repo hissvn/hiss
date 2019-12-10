@@ -15,6 +15,16 @@ import HTypes;
 
 class HissParser {
     public static function read(str: String) {
+
+        // Remove comments
+        var comment = ~/;.*\n/;
+        
+        var oldStr = "";
+        do {
+            oldStr = str;
+            str = comment.replace(str, "");
+        } while (str != oldStr);
+
         if (parseFunction == null) { init(); }
         var result = parseFunction(str);
         if (!result.status) {
@@ -70,11 +80,7 @@ class HissParser {
         var hissUnquote = ",".string().then(hissExpression)
             .map((r) -> Unquote(r)); 
 
-        var comment = ~/;.*\n/.regexp().trim()
-            .map((r) -> Nil);
-
         hissExpression.apply = [
-            comment,
             hissQuasiquote,
             hissQuote,
             hissUnquote,

@@ -258,6 +258,15 @@ class HissInterp {
         }
         importPredicate(int);
 
+        function list(value: HValue) {
+            try {
+                value.toList();
+                return T;
+            } catch (s: Dynamic) {
+                return Nil;
+            }
+        }
+        importPredicate(list);
 
         // Haxe std io
         function print(value: HValue) {
@@ -405,15 +414,19 @@ class HissInterp {
 
         variables['set-nth'] = Function(Haxe(Fixed, (arr: HValue, idx: HValue, val: HValue) -> { arr.toList()[idx.toInt()] = val; return arr;}));
 
-        /*variables['for'] = Function(Macro(Haxe(Fixed, (iterator: HValue, func: HValue) -> {
-            var it: IntIterator = eval(iterator);
-            var f = resolve(symbolName(func));
-            for (v in it) {
-                trace('innter funcall');
-                funcall(f, [v]);
-            }
+        variables['for'] = Function(Macro(false, Haxe(Var, (args: HValue) -> {
+            var argList = args.toList();
+            var name = argList[0];
+            var it: IntIterator = cast(eval(argList[1]).toObject(), IntIterator);
+            var body: HValue = List(argList.slice(2));
+            return List([for (v in it) {
+                setlocal(List([name, Atom(Int(v))]));
+
+                //trace('innter funcall');
+                eval(cons(Atom(Symbol("progn")), body));
+            }]);
+            //return Nil;
         })));
-        */
 
         variables['dolist'] = Function(Haxe(Fixed, (list: HValue, func: HValue) -> {
             for (v in list.toList()) {
@@ -460,6 +473,10 @@ class HissInterp {
 
     public static function toList(list: HValue): HList {
         return HissTools.extract(list, List(l) => l);
+    }
+
+    public static function toObject(obj: HValue): Dynamic {
+        return HissTools.extract(obj, Object(_, o) => o);
     }
 
     function evalAll(hl: HValue): HValue {

@@ -21,6 +21,7 @@ enum HValue {
     Error(m: String);
     Nil;
     T;
+    Comment;
 }
 
 enum HArgType {
