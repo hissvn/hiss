@@ -32,5 +32,6 @@
     (setq symbolic t)
     (setq my-equation (execute 2 'noun 'verb))
     (setq my-equation (combine-like-operators my-equation))
+    (setq my-equation (distribute-multiplication my-equation))
     (print my-equation)
     (setq symbolic nil))

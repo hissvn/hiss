@@ -365,9 +365,22 @@ class HissInterp {
             if (truthy(a) && truthy(b)) T else Nil;
         })); */
 
-        variables['eq'] = Function(Haxe(Fixed, (a: HValue, b: HValue) -> {
-            return if (Type.enumEq(a, b)) T else Nil;
-        }));
+        function eq(a: HValue, b: HValue): HValue {
+            try {
+                var l1 = a.toList();
+                var l2 = b.toList();
+                if (l1.length != l2.length) return Nil;
+                var i = 0;
+                while (i < l1.length) {
+                    if (!truthy(eq(l1[i], l2[i]))) return Nil;
+                    i++;
+                }
+                return T;
+            } catch (s: Dynamic) {
+                return if (Type.enumEq(a, b)) T else Nil;
+            }
+        }
+        importFixed(eq);
 
         function or(args: HValue) {
             return if (args.toList().length == 0) {
@@ -726,7 +739,7 @@ class HissInterp {
             }
         } catch (s: Dynamic) {
             trace('error $s while $message');
-            return Error(${Std.string(s)});
+            throw s;
         }
     }
 

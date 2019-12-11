@@ -23,7 +23,7 @@ class Repl {
 				Sys.println(hval.toPrint());
 			} catch (e: Dynamic) {
 				Sys.println('error $e');
-				Sys.println(CallStack.exceptionStack());
+				// Sys.println(CallStack.exceptionStack());
 			}
 		}
  	}

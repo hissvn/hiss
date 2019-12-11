@@ -42,6 +42,29 @@
             equation)
         ))
 
+(defun distribute-multiplication (equation)
+    (print equation)
+    (if (list? equation)
+        (if (and 
+                (eq (nth equation 0) '*) 
+                (list? (nth equation 2)) 
+                (eq (nth (nth equation 2) 0) '+)
+                (int? (nth equation 1)))
+            (let ((inner-equation (nth equation 2))
+                    (scale (nth equation 1))
+                    (operand1 (nth inner-equation 1))
+                    (operand2 (nth inner-equation 2)))
+                (distribute-multiplication
+                    `(+ 
+                        ,(if (int? operand1)
+                            (eval '(* scale (distribute-multiplication operand1)))
+                            (distribute-multiplication operand1))
+                        ,(if (or (list? operand2) (symbol? operand2))
+                            `(* ,scale ,(distribute-multiplication operand2))
+                            (eval '(* scale (distribute-multiplication operand2)))) )))
+            `(,(first equation) ,(distribute-multiplication (nth equation 1)) ,(distribute-multiplication (nth equation 2))))
+        equation))
+
 (setq symbolic nil)
 (setq instructions '(
     ; (code num-args body...)
