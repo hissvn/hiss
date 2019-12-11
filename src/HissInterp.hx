@@ -237,6 +237,40 @@ class HissInterp {
 
         variables['not'] = Function(Haxe(Fixed, (v: HValue) -> if (truthy(v)) Nil else T));
 
+        // TODO allow other sorting algorithms, Reflect.compare, etc.
+        function sort(v: HValue) {
+            var sorted = v.toList().copy();
+            sorted.sort((v1:HValue, v2:HValue) -> {
+                Std.int(valueOf(v1) - valueOf(v2));
+            });
+            return List(sorted);
+        }
+        importFixed(sort);
+        function reverseSort(v: HValue) {
+            var sorted = v.toList().copy();
+            sorted.sort((v1:HValue, v2:HValue) -> {
+                Std.int(valueOf(v2) - valueOf(v1));
+            });
+            return List(sorted);
+        }
+        importFixed(reverseSort);
+
+        function indexOf(l: HValue, v: HValue): HValue {
+            var list = l.toList();
+            var idx = 0;
+            for (lv in list) {
+                if (Type.enumEq(v, lv)) return Atom(Int(idx));
+                idx++;
+            }
+            return Nil;
+        }
+        importFixed(indexOf);
+        
+        function contains(l: HValue, v: HValue):HValue {
+            return if (truthy(indexOf(l, v))) T else Nil;
+        }
+        importFixed(contains);
+
         variables['read-line'] = Function(Haxe(Var, (args: HValue) -> {
             if (args.toList().length == 1) {
                 Sys.print(first(args).toString());

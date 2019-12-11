@@ -84,6 +84,11 @@
             (push filter--result val))))
     filter--result)
 
+(defun unique (list)
+    (let ((result '()))
+        (for v (sort list) (if (not (contains result v)) (push result v)))
+        result))
+
 ; Temp functions -- eventually these will need to account for not knowing if hiss is run from repo root
 (defun lstd () (load "src/std.hiss"))
 (defun lp (num) (load (+ "aoc/p" num ".hiss")))
