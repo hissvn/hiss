@@ -50,10 +50,8 @@ class HissTools {
                 't';
             case Dict(hdict):
                 '${[for (k => v in hdict) '$k => ${v.toPrint()}, ']}';
-            /*
-            case varinfo
-            */
-
+            case VarInfo(hvi):
+                '{name: ${hvi.name}, value: ${hvi.value.toPrint()}, container: ${hvi.container}}';
             case Quasiquote(e):
                 return '`${e.toPrint()}';
             case Unquote(e):
