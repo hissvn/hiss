@@ -1,0 +1,7 @@
+(setq orbit-pairs (for line (split-lines (getContent "aoc/input6.txt")) (split line ")")))
+(setq objects-with-satellites (for pair orbit-pairs (nth pair 0)))
+(setq leaf-objects (filter (for pair orbit-pairs (nth pair 1)) (lambda (object) (not (contains objects-with-satellites object)))))
+;(setq keys-to-values (for pair values-to-keys (swap-nth values-to-keys 0 1)))
+
+
+(print direct-orbits)
