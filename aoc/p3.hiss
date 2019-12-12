@@ -33,8 +33,8 @@
     (y (point-a horizontal-line)))
 
 (defun intersection (line-a line-b)
-    (let ((a-vertical (vertical line-a))
-        (b-vertical (vertical line-b)))
+    (let (a-vertical (vertical line-a)
+        b-vertical (vertical line-b))
         (if (not (= a-vertical b-vertical)) (progn
             (setlocal h--line (if a-vertical line-b line-a))
             (setlocal v--line (if a-vertical line-a line-b))
@@ -68,8 +68,8 @@
         (abs (- (y point-a) (y point-b)))))
 
 (defun move (point movement)
-    (let ((dir (charAt movement 0))
-        (dist (parseInt (substr movement 1))))
+    (let (dir (charAt movement 0)
+        dist (parseInt (substr movement 1)))
         (add
             point
             (case dir
@@ -87,9 +87,9 @@
             `(,wire--location ,(setq wire--location (move wire--location movement))))))
 
 (defun test-funs ()
-    (let ((line-a `(,origin ,(move origin "L3")))
-        (line-b `(,origin ,(move origin "R3")))
-        (line-c `(,origin ,(move origin "U5"))))
+    (let (line-a `(,origin ,(move origin "L3"))
+        line-b `(,origin ,(move origin "R3"))
+        line-c `(,origin ,(move origin "U5")))
             (println (vertical line-a))
             (println (vertical line-b))
             (println (vertical line-c))

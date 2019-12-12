@@ -48,8 +48,9 @@ class HissTools {
                 'nil';
             case T:
                 't';
+            case Dict(hdict):
+                '${[for (k => v in hdict) '$k => ${v.toPrint()}, ']}';
             /*
-            case map
             case varinfo
             */
 

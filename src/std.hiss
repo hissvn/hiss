@@ -5,12 +5,12 @@
             ,value)))
 
 (defmacro case (form &rest case-list)
-    (let ((case--first (first case-list))
-            (case--rest (rest case-list)))
-        (if case--first
-            `(if (haxe|| (haxe== ,(first case--first) t) (haxe== ,(first case--first) ,form))
-                ,(cons 'progn (rest case--first))
-                ,(cons 'case (cons form case--rest)))
+    (let (case-first (first case-list)
+            case-rest (rest case-list))
+        (if case-first
+            `(if (haxe|| (haxe== ,(first case-first) t) (haxe== ,(first case-first) ,form))
+                ,(cons 'progn (rest case-first))
+                ,(cons 'case (cons form case-rest)))
             nil)))
 
 (defmacro variadic-binop (symbol base-function &optional zero-case one-case two-case)
@@ -20,8 +20,11 @@
     `(defun ,symbol (&rest args)
         (case (length args)
             (0 ,zero-case)
-            (1 (let ((val (first args))) ,one-case))
-            (2 (let ((val1 (nth args 0)) (val2 (nth args 1)) (fun ,base-function)) ,two-case))
+            (1 (let (val (first args)) ,one-case))
+            (2 (let (val1 (nth args 0)
+                    val2 (nth args 1)
+                    fun ,base-function)
+                ,two-case))
             (t (funcall ,symbol (cons (funcall ,symbol (take args 2)) (slice args 2)))))))
 
 (variadic-binop - haxe- 0 (haxe- 0 val))
@@ -54,15 +57,12 @@
     (set-nth list n1 (nth list n2))
     (set-nth list n2 temp))
 
-(defmacro bind (pair)
-    `(setlocal ,(first pair) ,(first (rest pair))))
-
 (defmacro let (bindings &rest body)
     `(progn
         (scope-in)
-        (dolist ',bindings bind)
-        (setlocal result ,(cons 'progn body))
-        (scope-return result)))
+        ,(cons 'setlocal ,bindings)
+        (setlocal let-result ,(cons 'progn body))
+        (scope-return let-result)))
 
 (defun range (arg1 &optional arg2)
     (if arg2
@@ -70,22 +70,25 @@
         (haxe... 0 arg1)))
 
 (defun sum (args)
-    (setq sum--total 0)
-    (dolist args (lambda (arg) (setq sum--total (+ sum--total arg))))
-    sum--total)
+    (let (total 0)
+        (for arg args (setlocal total (+ total arg)))
+        total
+        ))
 
 (defun filter (list &optional criterion)
     (default criterion (lambda (val) val))
-    (setq filter--criterion criterion)
-    (setq filter--result '())
-    (dolist list (lambda (val)
-        ;(print val)
-        (if (funcall filter--criterion '(val))
-            (push filter--result val))))
-    filter--result)
+    (print result)
+    (let (result '())
+        ;(setlocal result '())
+        (print result)
+        (for val list
+            (print result)
+            (if (funcall criterion `(,val))
+                (push result val)))
+        result))
 
 (defun unique (list)
-    (let ((result '()))
+    (let (result '())
         (for v (sort list) (if (not (contains result v)) (push result v)))
         result))
 

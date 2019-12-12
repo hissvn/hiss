@@ -18,9 +18,11 @@ using HissInterp;
 import HissTools;
 
 class HissInterp {
-    public var variables: HMap = [];
-    private var stackFrames: Array<HMap> = [];
+    public var variables: HDict = [];
+    private var stackFrames: Array<HDict> = [];
 
+    var watchedVariables: HValue;
+    var watchedFunctions: HValue;
     // TODO import needs to turn camel case into lisp-case
     static function symbolName(v: HValue): HValue {
         return Atom(String(HissTools.extract(v, Atom(Symbol(name)) => name)));
@@ -255,20 +257,8 @@ class HissInterp {
         }
         importFixed(reverseSort);
 
-        function indexOf(l: HValue, v: HValue): HValue {
-            var list = l.toList();
-            var idx = 0;
-            for (lv in list) {
-                if (Type.enumEq(v, lv)) return Atom(Int(idx));
-                idx++;
-            }
-            return Nil;
-        }
         importFixed(indexOf);
         
-        function contains(l: HValue, v: HValue):HValue {
-            return if (truthy(indexOf(l, v))) T else Nil;
-        }
         importFixed(contains);
 
         variables['read-line'] = Function(Haxe(Var, (args: HValue) -> {
@@ -415,7 +405,7 @@ class HissInterp {
 
         variables['push'] = Function(Haxe(Fixed, (l:HValue, v:HValue) -> {l.toList().push(v); return l;}));
 
-        variables['scope-in'] = Function(Haxe(Fixed, () -> {stackFrames.push(new HMap()); return Nil; }));
+        variables['scope-in'] = Function(Haxe(Fixed, () -> {stackFrames.push(new HDict()); return Nil; }));
         variables['scope-out'] = Function(Haxe(Fixed, () -> {stackFrames.pop(); return Nil;}));
         variables['scope-return'] = Function(Haxe(Fixed, (v: HValue) -> { stackFrames.pop(); return v;}));
         
@@ -436,8 +426,10 @@ class HissInterp {
             var list = l.toList();
             var name = symbolName(list[0]).toString();
             var value = eval(list[1]);
-            // trace('done evaling the list');
-            // trace('setting $name to $value');
+            
+            var watched = truthy(contains(watchedVariables, Atom(String(name))));
+            if (watched) trace('calling setq for $name. New value ${value.toPrint()}');
+
             variables[name] = value;
             if (list.length > 2) {
                 return setq(List(list.slice(2)));
@@ -447,14 +439,20 @@ class HissInterp {
         };
 
         function setlocal (l: HValue) {
-            //trace(list);
             var list = l.toList();
             var name = symbolName(list[0]).toString();
+            var watched = truthy(contains(watchedVariables, Atom(String(name))));
+
+            if (watched) trace(l.toPrint());
+
             var value = eval(list[1]);
-            var stackFrame: HMap = variables;
+            var stackFrame: HDict = variables;
             if (stackFrames.length > 0) {
+                // By default, setlocal binds the variable at the current scope
                 stackFrame = stackFrames[stackFrames.length-1];
+                // But if a higher scope already binds the variable, it will be modified instead. TODO or not??!?!?!
             }
+            if (watched) trace('calling setlocal for $name on frame ${Dict(stackFrame).toPrint()} with ${stackFrames.length} frames and new value ${value.toPrint()} evaluated from ${list[1].toPrint()}');
             stackFrame[name] = value;
             if (list.length > 2) {
                 return setlocal(List(list.slice(2)));
@@ -506,7 +504,7 @@ class HissInterp {
                     }]);
                 case List(l):
                     List([for (v in l) {
-                        setlocal(List([name, v]));
+                        setlocal(List([name, Quote(v)]));
 
                         //trace('innter funcall');
                         eval(cons(Atom(Symbol("progn")), body));
@@ -543,13 +541,76 @@ class HissInterp {
             return List([for (v in arr.toList()) funcall(func, List([v]))]);
         }));
 
+        variables['dict'] = Function(Macro(false, Haxe(Var, (pairs: HValue) -> {
+            var dict = new HDict();
+            for (pair in pairs.toList()) {
+                var key = nth(pair, Atom(Int(0))).toString();
+                var value = eval(nth(pair, Atom(Int(1))));
+                dict[key] = value;
+            }
+            return Dict(dict);
+        })));
+
+        variables['set-dict'] = Function(Haxe(Fixed, (dict: HValue, key: HValue, value: HValue) -> {
+            var dictObj: HDict = dict.toDict();
+            dictObj[key.toString()] = value;
+            return dict;
+        }));
+
+        variables['get-dict'] = Function(Haxe(Fixed, (dict: HValue, key: HValue) -> {
+            var dictObj: HDict = dict.toDict();
+            return dictObj[key.toString()];
+        }));
+
+        variables['keys'] = Function(Haxe(Fixed, (dict: HValue) -> {
+            var dictObj: HDict = dict.toDict();
+            return List([for (key in dictObj.keys()) Atom(String(key))]);
+        }));
+
+
+        function charAt (str: HValue, idx: HValue) {
+            return Atom(String(str.toString().charAt(idx.toInt())));
+        }
+        importFixed(charAt);
+        
+        variables['substr'] = Function(Haxe(Var, (args: HValue) -> {
+            var l = args.toList();
+            var str = l[0].toString();
+            var start = l[1].toInt();
+            var len = null;
+            if (l.length > 2) len = l[2].toInt();
+            return Atom(String(str.substr(start, len)));
+        }));
+
+        watchedFunctions = List([]);
+        watchedVariables = List([]);
+        variables['watched-functions'] = watchedFunctions;
+        variables['watched-vars'] = watchedVariables;
+
         try {
             load(Atom(String('src/std.hiss')));
-        } catch (s: Dynamic) {
+        }/* catch (s: Dynamic) {
             trace('Error loading the standard library: $s');
-        }
+        }*/
     }
 
+    function indexOf(l: HValue, v: HValue): HValue {
+        var list = l.toList();
+        var idx = 0;
+        for (lv in list) {
+            if (Type.enumEq(v, lv)) return Atom(Int(idx));
+            idx++;
+        }
+        return Nil;
+    }
+
+    function contains(l: HValue, v: HValue):HValue {
+        return if (truthy(indexOf(l, v))) T else Nil;
+    }
+
+    public static function toDict(dict: HValue): HDict {
+        return HissTools.extract(dict, Dict(h) => h);
+    }
 
     public static function first(list: HValue): HValue {
         //trace('calling first on ${list.toPrint()}');
@@ -599,31 +660,15 @@ class HissInterp {
             default:
         }
 
-        var watchedFunctions = [];
+        // watchedFunctions = ["filter"];
         //watchedFunctions = ["nth", "set-nth", "+", "progn"];
         //watchedFunctions = ["distance", "anonymous"];
         // watchedFunctions = ["intersection", "and", "not"];
         //watchedFunctions = ["dolist"];
 
-
-        function charAt (str: HValue, idx: HValue) {
-            return Atom(String(str.toString().charAt(idx.toInt())));
-        }
-        importFixed(charAt);
-        
-        variables['substr'] = Function(Haxe(Var, (args: HValue) -> {
-            var l = args.toList();
-            var str = l[0].toString();
-            var start = l[1].toInt();
-            var len = null;
-            if (l.length > 2) len = l[2].toInt();
-            return Atom(String(str.substr(start, len)));
-        }));
-
-
         //var watchedFunctions = ['=', 'haxe=='];
         //var watchedFunctions = ["variadic-binop", "-", "haxe-", "funcall"];
-        var watched = watchedFunctions.indexOf(name) != -1;
+        var watched = truthy(contains(watchedFunctions, Atom(String(name))));
 
         // trace('calling function $name whose value is $func');
 
@@ -637,17 +682,6 @@ class HissInterp {
                 } else {
                     macroExpansion;
                 };
-            
-                /*
-                switch (func) {
-                    case Haxe(_, _):
-                        return val;
-                    case Hiss(_):
-                        trace('macro ${funcInfo.name} expanded to ${val}');
-                        return eval(val);
-                    case Macro(_):
-                        throw 'eawerae';
-                }*/      
             default:
         }
         
@@ -688,7 +722,7 @@ class HissInterp {
                 case Hiss(funDef):
                     var oldStackFrames = stackFrames;
 
-                    var argStackFrame: HMap = [];
+                    var argStackFrame: HDict = [];
                     var valIdx = 0;
                     var nameIdx = 0;
                     while (nameIdx < funDef.argNames.length) {
@@ -723,6 +757,13 @@ class HissInterp {
                     var lastResult = null;
                     for (expression in funDef.body) {
                         try {
+                            if (watched) {
+                                trace('there are ${stackFrames.length} stack frames when calling $name');
+                                trace('top stack frame:');
+                                trace(Dict(stackFrames[stackFrames.length-1]).toPrint());
+                                trace('variables:');
+                                trace(Dict(variables).toPrint());
+                            } 
                             lastResult = eval(expression);
                         }/* catch (e: Dynamic) {
                             stackFrames = oldStackFrames;

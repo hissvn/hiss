@@ -16,7 +16,7 @@ enum HValue {
     // If you're going to store arbitrary objects in Hiss variables, do yourself a favor and give them a descriptive label because Haxe runtime type info can be squirrely on different platforms
     Object(t: String, v: Dynamic);
     Function(f: HFunction);
-    Map(n: HMap);
+    Dict(n: HDict);
     VarInfo(i: HVarInfo);
     Error(m: String);
     Nil;
@@ -36,7 +36,7 @@ enum HFunction {
     Macro(evalResult: Bool, f: HFunction);
 }
 
-typedef HMap = Map<String, HValue>;
+typedef HDict = Map<String, HValue>;
 
 typedef HFunDef = {
     var argNames: Array<String>;
@@ -46,7 +46,7 @@ typedef HFunDef = {
 typedef HVarInfo = {
     var name: String;
     var value: HValue;
-    var container: Null<HMap>;
+    var container: Null<HDict>;
 }
 
 typedef HList = Array<HValue>;
