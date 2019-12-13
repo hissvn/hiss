@@ -29,7 +29,7 @@ class HissInterp {
 
     public function load(file: HValue) {
         var contents = sys.io.File.getContent(HissTools.extract(file, Atom(String(s)) => s));
-        eval(HissParser.read('(progn ${contents})'));
+        eval(HissParser.read('(progn ${contents} t)'));
     }
 
     /**
@@ -227,12 +227,144 @@ class HissInterp {
         return HissTools.extract(hv, Atom(String(s)) => s);
     }
 
+     // TODO allow other sorting algorithms, Reflect.compare, etc.
+    function sort(v: HValue) {
+        var sorted = v.toList().copy();
+        sorted.sort((v1:HValue, v2:HValue) -> {
+            Std.int(valueOf(v1) - valueOf(v2));
+        });
+        return List(sorted);
+    }
+
+    function reverseSort(v: HValue) {
+        var sorted = v.toList().copy();
+        sorted.sort((v1:HValue, v2:HValue) -> {
+            Std.int(valueOf(v2) - valueOf(v1));
+        });
+        return List(sorted);
+    }
+
+    function readLine(args: HValue) {
+        if (args.toList().length == 1) {
+            Sys.print(first(args).toString());
+        }
+        return Atom(String(Sys.stdin().readLine()));
+    }
+
+    function getVariables() { return variables; }
+
+    function not(v: HValue) {
+        return if (truthy(v)) Nil else T;
+    }
+
+    function progn(exps: HValue) {
+        return exps.toList().pop();
+    }
+
+    function makeList(exps: HValue) {
+        return exps;
+    }
+
+    function quote(exp: HValue) {
+        return exp;
+    }
+
+    function int(value: HValue) {
+        try {
+            value.toInt();
+            return T;
+        } catch (s: Dynamic) {
+            return Nil;
+        }
+    }
+
+    function list(value: HValue) {
+        try {
+            value.toList();
+            return T;
+        } catch (s: Dynamic) {
+            return Nil;
+        }
+    }
+
+    function symbol(value: HValue) {
+        try {
+            symbolName(value);
+            return T;
+        } catch (s: Dynamic) {
+            return Nil;
+        }
+    }
+
+    function print(value: HValue) {
+        Sys.println(value.toPrint());
+        return value;
+    }
+
+    function eq(a: HValue, b: HValue): HValue {
+        try {
+            var l1 = a.toList();
+            var l2 = b.toList();
+            if (l1.length != l2.length) return Nil;
+            var i = 0;
+            while (i < l1.length) {
+                if (!truthy(eq(l1[i], l2[i]))) return Nil;
+                i++;
+            }
+            return T;
+        } catch (s: Dynamic) {
+            return if (Type.enumEq(a, b)) T else Nil;
+        }
+    }
+
+    function or(args: HValue) {
+        return if (args.toList().length == 0) {
+            Nil;
+        } else if (truthy(eval(first(args)))) {
+            T;
+        } else {
+            or(rest(args));
+        }
+    }
+
+    function split(s: HValue, d: HValue) {
+        return s.toString().split(d.toString()).toHValue();
+    }
+
+    function splitLines(s: HValue) {
+        return s.toString().split("\n").toHValue();
+    }
+
+    function push(l:HValue, v:HValue) {
+        l.toList().push(v); 
+        return l;
+    }
+
+    function scopeIn() {
+        stackFrames.toList().push(Dict(new HDict()));
+        return Nil;
+    }
+
+    function scopeOut() {
+        stackFrames.toList().pop();
+        return Nil;
+    }
+
+    function scopeReturn(v: HValue) {
+        stackFrames.toList().pop();
+        return v;
+    }
+
+    function error(message: HValue) {
+        return Error(message.toString());
+    }
+
     public function new() {
         // The hiss standard library:
         variables = Dict([]);
         var vars: HDict = variables.toDict();
 
-        vars['variables'] = Function(Haxe(Fixed, () -> variables)); 
+        vars['variables'] = Function(Haxe(Fixed, getVariables)); 
 
         vars['nil'] = Nil;
         vars['null'] = Nil;
@@ -240,87 +372,32 @@ class HissInterp {
         vars['t'] = T;
         vars['true'] = T;
 
-        vars['not'] = Function(Haxe(Fixed, (v: HValue) -> if (truthy(v)) Nil else T));
-
-        // TODO allow other sorting algorithms, Reflect.compare, etc.
-        function sort(v: HValue) {
-            var sorted = v.toList().copy();
-            sorted.sort((v1:HValue, v2:HValue) -> {
-                Std.int(valueOf(v1) - valueOf(v2));
-            });
-            return List(sorted);
-        }
+        vars['not'] = Function(Haxe(Fixed, not));
+       
         importFixed(sort);
-        function reverseSort(v: HValue) {
-            var sorted = v.toList().copy();
-            sorted.sort((v1:HValue, v2:HValue) -> {
-                Std.int(valueOf(v2) - valueOf(v1));
-            });
-            return List(sorted);
-        }
+        
         importFixed(reverseSort);
 
         importFixed(indexOf);
         
         importFixed(contains);
 
-        vars['read-line'] = Function(Haxe(Var, (args: HValue) -> {
-            if (args.toList().length == 1) {
-                Sys.print(first(args).toString());
-            }
-            return Atom(String(Sys.stdin().readLine()));
-        }));
+        vars['read-line'] = Function(Haxe(Var, readLine));
 
         // Control flow
         vars['if'] = Function(Macro(false, Haxe(Fixed, hissIf)));
 
-        vars['progn'] = Function(Haxe(Var, (exps: HValue) -> {
-            return exps.toList().pop();
-        }));
+        vars['progn'] = Function(Haxe(Var, progn));
 
-        vars['list'] = Function(Haxe(Var, (exps: HValue) -> {
-            return exps;
-        }));
+        vars['list'] = Function(Haxe(Var, makeList));
 
-        vars['quote'] = Function(Macro(false, Haxe(Fixed, (exp: HValue) -> {
-            return exp;
-        })));
+        vars['quote'] = Function(Macro(false, Haxe(Fixed, quote)));
 
-        function int(value: HValue) {
-            try {
-                value.toInt();
-                return T;
-            } catch (s: Dynamic) {
-                return Nil;
-            }
-        }
         importPredicate(int);
-
-        function list(value: HValue) {
-            try {
-                value.toList();
-                return T;
-            } catch (s: Dynamic) {
-                return Nil;
-            }
-        }
         importPredicate(list);
-
-        function symbol(value: HValue) {
-            try {
-                symbolName(value);
-                return T;
-            } catch (s: Dynamic) {
-                return Nil;
-            }
-        }
         importPredicate(symbol);
 
         // Haxe std io
-        function print(value: HValue) {
-            Sys.println(value.toPrint());
-            return value;
-        }
         importFixed(print);
         
         importWrapped(Std.parseInt);
@@ -358,32 +435,8 @@ class HissInterp {
             if (truthy(a) && truthy(b)) T else Nil;
         })); */
 
-        function eq(a: HValue, b: HValue): HValue {
-            try {
-                var l1 = a.toList();
-                var l2 = b.toList();
-                if (l1.length != l2.length) return Nil;
-                var i = 0;
-                while (i < l1.length) {
-                    if (!truthy(eq(l1[i], l2[i]))) return Nil;
-                    i++;
-                }
-                return T;
-            } catch (s: Dynamic) {
-                return if (Type.enumEq(a, b)) T else Nil;
-            }
-        }
         importFixed(eq);
 
-        function or(args: HValue) {
-            return if (args.toList().length == 0) {
-                Nil;
-            } else if (truthy(eval(first(args)))) {
-                T;
-            } else {
-                or(rest(args));
-            }
-        }
         vars['or'] = Function(Macro(false, Haxe(Var, or)));
 
         // Some binary operators are Lisp-compatible as-is
@@ -402,188 +455,52 @@ class HissInterp {
         importFixed(load);
         importWrapped(sys.io.File.getContent);
         
-        vars['split'] = Function(Haxe(Fixed, (s: HValue, d: HValue) -> {s.toString().split(d.toString()).toHValue();}));
+        vars['split'] = Function(Haxe(Fixed, split));
         // TODO escape sequences aren't parsed so this needs its own function:
-        vars['split-lines'] = Function(Haxe(Fixed, (s: HValue) -> {s.toString().split("\n").toHValue();}));
+        vars['split-lines'] = Function(Haxe(Fixed, splitLines));
 
-        vars['push'] = Function(Haxe(Fixed, (l:HValue, v:HValue) -> {l.toList().push(v); return l;}));
+        vars['push'] = Function(Haxe(Fixed, push));
 
-        vars['scope-in'] = Function(Haxe(Fixed, () -> {stackFrames.toList().push(Dict(new HDict())); return Nil; }));
-        vars['scope-out'] = Function(Haxe(Fixed, () -> {stackFrames.toList().pop(); return Nil;}));
-        vars['scope-return'] = Function(Haxe(Fixed, (v: HValue) -> { stackFrames.toList().pop(); return v;}));
+        vars['scope-in'] = Function(Haxe(Fixed, scopeIn));
+        vars['scope-out'] = Function(Haxe(Fixed, scopeOut));
+        vars['scope-return'] = Function(Haxe(Fixed, scopeReturn));
         
-        vars['error'] = Function(Haxe(Fixed, (message: HValue) -> {return Error(message.toString());}));
+        vars['error'] = Function(Haxe(Fixed, error));
 
         // TODO strings with interpolation
 
-        function string(l: HValue): HValue {
-            return Atom(String(try {
-                valueOf(l).toString();
-            } catch (s: Dynamic) {
-                Std.string(valueOf(l));
-            }));
-        }
-        importFixed(string);
-
-        function setq (l: HValue): HValue {
-            var list = l.toList();
-            var name = symbolName(list[0]).toString();
-            var value = eval(list[1]);
-            
-            var watched = truthy(contains(watchedVariables, Atom(String(name))));
-            if (watched) trace('calling setq for $name. New value ${value.toPrint()}');
-
-            vars[name] = value;
-            if (list.length > 2) {
-                return setq(List(list.slice(2)));
-            } else {
-                return value;
-            }
-        };
-
-        function setlocal (l: HValue) {
-            var list = l.toList();
-            var name = symbolName(list[0]).toString();
-            var watched = truthy(contains(watchedVariables, Atom(String(name))));
-
-            if (watched) trace(l.toPrint());
-
-            var value = eval(list[1]);
-            var stackFrame: HDict = vars;
-            if (stackFrames.toList().length > 0) {
-                // By default, setlocal binds the variable at the current scope
-                stackFrame = stackFrames.toList()[stackFrames.toList().length-1].toDict();
-                // But if a higher scope already binds the variable, it will be modified instead. TODO or not??!?!?!
-            }
-            if (watched) trace('calling setlocal for $name on frame ${Dict(stackFrame).toPrint()} with ${stackFrames.length} frames and new value ${value.toPrint()} evaluated from ${list[1].toPrint()}');
-            stackFrame[name] = value;
-            if (list.length > 2) {
-                return setlocal(List(list.slice(2)));
-            } else {
-                return value;
-            }
-        };
-
-        function append(args: HValue) {
-            var firstList: HList = first(args).toList();
-
-            return if (truthy(rest(args))) {
-                var nextList = first(rest(args)).toList();
-                var newFirst = firstList.concat(nextList);
-                var newArgs = rest(rest(args)).toList();
-                newArgs.insert(0, List(newFirst));
-                append(List(newArgs));
-            } else {
-                List(firstList);
-            }
-        };
+        importFixed(string);        
 
         vars['append'] = Function(Haxe(Var, append));
 
         vars['setq'] = Function(Macro(false, Haxe(Var, setq)));
         vars['setlocal'] = Function(Macro(false, Haxe(Var, setlocal)));
 
-        vars['set-nth'] = Function(Haxe(Fixed, (arr: HValue, idx: HValue, val: HValue) -> { 
-            arr.toList()[idx.toInt()] = val; return arr;
-        }));
+        vars['set-nth'] = Function(Haxe(Fixed, setNth));
 
-        vars['for'] = Function(Macro(false, Haxe(Var, (args: HValue) -> {
-            var argList = args.toList();
-            var name = argList[0];
-            var coll = eval(argList[1]);
-            //var coll = argList[1];
+        vars['for'] = Function(Macro(false, Haxe(Var, hissFor)));
 
+        vars['do-for'] = Function(Macro(false, Haxe(Var, hissDoFor)));
 
-            var body: HValue = List(argList.slice(2));
-            return switch (coll) {
-                case Object("IntIterator", o):
-                    var it: IntIterator = cast(eval(argList[1]).toObject(), IntIterator);
-            
-                    List([for (v in it) {
-                        setlocal(List([name, Atom(Int(v))]));
+        vars['while'] = Function(Macro(false, Haxe(Var, hissWhile)));
 
-                        //trace('innter funcall');
-                        eval(cons(Atom(Symbol("progn")), body));
-                    }]);
-                case List(l):
-                    List([for (v in l) {
-                        setlocal(List([name, Quote(v)]));
+        vars['dolist'] = Function(Haxe(Fixed, doList));
+        vars['map'] = Function(Haxe(Fixed, map));
 
-                        //trace('innter funcall');
-                        eval(cons(Atom(Symbol("progn")), body));
-                    }]);
-                default:
-                    Error('cannot call for loop on ${coll.toPrint()}');
-            }
+        vars['dict'] = Function(Macro(false, Haxe(Var, dict)));
 
-            
-            //return Nil;
-        })));
+        vars['set-in-dict'] = Function(Haxe(Fixed, setInDict));
 
-        vars['while'] = Function(Macro(false, Haxe(Var, (args: HValue) -> {
-            var argList = args.toList();
-            var cond = argList[0];
-            var body: HValue = List(argList.slice(1));
-            
-            while (truthy(eval(cond))) {
-                //trace('innter funcall');
-                eval(cons(Atom(Symbol("progn")), body));
-            }
-            return Nil;
-        })));
+        vars['erase-in-dict'] = Function(Haxe(Fixed, eraseInDict));
 
-        vars['dolist'] = Function(Haxe(Fixed, (list: HValue, func: HValue) -> {
-            for (v in list.toList()) {
-                
-                //trace('calling ${funcInfo} with arg ${v}');
-                funcall(func, List([v]), Nil);
-            }
-            return Nil;
-        }));
-        vars['map'] = Function(Haxe(Fixed, (arr: HValue, func: HValue) -> {
-            return List([for (v in arr.toList()) funcall(func, List([v]))]);
-        }));
+        vars['get-in-dict'] = Function(Haxe(Fixed, getInDict));
 
-        vars['dict'] = Function(Macro(false, Haxe(Var, (pairs: HValue) -> {
-            var dict = new HDict();
-            for (pair in pairs.toList()) {
-                var key = nth(pair, Atom(Int(0))).toString();
-                var value = eval(nth(pair, Atom(Int(1))));
-                dict[key] = value;
-            }
-            return Dict(dict);
-        })));
-
-        vars['set-dict'] = Function(Haxe(Fixed, (dict: HValue, key: HValue, value: HValue) -> {
-            var dictObj: HDict = dict.toDict();
-            dictObj[key.toString()] = value;
-            return dict;
-        }));
-
-        vars['get-dict'] = Function(Haxe(Fixed, (dict: HValue, key: HValue) -> {
-            var dictObj: HDict = dict.toDict();
-            return dictObj[key.toString()];
-        }));
-
-        vars['keys'] = Function(Haxe(Fixed, (dict: HValue) -> {
-            var dictObj: HDict = dict.toDict();
-            return List([for (key in dictObj.keys()) Atom(String(key))]);
-        }));
+        vars['keys'] = Function(Haxe(Fixed, keys));
 
 
-        function charAt (str: HValue, idx: HValue) {
-            return Atom(String(str.toString().charAt(idx.toInt())));
-        }
         importFixed(charAt);
         
-        vars['substr'] = Function(Haxe(Var, (args: HValue) -> {
-            var l = args.toList();
-            var str = l[0].toString();
-            var start = l[1].toInt();
-            var len = null;
-            if (l.length > 2) len = l[2].toInt();
-            return Atom(String(str.substr(start, len)));
-        }));
+        vars['substr'] = Function(Haxe(Var, substr));
 
         watchedFunctions = List([]);
         watchedVariables = List([]);
@@ -598,6 +515,207 @@ class HissInterp {
             trace('Error loading the standard library: $s');
         }*/
     }
+
+    function string(l: HValue): HValue {
+        return Atom(String(try {
+            valueOf(l).toString();
+        } catch (s: Dynamic) {
+            Std.string(valueOf(l));
+        }));
+    }
+
+    function setq (l: HValue): HValue {
+        var list = l.toList();
+        var name = symbolName(list[0]).toString();
+        var value = eval(list[1]);
+        
+        var watched = truthy(contains(watchedVariables, Atom(String(name))));
+        if (watched) trace('calling setq for $name. New value ${value.toPrint()}');
+
+        variables.toDict()[name] = value;
+        if (list.length > 2) {
+            return setq(List(list.slice(2)));
+        } else {
+            return value;
+        }
+    }
+
+    function setlocal (l: HValue) {
+        var list = l.toList();
+        var name = symbolName(list[0]).toString();
+        var watched = truthy(contains(watchedVariables, Atom(String(name))));
+
+        if (watched) trace(l.toPrint());
+
+        var value = eval(list[1]);
+        var stackFrame: HDict = variables.toDict();
+        if (stackFrames.toList().length > 0) {
+            // By default, setlocal binds the variable at the current scope
+            stackFrame = stackFrames.toList()[stackFrames.toList().length-1].toDict();
+            // But if a higher scope already binds the variable, it will be modified instead. TODO or not??!?!?!
+        }
+        if (watched) trace('calling setlocal for $name on frame ${Dict(stackFrame).toPrint()} with ${stackFrames.length} frames and new value ${value.toPrint()} evaluated from ${list[1].toPrint()}');
+        stackFrame[name] = value;
+        if (list.length > 2) {
+            return setlocal(List(list.slice(2)));
+        } else {
+            return value;
+        }
+    }
+
+    function setNth(arr: HValue, idx: HValue, val: HValue) { 
+        arr.toList()[idx.toInt()] = val; return arr;
+    }
+
+    function hissFor(args: HValue): HValue {
+        var argList = args.toList();
+        var name = argList[0];
+        var coll = eval(argList[1]);
+        //var coll = argList[1];
+
+
+        var body: HValue = List(argList.slice(2));
+        return switch (coll) {
+            case Object("IntIterator", o):
+                var it: IntIterator = cast(eval(argList[1]).toObject(), IntIterator);
+        
+                List([for (v in it) {
+                    setlocal(List([name, Atom(Int(v))]));
+
+                    //trace('innter funcall');
+                    eval(cons(Atom(Symbol("progn")), body));
+                }]);
+            case List(l):
+                List([for (v in l) {
+                    setlocal(List([name, Quote(v)]));
+
+                    //trace('innter funcall');
+                    eval(cons(Atom(Symbol("progn")), body));
+                }]);
+            default:
+                Error('cannot call for loop on ${coll.toPrint()}');
+        }
+
+        
+        //return Nil;
+    }
+
+    function hissDoFor(args: HValue): HValue {
+        var argList = args.toList();
+        var name = argList[0];
+        var coll = eval(argList[1]);
+        //var coll = argList[1];
+
+
+        var body: HValue = List(argList.slice(2));
+        switch (coll) {
+            case Object("IntIterator", o):
+                var it: IntIterator = cast(eval(argList[1]).toObject(), IntIterator);
+        
+                for (v in it) {
+                    setlocal(List([name, Atom(Int(v))]));
+
+                    //trace('innter funcall');
+                    eval(cons(Atom(Symbol("progn")), body));
+                }
+            case List(l):
+                for (v in l) {
+                    setlocal(List([name, Quote(v)]));
+
+                    //trace('innter funcall');
+                    eval(cons(Atom(Symbol("progn")), body));
+                }
+            default:
+                Error('cannot call for loop on ${coll.toPrint()}');
+        }
+
+        
+        return Nil;
+    }
+
+    function hissWhile(args: HValue){
+        var argList = args.toList();
+        var cond = argList[0];
+        var body: HValue = List(argList.slice(1));
+        
+        while (truthy(eval(cond))) {
+            //trace('innter funcall');
+            eval(cons(Atom(Symbol("progn")), body));
+        }
+        return Nil;
+    }
+
+    function doList(list: HValue, func: HValue) {
+        for (v in list.toList()) {
+            
+            //trace('calling ${funcInfo} with arg ${v}');
+            funcall(func, List([v]), Nil);
+        }
+        return Nil;
+    }
+
+    function map(arr: HValue, func: HValue) {
+        return List([for (v in arr.toList()) funcall(func, List([v]))]);
+    }
+
+    function dict(pairs: HValue) {
+        var dict = new HDict();
+        for (pair in pairs.toList()) {
+            var key = nth(pair, Atom(Int(0))).toString();
+            var value = eval(nth(pair, Atom(Int(1))));
+            dict[key] = value;
+        }
+        return Dict(dict);
+    }
+
+    function setInDict(dict: HValue, key: HValue, value: HValue) {
+        var dictObj: HDict = dict.toDict();
+        dictObj[key.toString()] = value;
+        return dict;
+    }
+
+    function eraseInDict(dict: HValue, key: HValue, value: HValue) {
+        var dictObj: HDict = dict.toDict();
+        dictObj.remove(key.toString());
+        return dict;
+    }
+
+    function getInDict(dict: HValue, key: HValue) {
+        var dictObj: HDict = dict.toDict();
+        return if (dictObj[key.toString()] != null) dictObj[key.toString()] else Nil;
+    }
+
+    function keys(dict: HValue) {
+        var dictObj: HDict = dict.toDict();
+        return List([for (key in dictObj.keys()) Atom(String(key))]);
+    }
+
+    function charAt (str: HValue, idx: HValue) {
+        return Atom(String(str.toString().charAt(idx.toInt())));
+    }
+
+    function substr(args: HValue){
+        var l = args.toList();
+        var str = l[0].toString();
+        var start = l[1].toInt();
+        var len = null;
+        if (l.length > 2) len = l[2].toInt();
+        return Atom(String(str.substr(start, len)));
+    }
+
+    function append(args: HValue) {
+        var firstList: HList = first(args).toList();
+
+        return if (truthy(rest(args))) {
+            var nextList = first(rest(args)).toList();
+            var newFirst = firstList.concat(nextList);
+            var newArgs = rest(rest(args)).toList();
+            newArgs.insert(0, List(newFirst));
+            append(List(newArgs));
+        } else {
+            List(firstList);
+        }
+    };
 
     function indexOf(l: HValue, v: HValue): HValue {
         var list = l.toList();

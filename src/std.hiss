@@ -58,7 +58,7 @@
     (set-nth list n2 temp))
 
 (defmacro let (bindings &rest body)
-    (print bindings)
+    ;(print bindings)
     `(progn
         (scope-in)
         ,(cons 'setlocal ,bindings)
@@ -78,14 +78,14 @@
 
 (defun filter (l &optional criterion)
     (default criterion (lambda (val) val))
-    (print result)
-    (print l)
+    ;(print result)
+    ;(print l)
     (let (result '())
         ;(setlocal result '())
-        (print "in the let")
-        (print result)
+        ;(print "in the let")
+        ;(print result)
         (for val l
-            (print result)
+            ;(print result)
             (if (funcall criterion `(,val))
                 (push result val)))
         result))
