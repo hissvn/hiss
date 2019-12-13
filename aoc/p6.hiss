@@ -9,22 +9,25 @@
     (setq orbit-dict (eval (cons 'dict (for pair orbit-pairs (swap-nth pair 0 1))))))
 
 (defun orbit-chain (object)
-    (setq g--chain '("COM"))
+    (setq g--chain '())
     (setq g--object object)
     (while (not (= g--object "COM"))
+        ; (print g--chain)
         (push g--chain g--object)
         (setq g--object (get-in-dict orbit-dict g--object)))
     g--chain)
 
 (defun orbits-in-chain (chain)
-    (let (biggest-chain (- (length chain) 1))
+    (let (biggest-chain (length chain))
         (/ (* biggest-chain (+ biggest-chain 1)) 2)))
 
 (defun test-part1 ()
     (load-input 6000)
-    (print leaf-objects)
+    (print (orbit-chain "L"))
+    (print (orbit-chain "L"))
     ;(print (sum (for leaf leaf-objects (orbits-in-chain (orbit-chain leaf)))))
     )
+(test-part1)
 
 (defun part1 ()
     (load-input 6)

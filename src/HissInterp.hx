@@ -336,7 +336,7 @@ class HissInterp {
     }
 
     function push(l:HValue, v:HValue) {
-        l.toList().push(v); 
+        l.toList().push(v);
         return l;
     }
 
@@ -524,15 +524,24 @@ class HissInterp {
         }));
     }
 
-    function setq (l: HValue): HValue {
+    function setq(l: HValue): HValue {
         var list = l.toList();
         var name = symbolName(list[0]).toString();
+        //trace(list[1]);
         var value = eval(list[1]);
         
         var watched = truthy(contains(watchedVariables, Atom(String(name))));
         if (watched) trace('calling setq for $name. New value ${value.toPrint()}');
 
-        variables.toDict()[name] = value;
+        try {
+            if (value.toList().length == 0 && variables.toDict()[name].toList().length != 0) {
+                while (!variables.toDict()[name].toList().empty()) variables.toDict()[name].toList().pop();
+            } else {
+                throw 'fuck';
+            }
+        } catch (s: Dynamic) {
+            variables.toDict()[name] = value;
+        }
         if (list.length > 2) {
             return setq(List(list.slice(2)));
         } else {
@@ -809,13 +818,15 @@ class HissInterp {
         }
         
 
+        if (watched) trace ('args before evalAll of $name are $args');
         var argVals = args;
         if (truthy(evalArgs)) {
             // trace('evaling args ${argVals.toPrint()} for $name');
             argVals = evalAll(args);
         }
-        
-        var argList: HList = argVals.toList();
+        if (watched) trace ('args after evalAll are ${argVals.toPrint()}');
+
+        var argList: HList = argVals.toList().copy();
 
         // TODO trace the args
 
@@ -880,11 +891,11 @@ class HissInterp {
                     for (expression in funDef.body) {
                         try {
                             if (watched) {
-                                trace('there are ${stackFrames.toList().length} stack frames when calling $name');
-                                trace('top stack frame:');
-                                trace(stackFrames.toList()[stackFrames.toList().length-1].toPrint());
-                                trace('variables:');
-                                trace(variables.toPrint());
+                                //trace('there are ${stackFrames.toList().length} stack frames when calling $name');
+                                //trace('top stack frame:');
+                                //trace(stackFrames.toList()[stackFrames.toList().length-1].toPrint());
+                                //trace('variables:');
+                                //trace(variables.toPrint());
                             } 
                             lastResult = eval(expression);
                         }/* catch (e: Dynamic) {
@@ -987,7 +998,7 @@ class HissInterp {
                 var args = rest(expr);
 
                 // trace('calling funcall $funcInfo with args (before evaluation): $args');
-                funcall(funcInfo, args);
+                funcall(funcInfo, List(args.toList().copy()));
             case Quote(exp):
                 exp;
             case Quasiquote(exp):
