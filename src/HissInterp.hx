@@ -688,7 +688,14 @@ class HissInterp {
         
         while (truthy(eval(cond))) {
             //trace('innter funcall');
-            eval(cons(Atom(Symbol("progn")), body));
+            var value = eval(cons(Atom(Symbol("progn")), body));
+            switch (value) {
+                case Signal(Break):
+                    break;
+                case Signal(Continue):
+                    continue;
+                default:
+            }
         }
         return Nil;
     }
