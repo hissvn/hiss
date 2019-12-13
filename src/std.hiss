@@ -33,7 +33,11 @@
 (variadic-binop * haxe* 1)
 
 (variadic-binop < haxe< (error "cannot evaluate less-than without operands") t (if (fun val1 val2) val2))
+(variadic-binop <= haxe<= (error "cannot evaluate less-than without operands") t (if (fun val1 val2) val2))
 (variadic-binop > haxe> (error "cannot evaluate less-than without operands") t (if (fun val1 val2) val2))
+(variadic-binop >= haxe>= (error "cannot evaluate less-than without operands") t (if (fun val1 val2) val2))
+
+
 (defun between-exclusive (a b c)
     (or (< a b c) (> a b c)))
 
