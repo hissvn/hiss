@@ -18,10 +18,17 @@ enum HValue {
     Function(f: HFunction);
     Dict(n: HDict);
     VarInfo(i: HVarInfo);
-    Error(m: String);
+    Signal(s: HSignal);
     Nil;
     T;
     Comment;
+}
+
+enum HSignal {
+    Error(m: String);
+    Return(v: HValue);
+    Break;
+    Continue;
 }
 
 enum HArgType {

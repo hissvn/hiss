@@ -42,7 +42,7 @@ class HissTools {
                 '[hissfunction ${f.argNames}]';
             case Function(Macro(e,f)):
                 '[${if (!e) "special " else ""}macro ${Function(f).toPrint()}]';
-            case Error(m):
+            case Signal(Error(m)):
                 '!$m!';
             case Nil:
                 'nil';

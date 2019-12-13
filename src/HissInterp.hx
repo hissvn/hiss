@@ -40,7 +40,7 @@ class HissInterp {
             case Nil: false;
             //case Atom(Int(i)) if (i == 0): false; /* 0 being falsy will be useful for Hank read-counts */
             case List(l) if (l.length == 0): false;
-            case Error(m): false;
+            case Signal(Error(m)): false;
             default: true;
         }
     }
@@ -258,7 +258,18 @@ class HissInterp {
     }
 
     function progn(exps: HValue) {
-        return exps.toList().pop();
+        var value = null;
+        for (exp in exps.toList()) {
+            value = eval(exp);
+            switch (value) {
+                case Signal(Return(v)):
+                    return v;
+                case Signal(_):
+                    return value;
+                default:
+            }
+        }
+        return value;
     }
 
     function makeList(exps: HValue) {
@@ -285,6 +296,18 @@ class HissInterp {
         } catch (s: Dynamic) {
             return Nil;
         }
+    }
+
+    function hissReturn(value: HValue): HValue {
+        return Signal(Return(value));
+    }
+
+    function hissContinue(): HValue {
+        return Signal(Continue);
+    }
+
+    function hissBreak(): HValue {
+        return Signal(Break);
     }
 
     function symbol(value: HValue) {
@@ -354,12 +377,21 @@ class HissInterp {
         return Error(message.toString());
     }
 
+    function join(arr: HValue, sep: HValue) {
+        var strings = [for (val in arr.toList()) string(val).toString()];
+        return Atom(String(strings.join(sep.toString())));
+    }
+
     public function new() {
         // The hiss standard library:
         variables = Dict([]);
         var vars: HDict = variables.toDict();
 
         vars['variables'] = Function(Haxe(Fixed, getVariables)); 
+
+        vars['return'] = Function(Haxe(Fixed, hissReturn));
+        vars['break'] = Function(Haxe(Fixed, hissBreak));
+        vars['continue'] = Function(Haxe(Fixed, hissContinue));
 
         vars['nil'] = Nil;
         vars['null'] = Nil;
@@ -371,6 +403,7 @@ class HissInterp {
        
         importFixed(sort);
         
+        importFixed(join);
         importFixed(reverseSort);
 
         importFixed(indexOf);
@@ -382,7 +415,7 @@ class HissInterp {
         // Control flow
         vars['if'] = Function(Macro(false, Haxe(Fixed, hissIf)));
 
-        vars['progn'] = Function(Haxe(Var, progn));
+        vars['progn'] = Function(Macro(false, Haxe(Var, progn)));
 
         vars['list'] = Function(Haxe(Var, makeList));
 
@@ -453,8 +486,6 @@ class HissInterp {
         vars['split'] = Function(Haxe(Fixed, split));
         // TODO escape sequences aren't parsed so this needs its own function:
         vars['split-lines'] = Function(Haxe(Fixed, splitLines));
-
-        vars['push'] = Function(Haxe(Fixed, push));
 
         vars['scope-in'] = Function(Haxe(Fixed, scopeIn));
         vars['scope-out'] = Function(Haxe(Fixed, scopeOut));
@@ -577,7 +608,6 @@ class HissInterp {
         var coll = eval(argList[1]);
         //var coll = argList[1];
 
-
         var body: HValue = List(argList.slice(2));
         return switch (coll) {
             case Object("IntIterator", o):
@@ -597,7 +627,7 @@ class HissInterp {
                     eval(cons(Atom(Symbol("progn")), body));
                 }]);
             default:
-                Error('cannot call for loop on ${coll.toPrint()}');
+                Signal(Error('cannot call for loop on ${coll.toPrint()}'));
         }
 
         
@@ -620,14 +650,28 @@ class HissInterp {
                     setlocal(List([name, Atom(Int(v))]));
 
                     //trace('innter funcall');
-                    eval(cons(Atom(Symbol("progn")), body));
+                    var value = eval(cons(Atom(Symbol("progn")), body));
+                    switch (value) {
+                        case Signal(Continue):
+                            continue;
+                        case Signal(Break):
+                            return Nil;
+                        default:
+                    }
                 }
             case List(l):
                 for (v in l) {
                     setlocal(List([name, Quote(v)]));
 
                     //trace('innter funcall');
-                    eval(cons(Atom(Symbol("progn")), body));
+                    var value = eval(cons(Atom(Symbol("progn")), body));
+                    switch (value) {
+                        case Signal(Continue):
+                            continue;
+                        case Signal(Break):
+                            return Nil;
+                        default:
+                    }
                 }
             default:
                 Error('cannot call for loop on ${coll.toPrint()}');
@@ -987,7 +1031,7 @@ class HissInterp {
                 var value = switch (funcInfo) {
                     case VarInfo(v):
                         v.value;
-                    default: return Error('${expr.toPrint()}: ${funcInfo.toPrint()} is not a function pointer');
+                    default: return Signal(Error('${expr.toPrint()}: ${funcInfo.toPrint()} is not a function pointer'));
                 }
                 if (funcInfo == null || value == null) { trace(funcInfo); }
                 var args = rest(expr);
@@ -1004,7 +1048,9 @@ class HissInterp {
                 expr;
             case Nil | T:
                 expr;
-            case Error(m):
+            case Signal(Error(m)):
+                throw m;
+            case Signal(_):
                 expr;
             default:
                 throw 'Eval for type of expression ${expr} is not yet implemented';
@@ -1013,10 +1059,6 @@ class HissInterp {
             throw('Expression evaluated null: ${expr.toPrint()}');
         }
         //trace(value);
-        switch (value) {
-            case Error(m):
-                throw '$m';
-            default: return value;
-        }
+        return value;
     }
 }
