@@ -1,0 +1,33 @@
+(setq range-min 245318)
+(setq range-max 765747)
+
+(defun contains-adjacent-repeat (str)
+    (setlocal result nil)
+    (for idx (range (- (length str) 1))
+        (if (= (charAt str idx) (charAt str (+ idx 1)))
+            (setlocal result t)))
+    result)
+
+(defun digits-never-decrease (str)
+    (let (digits (for digit (split str "") (parseInt digit)))
+        (eval (cons '<= digits))))
+
+(defun number-matches (num)
+    (let (str (string num))
+        (and
+            (= (length str) 6)
+            (<= range-min num range-max)
+            (contains-adjacent-repeat str)
+            (digits-never-decrease str))))
+
+(defun ascending-digits (digit)
+    "Return the potential digits that can follow the given digit without breaking da rulez"
+    (setq digit digit)
+    (filter '(0 1 2 3 4 5 6 7 8 9) (lambda (dig)
+        (>= dig digit))))
+
+(defun ascending-digit-numbers ()
+    )
+
+(defun part1 () 
+    (print (length (filter (for i (range 245318 765748) (print (/ i 765747)) (number-matches i))))))
