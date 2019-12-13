@@ -19,14 +19,29 @@
     (let (biggest-chain (length chain))
         (/ (* biggest-chain (+ biggest-chain 1)) 2)))
 
+(defun orbit-sum ()
+    (setq sum 0)
+    (setq calculated-objects (dict))
+    (setq progress 0)
+    (for leaf leaf-objects
+        (print (/ progress (length leaf-objects)))
+        (let (chain (orbit-chain leaf))
+            (setq sum (+ sum (orbits-in-chain chain)))
+            (do-for object chain
+                (if (get-in-dict calculated-objects object)
+                    (progn (setq sum (- sum (orbits-in-chain (orbit-chain object))))(break))))
+            (for object chain
+                (set-in-dict calculated-objects object t))
+            (setq progress (+ progress 1))))
+    sum)
+
 (defun test-part1 ()
     (load-input 6000)
     (print (orbit-chain "L"))
     (print (orbit-chain "L"))
-    ;(print (sum (for leaf leaf-objects (orbits-in-chain (orbit-chain leaf)))))
-    )
+    (print (orbit-sum)))
 (test-part1)
 
 (defun part1 ()
     (load-input 6)
-    (print (sum (for leaf leaf-objects (orbits-in-chain (orbit-chain leaf))))))
+    (print (orbit-sum)))
