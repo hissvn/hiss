@@ -76,6 +76,9 @@
         total
         ))
 
+(defmacro push (l elt)
+    `(setlocal ,l (append ,l (list ,elt))))
+
 (defun filter (l &optional criterion)
     (default criterion (lambda (val) val))
     ;(print result)

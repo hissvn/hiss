@@ -335,11 +335,6 @@ class HissInterp {
         return s.toString().split("\n").toHValue();
     }
 
-    function push(l:HValue, v:HValue) {
-        l.toList().push(v);
-        return l;
-    }
-
     function scopeIn() {
         stackFrames.toList().push(Dict(new HDict()));
         return Nil;

@@ -9,13 +9,11 @@
     (setq orbit-dict (eval (cons 'dict (for pair orbit-pairs (swap-nth pair 0 1))))))
 
 (defun orbit-chain (object)
-    (setq g--chain '())
-    (setq g--object object)
-    (while (not (= g--object "COM"))
-        ; (print g--chain)
-        (push g--chain g--object)
-        (setq g--object (get-in-dict orbit-dict g--object)))
-    g--chain)
+    (let (chain '())
+        (while (not (= object "COM"))
+            (push chain object)
+            (setlocal object (get-in-dict orbit-dict object)))
+        chain))
 
 (defun orbits-in-chain (chain)
     (let (biggest-chain (length chain))

@@ -1,7 +1,7 @@
-(setq modules (map (split-lines (getContent "aoc2019/input1-1.txt")) parseInt))
+(setq modules (map (split-lines (getContent "aoc/input1-1.txt")) parseInt))
 (defun fuel (module)
     (setlocal number (haxe- (floor (haxe/ module 3)) 2))
     (if (haxe< number 0) 
         0
         (+ number (fuel number))))
-(println (sum (map modules fuel)))
+(print (sum (map modules fuel)))
