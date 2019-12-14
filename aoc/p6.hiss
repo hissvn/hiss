@@ -6,7 +6,16 @@
         (if (get-in-dict leaf-objects non-leaf)
             (erase-in-dict leaf-objects non-leaf)))
     (setq leaf-objects (keys leaf-objects))
+    (setq reverse-orbit-dict (dict))
+    (do-for pair orbit-pairs
+        (let (object (first pair)
+                satellite (nth pair 1)
+                previous-satellites (get-in-dict reverse-orbit-dict object))
+            (if previous-satellites 
+                (set-in-dict reverse-orbit-dict object (cons satellite previous-satellites)) 
+                (set-in-dict reverse-orbit-dict object `(,satellite)))))
     (setq orbit-dict (eval (cons 'dict (for pair orbit-pairs (swap-nth pair 0 1))))))
+    
 
 (defun orbit-chain (object)
     (let (chain '())
@@ -45,3 +54,42 @@
 (defun part1 ()
     (load-input 6)
     (print (orbit-sum)))
+
+(defun start-search ()
+    (setq depth 0)
+	(setq objects-searched (dict)))
+
+(defun orbit-search (start target)
+    (start-search)
+    (setq objects `(,start))
+    (while t
+        (setq objects (orbit-search-step objects target))
+        (setq depth (+ 1 depth))
+        (if (not objects) (break))))
+
+(defun orbit-search-step (objects target)
+    (if objects
+        (let (children '())
+            (do-for object objects
+                (when (= object target)
+                    (print (+ depth 1))
+                    (break))
+                (set-in-dict objects-searched object t)
+                (setlocal children (append children
+                    (filter (connected-objects object)
+                        (lambda (obj) (not (get-in-dict objects-searched obj)))))))
+            children)))
+
+(defun connected-objects (object)
+    (let (anchor (get-in-dict orbit-dict object)
+            satellites (get-in-dict reverse-orbit-dict object))
+	    (filter (append (list anchor) (if satellites satellites '())))))
+
+(defun test-part2 ()
+    (load-input 6000)
+    (orbit-search "COM" "L" 0)
+    (orbit-search "H" "D" 0))
+
+(defun part2 ()
+    (load-input 6)
+    (orbit-search "YOU" "SAN" 0))

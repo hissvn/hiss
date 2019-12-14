@@ -55,6 +55,12 @@
         (2 (if (eval (first args)) (eval (first (rest args)))))
         (t (funcall and (cons (and (funcall and (take args 2))) (slice args 2))))))
 
+(defmacro when (cond &rest body)
+    `(if ,cond ,(cons 'progn body)))
+
+(defmacro unless (cond &rest body)
+`(if (not ,cond) ,(cons 'progn body)))
+
 ; Useful for AOC 2019 day 2 ;)
 (defun swap-nth (list n1 n2)
     (setlocal temp (nth list n1))
