@@ -1,6 +1,6 @@
 (defmacro default (var value)
     `(setlocal ,var
-        (if ,var
+        (if (bound? (quote ,var))
             ,var
             ,value)))
 

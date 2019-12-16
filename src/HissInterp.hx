@@ -133,7 +133,7 @@ class HissInterp {
         var name = findFunctionName(f);
         //var name = "";
         return macro {
-            variables.toDict()[($v{name} + "?").toLowerHyphen()] = Function(Haxe(Fixed, $f));            
+            variables.toDict()[$v{name}.toLowerHyphen() + "?"] = Function(Haxe(Fixed, $f));            
         };
     }
 
@@ -314,6 +314,10 @@ class HissInterp {
         }
     }
 
+    function bound(value: HValue) {
+        return if (resolve(symbolName(value).toString()).value != null) T else Nil;
+    }
+
     function list(value: HValue) {
         try {
             value.toList();
@@ -447,6 +451,7 @@ class HissInterp {
 
         vars['quote'] = Function(Macro(false, Haxe(Fixed, quote)));
 
+        importPredicate(bound);
         importPredicate(int);
         importPredicate(list);
         importPredicate(symbol);
@@ -557,6 +562,8 @@ class HissInterp {
         watchedFunctions = List([]);
         watchedVariables = List([]);
         stackFrames = List([]);
+
+        // TODO make these all imported getters
         vars['watched-functions'] = watchedFunctions;
         vars['watched-vars'] = watchedVariables;
         vars['stack-frames'] = stackFrames;
@@ -942,6 +949,9 @@ class HissInterp {
                                 if (nameIdx > funDef.argNames.length-1) throw 'Supplied too many arguments for ${funDef.argNames}: $argList';
                                 argStackFrame[funDef.argNames[nameIdx++]] = val;
                             }
+                            while (nameIdx < funDef.argNames.length) {
+                                argStackFrame[funDef.argNames[nameIdx++]] = Nil;
+                            }
                             break;
                         } else {
                             argStackFrame[arg] = argList[valIdx++];
@@ -1048,7 +1058,7 @@ class HissInterp {
                     case Symbol(name):
                         var varInfo = resolve(name);
                         if (varInfo.value == null) {
-                            //trace('Tried to access undefined variable $name with stackFrames $stackFrames');
+                            trace('Tried to access undefined variable $name with stackFrames ${stackFrames.toPrint()}');
                             return Nil;
                         }
                         if (truthy(returnScope)) {

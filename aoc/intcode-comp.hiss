@@ -1,6 +1,6 @@
 (defun load-intcode (input-num)
     (let (file (+ "aoc/input" input-num ".txt")
-            codes (map (split (getContent file) ",") parseInt))
+            codes (map (split (get-content file) ",") parse-int))
         (setq program codes)))
 
 (defun execute (input-num &optional noun verb prompt-for-step)
@@ -89,7 +89,7 @@
             (number-first-binop `(* ,(get-arg (nth args 0)) ,(get-arg (nth args 1))))))))
     (3 1 ((set-arg (nth args 0) 
         (let (input (read-line "Enter an integer: "))
-                (or (parseInt input) (intern input))))))
+                (or (parse-int input) (intern input))))))
     (4 1 ((print (get-arg (nth args 0)))))
     (5 2 ((if (not (= (get-arg (nth args 0)) 0)) 
         (progn (setq counter (get-arg (nth args 1)))
@@ -119,11 +119,11 @@
 (defun address (addr) `(& ,addr))
 
 (defun get-arg (arg)
-    (if (list? arg)
+    (print (if (list? arg)
         (if (symbol? (nth arg 1))
             arg
             (nth program (nth arg 1)))
-        arg))
+        arg)))
 
 (defun set-arg (arg value)
     (if (list? arg)
@@ -132,8 +132,8 @@
 (defun intcode-process (instruction)
     (let (inst-str (string instruction)
             len (length inst-str)
-            current-opcode (parseInt (substr inst-str (- len 2) 2))
-            arg-modes (for i (range (- len 2)) (parseInt (charAt inst-str (- (- len 2) 1 i)))))
+            current-opcode (parse-int (substr inst-str (- len 2) 2))
+            arg-modes (for i (range (- len 2)) (parse-int (char-at inst-str (- (- len 2) 1 i)))))
         ;(print arg-modes)
         (do-for definition instructions
             (let (opcode (nth definition 0)
@@ -157,9 +157,9 @@
                             (print args)
                             (setq old-counter counter) ; track if we jumped
                             (eval
-                                ;(print
+                                (print
                                     (cons 'progn body)
-                                    ;)
+                                    )
                                 )
                             (if (= old-counter counter) 
                                 (setq counter (+ counter 1 num-args))
