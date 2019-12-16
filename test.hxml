@@ -1,0 +1,8 @@
+-lib parsihax
+-lib haxe-strings
+-lib utest
+-cp src
+-D analyzer-optimize
+-D no-deprecation-warnings
+-main test.TestAll
+--interp

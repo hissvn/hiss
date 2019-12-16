@@ -133,7 +133,7 @@ class HissInterp {
         };
     }
 
-    public static macro function importWrapped(f: Expr) {
+    public static macro function importWrapped(interp: Expr, f: Expr) {
         function findFunctionName(e:Expr) {
 	        switch(e.expr) {
 		        case EConst(CIdent(s)) | EField(_, s):
@@ -145,8 +145,26 @@ class HissInterp {
 	    }
         var name = findFunctionName(f);
         //var name = "";
-        return macro variables.toDict()[$v{name}.toLowerHyphen()] = Function(Haxe(Fixed, (v: HValue) -> {
-            return $f(valueOf(v)).toHValue();
+        return macro $interp.variables.toDict()[$v{name}.toLowerHyphen()] = Function(Haxe(Fixed, (v: HValue) -> {
+            return $f(HissInterp.valueOf(v)).toHValue();
+        }));
+    }
+
+    public static macro function importWrappedVoid(interp: Expr, f: Expr) {
+        function findFunctionName(e:Expr) {
+	        switch(e.expr) {
+		        case EConst(CIdent(s)) | EField(_, s):
+			        // handle s
+                    return s;
+		        case _:
+			        throw 'improper expression for importing haxe function to interpreter';
+            }
+	    }
+        var name = findFunctionName(f);
+        //var name = "";
+        return macro $interp.variables.toDict()[$v{name}.toLowerHyphen()] = Function(Haxe(Fixed, (v: HValue) -> {
+            $f(HissInterp.valueOf(v));
+            return Nil;
         }));
     }
 
@@ -181,7 +199,10 @@ class HissInterp {
     }
 
     static function toHValue(v: Dynamic): HValue {
+        if (v == null) return Nil;
         return switch (Type.typeof(v)) {
+            case TNull:
+                Nil;
             case TInt:
                 Atom(Int(v));
             case TFloat:
@@ -428,18 +449,18 @@ class HissInterp {
         // Haxe std io
         importFixed(print);
         
-        importWrapped(Std.parseInt);
-        importWrapped(Std.parseFloat);
+        importWrapped(this, Std.parseInt);
+        importWrapped(this, Std.parseFloat);
 
         // Haxe binops
         importFixed(HissParser.read);
         importFixed(eval);
 
         // Haxe math
-        importWrapped(Math.round);
-        importWrapped(Math.floor);
-        importWrapped(Math.ceil);
-        importWrapped(Math.abs);
+        importWrapped(this, Math.round);
+        importWrapped(this, Math.floor);
+        importWrapped(this, Math.ceil);
+        importWrapped(this, Math.abs);
 
         importFixed(first);
         importFixed(rest);
@@ -481,7 +502,7 @@ class HissInterp {
         importFixed(resolve);
         importFixed(funcall);
         importFixed(load);
-        importWrapped(sys.io.File.getContent);
+        importWrapped(this, sys.io.File.getContent);
         
         vars['split'] = Function(Haxe(Fixed, split));
         // TODO escape sequences aren't parsed so this needs its own function:

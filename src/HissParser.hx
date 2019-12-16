@@ -2,8 +2,6 @@
 
 package;
 
-using StringTools;
-
 import parsihax.*;
 import parsihax.Parser.*;
 using parsihax.Parser;

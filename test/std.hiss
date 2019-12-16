@@ -1,0 +1,5 @@
+(is-true t)
+(is-true true)
+(is-false nil)
+(is-false false)
+(is-false null)
