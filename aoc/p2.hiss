@@ -11,27 +11,9 @@
 (defun part2--brute-force ()
     (for n (range 100) (try-with-noun n)))
 
-(defun part2-medium ()
-    (load-intcode 2)
-    (setlocal uq (unique (take program 100)))
-    (for noun uq 
-        (for verb uq
-            (if (= 19690720 (execute 2 (indexOf program noun) (indexOf program verb)))
-                (print (+ "Noun: " noun " Verb: " verb))))))
-
-(defun part2-medium-reverse ()
-    (load-intcode 2)
-    (setlocal uq (reverseSort (unique (take program 100))))
-    (for noun uq 
-        (for verb uq
-            (if (= 19690720 (execute 2 (indexOf program noun) (indexOf program verb)))
-                (print (+ "Noun: " noun " Verb: " verb))))))
-
 ;; Too smart solution (WIP)
 (defun part2-smart ()
-    (setq symbolic t)
-    (setq my-equation (execute 2 'noun 'verb))
+    (setq my-equation (execute 2 'noun 'verb t))
     (setq my-equation (combine-like-operators my-equation))
     (setq my-equation (distribute-multiplication my-equation))
-    (print my-equation)
-    (setq symbolic nil))
+    (print my-equation))

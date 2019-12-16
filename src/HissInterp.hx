@@ -98,6 +98,10 @@ class HissInterp {
     function defmacro(args: HValue): HValue {
         return defun(args, T);
     }
+    
+    function intern(arg: HValue): HValue {
+        return Atom(Symbol(arg.toString()));
+    }
 
     public static macro function importFixed(f: Expr) {
         function findFunctionName(e:Expr) {
@@ -423,7 +427,8 @@ class HissInterp {
         vars['not'] = Function(Haxe(Fixed, not));
        
         importFixed(sort);
-        
+        importFixed(intern);
+
         importFixed(join);
         importFixed(reverseSort);
 
