@@ -3,7 +3,7 @@ package;
 import haxe.macro.Context;
 import haxe.macro.Expr;
 using haxe.macro.ExprTools;
-using haxe.macro.Expr.Binop;
+using hx.strings.Strings;
 
 using Lambda;
 
@@ -112,7 +112,7 @@ class HissInterp {
         var name = findFunctionName(f);
         //var name = "";
         return macro {
-            variables.toDict()[$v{name}] = Function(Haxe(Fixed, $f));            
+            variables.toDict()[$v{name}.toLowerHyphen()] = Function(Haxe(Fixed, $f));            
         };
     }
 
@@ -129,7 +129,7 @@ class HissInterp {
         var name = findFunctionName(f);
         //var name = "";
         return macro {
-            variables.toDict()[$v{name} + "?"] = Function(Haxe(Fixed, $f));            
+            variables.toDict()[($v{name} + "?").toLowerHyphen()] = Function(Haxe(Fixed, $f));            
         };
     }
 
@@ -145,7 +145,7 @@ class HissInterp {
 	    }
         var name = findFunctionName(f);
         //var name = "";
-        return macro variables.toDict()[$v{name}] = Function(Haxe(Fixed, (v: HValue) -> {
+        return macro variables.toDict()[$v{name}.toLowerHyphen()] = Function(Haxe(Fixed, (v: HValue) -> {
             return $f(valueOf(v)).toHValue();
         }));
     }

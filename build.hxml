@@ -1,5 +1,7 @@
 -lib parsihax
+-lib haxe-strings
 -cp src
 -D analyzer-optimize
+-D no-deprecation-warnings
 -main Main
 --interp
