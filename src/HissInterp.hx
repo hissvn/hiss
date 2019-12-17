@@ -1056,7 +1056,7 @@ class HissInterp {
     }
 
     public function eval(expr: HValue, returnScope: HValue = Nil): HValue {
-        // trace('eval called on $expr');
+        //trace('eval called on ${expr.toPrint()}');
         var value = switch (expr) {
             case Atom(a):
                 switch (a) {
@@ -1114,6 +1114,9 @@ class HissInterp {
         if (value == null) {
             throw('Expression evaluated null: ${expr.toPrint()}');
         }
+        //trace(expr);
+        //trace(value);
+        // trace('${expr.toPrint()} -> ${value.toPrint()}'); // Good for debugging crazy stuff
         //trace(value);
         return value;
     }

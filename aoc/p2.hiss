@@ -13,7 +13,10 @@
 
 ;; Too smart solution (WIP)
 (defun part2-smart ()
-    (setq my-equation (execute 2 'noun 'verb t))
+    (setq my-equation (execute 2 'noun 'verb
+        ; t ; step through each instruction
+        nil
+        ))
     (setq my-equation (combine-like-operators my-equation))
     (setq my-equation (distribute-multiplication my-equation))
     (print my-equation))

@@ -51,7 +51,9 @@ class HissTools {
             case Dict(hdict):
                 '${[for (k => v in hdict) '$k => ${v.toPrint()}, ']}';
             case VarInfo(hvi):
-                '{name: ${hvi.name}, value: ${hvi.value.toPrint()}, container: ${hvi.container}}';
+                //trace(hvi);
+                var container = if (hvi.container != null) Std.string(hvi.container) else "null";
+                '{name: ${hvi.name}, value: ${hvi.value.toPrint()}, container: $container}';
             case Quasiquote(e):
                 return '`${e.toPrint()}';
             case Unquote(e):
