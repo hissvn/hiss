@@ -4,6 +4,7 @@ import haxe.macro.Context;
 import haxe.macro.Expr;
 using haxe.macro.ExprTools;
 using hx.strings.Strings;
+using StringTools;
 
 using Lambda;
 
@@ -27,9 +28,9 @@ class HissInterp {
         return Atom(String(HissTools.extract(v, Atom(Symbol(name)) => name)));
     }
 
-    public function load(file: HValue) {
+    public function load(file: HValue, wrappedIn: String = '(progn * t)') {
         var contents = sys.io.File.getContent(HissTools.extract(file, Atom(String(s)) => s));
-        eval(HissParser.read('(progn ${contents} t)'));
+        return eval(HissParser.read(wrappedIn.replace('*', contents)));
     }
 
     /**
@@ -305,6 +306,15 @@ class HissInterp {
         return exp;
     }
 
+    function isError(exp: HValue) {
+        return switch (exp) {
+            case Signal(Error(_)):
+                T;
+            default:
+                Nil;
+        };
+    }
+
     function int(value: HValue) {
         try {
             value.toInt();
@@ -403,7 +413,7 @@ class HissInterp {
     }
 
     function error(message: HValue) {
-        return Error(message.toString());
+        return Signal(Error(message.toString()));
     }
 
     function join(arr: HValue, sep: HValue) {
@@ -455,6 +465,7 @@ class HissInterp {
         importPredicate(int);
         importPredicate(list);
         importPredicate(symbol);
+        vars['error?'] = Function(Haxe(Fixed, isError));
 
         // Haxe std io
         importFixed(print);
@@ -569,7 +580,7 @@ class HissInterp {
         vars['stack-frames'] = stackFrames;
 
         try {
-            load(Atom(String('src/std.hiss')));
+            load(Atom(String('src/stdlib.hiss')));
         }/* catch (s: Dynamic) {
             trace('Error loading the standard library: $s');
         }*/
@@ -596,7 +607,7 @@ class HissInterp {
             if (value.toList().length == 0 && variables.toDict()[name].toList().length != 0) {
                 while (!variables.toDict()[name].toList().empty()) variables.toDict()[name].toList().pop();
             } else {
-                throw 'fuck';
+                throw 'incorrect call to setq';
             }
         } catch (s: Dynamic) {
             variables.toDict()[name] = value;
@@ -879,7 +890,7 @@ class HissInterp {
 
         //var watchedFunctions = ['=', 'haxe=='];
         //var watchedFunctions = ["variadic-binop", "-", "haxe-", "funcall"];
-        var watched = truthy(contains(watchedFunctions, Atom(String(name))));
+        var watched = truthy(contains(variables.toDict()["watched-functions"], Atom(String(name))));
 
         // trace('calling function $name whose value is $func');
 
@@ -1092,7 +1103,9 @@ class HissInterp {
             case Nil | T:
                 expr;
             case Signal(Error(m)):
-                throw m;
+                // TODO make a modifiable variable for whether to throw errors or return them
+                expr;
+                //throw m;
             case Signal(_):
                 expr;
             default:

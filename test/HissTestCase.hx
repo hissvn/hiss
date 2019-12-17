@@ -18,10 +18,11 @@ class HissTestCase extends utest.Test {
 
     function testFile() {
         interp = new HissInterp();
-        HissInterp.importWrappedVoid(interp, Assert.isTrue);
-        HissInterp.importWrappedVoid(interp, Assert.isFalse);
-
-        interp.load(Atom(String(file)));
+        
+        var results = interp.load(Atom(String(file)), "(for statement '(*) (eval statement))").toList();
+        for (v in results) {
+            Assert.isTrue(HissInterp.truthy(v));
+        }
     }
 
 }

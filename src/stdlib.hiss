@@ -1,17 +1,33 @@
-(defmacro default (var value)
-    `(setlocal ,var
-        (if (bound? (quote ,var))
-            ,var
-            ,value)))
+
+(defmacro let (bindings &rest body)
+    ;(print bindings)
+    `(progn
+        (scope-in)
+        ,(cons 'setlocal ,bindings)
+        (setlocal let-result ,(cons 'progn body))
+        (scope-return let-result)))
 
 (defmacro case (form &rest case-list)
     (let (case-first (first case-list)
             case-rest (rest case-list))
-        (if case-first
+        (if case-first                                      
             `(if (or (eq ,(first case-first) t) (eq ,(first case-first) ,form))
                 ,(cons 'progn (rest case-first))
                 ,(cons 'case (cons form case-rest)))
             nil)))
+
+(defmacro and (&rest args)
+    (case (length args)
+        (0 't)
+        (1 (first args))
+        (2 (if (eval (first args)) (eval (first (rest args)))))
+        (t (funcall and (cons (and (funcall and (take args 2))) (slice args 2))))))
+
+(defmacro default (var value)
+    `(setlocal ,var
+        (if (and (bound? (quote ,var)) (quote ,var))
+            ,var
+            ,value)))
 
 (defmacro variadic-binop (symbol base-function &optional zero-case one-case two-case)
     (default zero-case 0)
@@ -48,12 +64,7 @@
 ; TODO add advice to this function to coerce to t or nil to avoid errors, although technically it *does* return truthy when it should(combine-like-operators '(+ 2 (+ 5 3)))
 
 ; (variadic-binop and haxe&& t val (if val1 val2 nil))
-(defmacro and (&rest args)
-    (case (length args)
-        (0 't)
-        (1 (first args))
-        (2 (if (eval (first args)) (eval (first (rest args)))))
-        (t (funcall and (cons (and (funcall and (take args 2))) (slice args 2))))))
+
 
 (defmacro when (cond &rest body)
     `(if ,cond ,(cons 'progn body)))
@@ -66,14 +77,6 @@
     (setlocal temp (nth list n1))
     (set-nth list n1 (nth list n2))
     (set-nth list n2 temp))
-
-(defmacro let (bindings &rest body)
-    ;(print bindings)
-    `(progn
-        (scope-in)
-        ,(cons 'setlocal ,bindings)
-        (setlocal let-result ,(cons 'progn body))
-        (scope-return let-result)))
 
 (defun range (arg1 &optional arg2)
     (if arg2
@@ -109,5 +112,5 @@
         result))
 
 ; Temp functions -- eventually these will need to account for not knowing if hiss is run from repo root
-(defun lstd () (load "src/std.hiss"))
+(defun lstd () (load "src/stdlib.hiss"))
 (defun lp (num) (load (+ "aoc/p" num ".hiss")))
