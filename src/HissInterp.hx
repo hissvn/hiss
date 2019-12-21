@@ -797,7 +797,7 @@ class HissInterp {
         var l = args.toList();
         var str = l[0].toString();
         var start = l[1].toInt();
-        var len = null;
+        var len: Null<Int> = null;
         if (l.length > 2) len = l[2].toInt();
         return Atom(String(str.substr(start, len)));
     }
