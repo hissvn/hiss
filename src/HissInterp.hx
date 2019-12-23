@@ -155,6 +155,23 @@ class HissInterp {
         }));
     }
 
+    public static macro function importWrapped2(interp: Expr, f: Expr) {
+        function findFunctionName(e:Expr) {
+	        switch(e.expr) {
+		        case EConst(CIdent(s)) | EField(_, s):
+			        // handle s
+                    return s;
+		        case _:
+			        throw 'improper expression for importing haxe function to interpreter';
+            }
+	    }
+        var name = findFunctionName(f);
+        //var name = "";
+        return macro $interp.variables.toDict()[$v{name}.toLowerHyphen()] = Function(Haxe(Fixed, (v: HValue, v2: HValue) -> {
+            return $f(HissInterp.valueOf(v), HissInterp.valueOf(v2)).toHValue();
+        }));
+    }
+
     public static macro function importWrappedVoid(interp: Expr, f: Expr) {
         function findFunctionName(e:Expr) {
 	        switch(e.expr) {
@@ -254,15 +271,21 @@ class HissInterp {
     }
 
      // TODO allow other sorting algorithms, Reflect.compare, etc.
-    function sort(v: HValue) {
-        var sorted = v.toList().copy();
+    function sort(args: HValue) {
+        var argList = args.toList();
+        var listToSort = argList[0].toList();
+        var sortFunction: HValue = if (argList.length > 1 && argList[1] != Nil) argList[1] else variables.toDict()['compare'];
+        
+        var sorted = listToSort.copy();
+        
         sorted.sort((v1:HValue, v2:HValue) -> {
-            Std.int(valueOf(v1) - valueOf(v2));
+            valueOf(funcall(sortFunction, List([v1, v2]), Nil));
         });
         return List(sorted);
     }
 
     function reverseSort(v: HValue) {
+        // TODO implement better
         var sorted = v.toList().copy();
         sorted.sort((v1:HValue, v2:HValue) -> {
             Std.int(valueOf(v2) - valueOf(v1));
@@ -440,7 +463,11 @@ class HissInterp {
 
         vars['not'] = Function(Haxe(Fixed, not));
        
-        importFixed(sort);
+        vars['sort'] = Function(Haxe(Var, sort));
+        importWrapped2(this, Reflect.compare);
+        
+        importFixed(reverse);
+
         importFixed(intern);
 
         importFixed(join);
@@ -863,6 +890,12 @@ class HissInterp {
 
     public static function toObject(obj: HValue): Dynamic {
         return HissTools.extract(obj, Object(_, o) => o);
+    }
+
+    public static function reverse(list: HValue): HValue {
+        var copy = list.toList().copy();
+        copy.reverse();
+        return List(copy);
     }
 
     function evalAll(hl: HValue): HValue {

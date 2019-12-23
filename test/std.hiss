@@ -17,3 +17,28 @@ true
 (not (> 7 6 6))
 
 (error? (/))
+
+(setq unsorted-int-list '(1 7 4 3 6 2 5))
+(setq unsorted-string-list '("baby" "Dont" "hurt" "me"))
+
+; sort function should default to use Reflect.compare
+(eq '(1 2 3 4 5 6 7) (sort unsorted-int-list))
+(eq '("Dont" "baby" "hurt" "me") (sort unsorted-string-list))
+; sort function should have no side effects
+(eq unsorted-int-list '(1 7 4 3 6 2 5))
+(eq unsorted-string-list '("baby" "Dont" "hurt" "me"))
+
+; sort function should allow custom Hiss compare functions
+(defun compare-by-even-odd (a b)
+    (- (% a 2) (% b 2)))
+(setq sorted-by-even-odd (sort unsorted-int-list compare-by-even-odd))
+(defun all-true (list)
+    (= (length list) (length (filter list))))
+(all-true (for val (take sorted-by-even-odd 3) (= (% val 2) 0)))
+(all-true (for val (slice sorted-by-even-odd 3) (= (% val 2) 1)))
+
+; reverse short should invert whatever compare function is used
+(eq '(7 6 5 4 3 2 1) (reverse-sort unsorted-int-list))
+(setq reverse-sorted-by-even-odd (reverse-sort unsorted-int-list compare-by-even-odd))
+(all-true (for val (take reverse-sorted-by-even-odd 4) (= (% val 2) 1)))
+(all-true (for val (slice reverse-sorted-by-even-odd 4) (= (% val 2) 0)))

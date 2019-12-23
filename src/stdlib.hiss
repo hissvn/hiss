@@ -111,6 +111,9 @@
         (for v (sort list) (if (not (contains result v)) (push result v)))
         result))
 
+(defun reverse-sort (list &optional compare-function)
+    (reverse (sort list compare-function)))
+
 ; Temp functions -- eventually these will need to account for not knowing if hiss is run from repo root
 (defun lstd () (load "src/stdlib.hiss"))
 (defun lp (num) (load (+ "aoc/p" num ".hiss")))
