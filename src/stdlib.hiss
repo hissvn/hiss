@@ -55,7 +55,9 @@
 
 
 (defun between-exclusive (a b c)
-    (or (< a b c) (> a b c)))
+    (or (< b a c) (> c a b)))
+(defun between-inclusive (a b c)
+    (or (<= b a c) (>= c a b)))
 
 (variadic-binop min < (error "cannot find min of 0 elements") val (if (fun val1 val2) val1 val2))
 (variadic-binop max > (error "cannot find min of 0 elements") val (if (fun val1 val2) val1 val2))
@@ -113,6 +115,25 @@
 
 (defun reverse-sort (list &optional compare-function)
     (reverse (sort list compare-function)))
+
+(defun sort-by (list function)
+    "Sort a list by applying a function that returns a comparable to each element"
+    (sort list (lambda (a b) (- (funcall function `(,a) nil) (funcall function `(,b) nil)))))
+
+(defmacro apply-partially (function &rest args)
+    (setlocal evaled-args (for arg args (eval arg)))
+    `(lambda (&rest missing-args)
+        (funcall ,function (append ',evaled-args missing-args) nil)))
+
+(defun list-of (size element)
+    (for i (range size) element))
+
+(defun zip (&rest lists)
+    "Create a list of tuples by grouping all same-nth elements in the given lists. Discards elements with no corresponding element in all other lists"
+    (let (final-length (funcall min (map lists length))
+            result (list-of final-length '()))
+        (for i (range final-length)
+            (map lists (lambda (l) (nth l i))))))
 
 ; Temp functions -- eventually these will need to account for not knowing if hiss is run from repo root
 (defun lstd () (load "src/stdlib.hiss"))

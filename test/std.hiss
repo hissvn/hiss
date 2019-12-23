@@ -42,3 +42,19 @@ true
 (setq reverse-sorted-by-even-odd (reverse-sort unsorted-int-list compare-by-even-odd))
 (all-true (for val (take reverse-sorted-by-even-odd 4) (= (% val 2) 1)))
 (all-true (for val (slice reverse-sorted-by-even-odd 4) (= (% val 2) 0)))
+
+; sort-by should be able to sort data structures conveniently
+(setq list-of-lists '(
+    (5 4 3)
+    (6 7 8)
+    (1 2 3)))
+(setq sorted-list-of-lists '(
+    (1 2 3)
+    (5 4 3)
+    (6 7 8)
+))
+(eq sorted-list-of-lists (sort-by list-of-lists first))
+
+; Partial functions (currying)
+(setq add-a-bunch (apply-partially + 5 6 7))
+(= (add-a-bunch 3 6) 27)

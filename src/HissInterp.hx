@@ -781,7 +781,7 @@ class HissInterp {
     }
 
     function map(arr: HValue, func: HValue) {
-        return List([for (v in arr.toList()) funcall(func, List([v]))]);
+        return List([for (v in arr.toList()) funcall(func, List([v]), Nil)]);
     }
 
     function dict(pairs: HValue) {
@@ -925,6 +925,8 @@ class HissInterp {
         //var watchedFunctions = ["variadic-binop", "-", "haxe-", "funcall"];
         var watched = truthy(contains(variables.toDict()["watched-functions"], Atom(String(name))));
 
+        var oldStackFrames = List(stackFrames.toList().copy());
+
         // trace('calling function $name whose value is $func');
 
         switch (func) {
@@ -977,8 +979,6 @@ class HissInterp {
                     return result;
         
                 case Hiss(funDef):
-                    var oldStackFrames = List(stackFrames.toList().copy());
-
                     var argStackFrame: HDict = [];
                     var valIdx = 0;
                     var nameIdx = 0;
@@ -1043,6 +1043,7 @@ class HissInterp {
             }
         } catch (s: Dynamic) {
             trace('error $s while $message');
+            stackFrames = oldStackFrames;
             throw s;
         }
     }
