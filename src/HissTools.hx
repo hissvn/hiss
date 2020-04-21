@@ -3,6 +3,10 @@ import haxe.macro.Expr;
 import HTypes;
 
 class HissTools {
+    public static function put(dict: HValue, key: String, v: HValue) {
+        dict.toDict()[key] = v;
+    }
+
     public static function toPrint(v: HValue): String {
         return switch (v) {
             case Atom(Int(i)):

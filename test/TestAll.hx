@@ -5,6 +5,7 @@ class TestAll {
     utest.UTest.run([
       //new HissTestCase("test/std.hiss"),
       new HStreamTestCase(),
+      new HissReaderTestCase(),
     ]);
     
   }

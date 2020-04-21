@@ -12,7 +12,7 @@ import sys.io.File;
 import Reflect;
 import Type;
 
-import HissParser;
+import HissReader;
 import HTypes;
 
 using HissInterp;
@@ -23,14 +23,14 @@ class HissInterp {
     private var stackFrames: HValue;
     var watchedVariables: HValue;
     var watchedFunctions: HValue;
-    // TODO import needs to turn camel case into lisp-case
+
     static function symbolName(v: HValue): HValue {
-        return Atom(String(HissTools.extract(v, Atom(Symbol(name)) => name)));
+        return Atom(String(HaxeUtils.extract(v, Atom(Symbol(name)) => name)));
     }
 
     public function load(file: HValue, wrappedIn: String = '(progn * t)') {
-        var contents = sys.io.File.getContent(HissTools.extract(file, Atom(String(s)) => s));
-        return eval(HissParser.read(wrappedIn.replace('*', contents)));
+        var contents = sys.io.File.getContent(HaxeUtils.extract(file, Atom(String(s)) => s));
+        return eval(HissReader.read(Atom(String(wrappedIn.replace('*', contents)))));
     }
 
     /**
@@ -82,7 +82,7 @@ class HissInterp {
     }
 
     static function toHFunction(hv: HValue): HFunction {
-        return HissTools.extract(hv, Function(f) => f);
+        return HaxeUtils.extract(hv, Function(f) => f);
     }
 
     // TODO optional docstrings lollll
@@ -117,7 +117,7 @@ class HissInterp {
         var name = findFunctionName(f);
         //var name = "";
         return macro {
-            variables.toDict()[$v{name}.toLowerHyphen()] = Function(Haxe(Fixed, $f));            
+            variables.toDict()[$v{name}.toLowerHyphen()] = Function(Haxe(Fixed, $f, $v{name}.toLowerHyphen()));            
         };
     }
 
@@ -134,7 +134,7 @@ class HissInterp {
         var name = findFunctionName(f);
         //var name = "";
         return macro {
-            variables.toDict()[$v{name}.toLowerHyphen() + "?"] = Function(Haxe(Fixed, $f));            
+            variables.toDict()[$v{name}.toLowerHyphen() + "?"] = Function(Haxe(Fixed, $f, $v{name}));            
         };
     }
 
@@ -152,7 +152,7 @@ class HissInterp {
         //var name = "";
         return macro $interp.variables.toDict()[$v{name}.toLowerHyphen()] = Function(Haxe(Fixed, (v: HValue) -> {
             return $f(HissInterp.valueOf(v)).toHValue();
-        }));
+        }, $v{name}));
     }
 
     public static macro function importWrapped2(interp: Expr, f: Expr) {
@@ -169,7 +169,7 @@ class HissInterp {
         //var name = "";
         return macro $interp.variables.toDict()[$v{name}.toLowerHyphen()] = Function(Haxe(Fixed, (v: HValue, v2: HValue) -> {
             return $f(HissInterp.valueOf(v), HissInterp.valueOf(v2)).toHValue();
-        }));
+        }, $v{name}));
     }
 
     public static macro function importWrappedVoid(interp: Expr, f: Expr) {
@@ -191,7 +191,7 @@ class HissInterp {
     }
 
     public static function toInt(v: HValue): Int {
-        return HissTools.extract(v, Atom(Int(i)) => i);
+        return HaxeUtils.extract(v, Atom(Int(i)) => i);
     }
 
     public static macro function importBinops(prefix: Bool, rest: Array<ExprOf<String>>) {
@@ -204,7 +204,7 @@ class HissInterp {
     }
 
     /**
-     * Behind the scenes function to HissTools.extract a haxe binop-compatible value from an HValue
+     * Behind the scenes function to HaxeUtils.extract a haxe binop-compatible value from an HValue
      **/
     public static function valueOf(hv: HValue): Dynamic {
         return switch (hv) {
@@ -254,7 +254,7 @@ class HissInterp {
             name = 'haxe$name';
         }
 
-        var code = 'variables.toDict()["$name"] = Function(Haxe(Fixed, (a,b) -> toHValue(valueOf(a) $op valueOf(b))))';
+        var code = 'variables.toDict()["$name"] = Function(Haxe(Fixed, (a,b) -> toHValue(valueOf(a) $op valueOf(b)), "$name"))';
 
         var expr = Context.parse(code, Context.currentPos());
         return expr;
@@ -266,8 +266,8 @@ class HissInterp {
         return List(l);
     }
 
-    static function toString(hv: HValue): String {
-        return HissTools.extract(hv, Atom(String(s)) => s);
+    public static function toString(hv: HValue): String {
+        return HaxeUtils.extract(hv, Atom(String(s)) => s);
     }
 
      // TODO allow other sorting algorithms, Reflect.compare, etc.
@@ -449,11 +449,11 @@ class HissInterp {
         variables = Dict([]);
         var vars: HDict = variables.toDict();
 
-        vars['variables'] = Function(Haxe(Fixed, getVariables)); 
+        vars['variables'] = Function(Haxe(Fixed, getVariables, "variables")); 
 
-        vars['return'] = Function(Haxe(Fixed, hissReturn));
-        vars['break'] = Function(Haxe(Fixed, hissBreak));
-        vars['continue'] = Function(Haxe(Fixed, hissContinue));
+        vars['return'] = Function(Haxe(Fixed, hissReturn, "return"));
+        vars['break'] = Function(Haxe(Fixed, hissBreak, "break"));
+        vars['continue'] = Function(Haxe(Fixed, hissContinue, "continue"));
 
         vars['nil'] = Nil;
         vars['null'] = Nil;
@@ -461,9 +461,9 @@ class HissInterp {
         vars['t'] = T;
         vars['true'] = T;
 
-        vars['not'] = Function(Haxe(Fixed, not));
+        vars['not'] = Function(Haxe(Fixed, not, "not"));
        
-        vars['sort'] = Function(Haxe(Var, sort));
+        vars['sort'] = Function(Haxe(Var, sort, "sort"));
         importWrapped2(this, Reflect.compare);
         
         importFixed(reverse);
@@ -477,22 +477,22 @@ class HissInterp {
         
         importFixed(contains);
 
-        vars['read-line'] = Function(Haxe(Var, readLine));
+        vars['read-line'] = Function(Haxe(Var, readLine, "read-line"));
 
         // Control flow
-        vars['if'] = Function(Macro(false, Haxe(Fixed, hissIf)));
+        vars['if'] = Function(Macro(false, Haxe(Fixed, hissIf, "if")));
 
-        vars['progn'] = Function(Macro(false, Haxe(Var, progn)));
+        vars['progn'] = Function(Macro(false, Haxe(Var, progn, "progn")));
 
-        vars['list'] = Function(Haxe(Var, makeList));
+        vars['list'] = Function(Haxe(Var, makeList, "list"));
 
-        vars['quote'] = Function(Macro(false, Haxe(Fixed, quote)));
+        vars['quote'] = Function(Macro(false, Haxe(Fixed, quote, "quote")));
 
         importPredicate(bound);
         importPredicate(int);
         importPredicate(list);
         importPredicate(symbol);
-        vars['error?'] = Function(Haxe(Fixed, isError));
+        vars['error?'] = Function(Haxe(Fixed, isError, "error?"));
 
         // Haxe std io
         importFixed(print);
@@ -500,8 +500,8 @@ class HissInterp {
         importWrapped(this, Std.parseInt);
         importWrapped(this, Std.parseFloat);
 
-        // Haxe binops
-        importFixed(HissParser.read);
+        vars['*readtable*'] = HissReader.readTable;
+        importFixed(HissReader.read);
         importFixed(eval);
 
         // Haxe math
@@ -534,14 +534,14 @@ class HissInterp {
 
         importFixed(eq);
 
-        vars['or'] = Function(Macro(false, Haxe(Var, or)));
+        vars['or'] = Function(Macro(false, Haxe(Var, or, "or")));
 
         // Some binary operators are Lisp-compatible as-is
         importBinops(false, "%");  
 
-        vars['lambda'] = Function(Macro(false, Haxe(Var, lambda)));
-        vars['defun'] = Function(Macro(false, Haxe(Var, defun)));
-        vars['defmacro'] = Function(Macro(false, Haxe(Var, defmacro)));
+        vars['lambda'] = Function(Macro(false, Haxe(Var, lambda, "lambda")));
+        vars['defun'] = Function(Macro(false, Haxe(Var, defun, "defun")));
+        vars['defmacro'] = Function(Macro(false, Haxe(Var, defmacro, "defmacro")));
 
         importFixed(length);
 
@@ -552,50 +552,50 @@ class HissInterp {
         importFixed(load);
         importWrapped(this, sys.io.File.getContent);
         
-        vars['split'] = Function(Haxe(Fixed, split));
+        vars['split'] = Function(Haxe(Fixed, split, "split"));
         // TODO escape sequences aren't parsed so this needs its own function:
-        vars['split-lines'] = Function(Haxe(Fixed, splitLines));
+        vars['split-lines'] = Function(Haxe(Fixed, splitLines, "split-lines"));
 
-        vars['scope-in'] = Function(Haxe(Fixed, scopeIn));
-        vars['scope-out'] = Function(Haxe(Fixed, scopeOut));
-        vars['scope-return'] = Function(Haxe(Fixed, scopeReturn));
+        vars['scope-in'] = Function(Haxe(Fixed, scopeIn, "scope-in"));
+        vars['scope-out'] = Function(Haxe(Fixed, scopeOut, "scope-out"));
+        vars['scope-return'] = Function(Haxe(Fixed, scopeReturn, "scope-return"));
         
-        vars['error'] = Function(Haxe(Fixed, error));
+        vars['error'] = Function(Haxe(Fixed, error, "error"));
 
         // TODO strings with interpolation
 
         importFixed(string);        
 
-        vars['append'] = Function(Haxe(Var, append));
+        vars['append'] = Function(Haxe(Var, append, "append"));
 
-        vars['setq'] = Function(Macro(false, Haxe(Var, setq)));
-        vars['setlocal'] = Function(Macro(false, Haxe(Var, setlocal)));
+        vars['setq'] = Function(Macro(false, Haxe(Var, setq, "setq")));
+        vars['setlocal'] = Function(Macro(false, Haxe(Var, setlocal, "setlocal")));
 
-        vars['set-nth'] = Function(Haxe(Fixed, setNth));
+        vars['set-nth'] = Function(Haxe(Fixed, setNth, "set-nth"));
 
-        vars['for'] = Function(Macro(false, Haxe(Var, hissFor)));
+        vars['for'] = Function(Macro(false, Haxe(Var, hissFor, "for")));
 
-        vars['do-for'] = Function(Macro(false, Haxe(Var, hissDoFor)));
+        vars['do-for'] = Function(Macro(false, Haxe(Var, hissDoFor, "do-for")));
 
-        vars['while'] = Function(Macro(false, Haxe(Var, hissWhile)));
+        vars['while'] = Function(Macro(false, Haxe(Var, hissWhile, "while")));
 
-        vars['dolist'] = Function(Haxe(Fixed, doList));
-        vars['map'] = Function(Haxe(Fixed, map));
+        vars['dolist'] = Function(Haxe(Fixed, doList, "dolist"));
+        vars['map'] = Function(Haxe(Fixed, map, "map"));
 
-        vars['dict'] = Function(Macro(false, Haxe(Var, dict)));
+        vars['dict'] = Function(Macro(false, Haxe(Var, dict, "dict")));
 
-        vars['set-in-dict'] = Function(Haxe(Fixed, setInDict));
+        vars['set-in-dict'] = Function(Haxe(Fixed, setInDict, "set-in-dict"));
 
-        vars['erase-in-dict'] = Function(Haxe(Fixed, eraseInDict));
+        vars['erase-in-dict'] = Function(Haxe(Fixed, eraseInDict, "erase-in-dict"));
 
-        vars['get-in-dict'] = Function(Haxe(Fixed, getInDict));
+        vars['get-in-dict'] = Function(Haxe(Fixed, getInDict, "get-in-dict"));
 
-        vars['keys'] = Function(Haxe(Fixed, keys));
+        vars['keys'] = Function(Haxe(Fixed, keys, "keys"));
 
 
         importFixed(charAt);
         
-        vars['substr'] = Function(Haxe(Var, substr));
+        vars['substr'] = Function(Haxe(Var, substr, "substr"));
 
         watchedFunctions = List([]);
         watchedVariables = List([]);
@@ -606,11 +606,13 @@ class HissInterp {
         vars['watched-vars'] = watchedVariables;
         vars['stack-frames'] = stackFrames;
 
-        try {
-            load(Atom(String('src/stdlib.hiss')));
-        }/* catch (s: Dynamic) {
-            trace('Error loading the standard library: $s');
-        }*/
+        //try {
+            // TODO obviously this needs to happen
+        //    load(Atom(String('src/stdlib.hiss')));
+        //} catch (s: Dynamic) {
+            // This catch expression makes things unsafe, and even if it is there, this trace should be uncommented eventually:
+            // trace('Error loading the standard library: $s');
+        //}
     }
 
     function string(l: HValue): HValue {
@@ -858,7 +860,7 @@ class HissInterp {
     }
 
     public static function toDict(dict: HValue): HDict {
-        return HissTools.extract(dict, Dict(h) => h);
+        return HaxeUtils.extract(dict, Dict(h) => h);
     }
 
     public static function first(list: HValue): HValue {
@@ -885,11 +887,11 @@ class HissInterp {
     }
 
     public static function toList(list: HValue): HList {
-        return HissTools.extract(list, List(l) => l);
+        return HaxeUtils.extract(list, List(l) => l);
     }
 
     public static function toObject(obj: HValue): Dynamic {
-        return HissTools.extract(obj, Object(_, o) => o);
+        return HaxeUtils.extract(obj, Object(_, o) => o);
     }
 
     public static function reverse(list: HValue): HValue {
@@ -912,6 +914,8 @@ class HissInterp {
                 name = v.name;
                 container = v.container;
                 func = v.value;
+            case Function(Haxe(_, _, fname)):
+                name = fname;
             default:
         }
 
@@ -958,12 +962,13 @@ class HissInterp {
         //trace('convert $name: ${func} to h function');
         var hfunc = func.toHFunction();
 
-        var message = 'calling $name: $hfunc with args ${argVals.toPrint()}';
+        var message = 'calling `$name`: $hfunc with args ${argVals.toPrint()}';
         if (watched) trace(message);
 
         try {
             switch (hfunc) {
-                case Haxe(t, hxfunc):
+                case Haxe(t, hxfunc, fname):
+                    name = fname;
                     switch (t) {
                         case Var: 
                             // trace('varargs -- putting them in a list');
@@ -1103,7 +1108,8 @@ class HissInterp {
                     case Symbol(name):
                         var varInfo = resolve(name);
                         if (varInfo.value == null) {
-                            trace('Tried to access undefined variable $name with stackFrames ${stackFrames.toPrint()}');
+                            // TODO make this error message come back!
+                            // trace('Tried to access undefined variable $name with stackFrames ${stackFrames.toPrint()}');
                             return Nil;
                         }
                         if (truthy(returnScope)) {
@@ -1141,6 +1147,8 @@ class HissInterp {
                 expr;
                 //throw m;
             case Signal(_):
+                expr;
+            case Object(_, _):
                 expr;
             default:
                 throw 'Eval for type of expression ${expr} is not yet implemented';

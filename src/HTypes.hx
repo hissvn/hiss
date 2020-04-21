@@ -38,7 +38,7 @@ enum HArgType {
 
 @:using(HissTools.HissTools)
 enum HFunction {
-    Haxe(t: HArgType, f: Dynamic);
+    Haxe(t: HArgType, f: Dynamic, name: String);
     Hiss(f: HFunDef);
     Macro(evalResult: Bool, f: HFunction);
 }

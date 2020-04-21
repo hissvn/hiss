@@ -118,6 +118,10 @@ class HStream {
 		}
 	}
 
+	public function toString() {
+		return '`$rawString`';
+	}
+
 	public function drop(s:String) {
 		var next = peek(s.length);
 		if (next != s) {
@@ -144,7 +148,7 @@ class HStream {
 
 				// Remove the terminator that followed the data from the buffer
 				if (dropTerminator) {
-					trace('dropping the terminator which is "$t"');
+					//trace('dropping the terminator which is "$t"');
 					drop(t);
 				}
 
@@ -234,15 +238,43 @@ class HStream {
 		return HStream.FromString(HaxeUtils.extract(takeLine(trimmed), Some(s) => s), pos);
 	}
 
-	/*
-	public function skipWhitespace(terminator:String = '') {
-		var nextTerm = rawString.indexOf(terminator);
-		var withoutTerm = rawString.length - rawString.ltrim().length;
-		var end = if (nextTerm <= 0) withoutTerm else Math.floor(Math.min(nextTerm, withoutTerm));
-		var whitespace = rawString.substr(0, end);
-		drop(whitespace);
+	public static var WHITESPACE = [" ", "\n", "\t"];
+
+	public function dropWhile(oneOf: Array<String>) {
+		while (rawString.length > 0 && oneOf.indexOf(peek(1)) != -1) {
+			drop(peek(1));
+		}
 	}
-	*/
+
+	public function dropWhitespace() {
+		dropWhile(WHITESPACE);
+	}
+
+	public function takeUntilWhitespace() {
+		return takeUntil(WHITESPACE, true);
+	}
+
+	public function peekUntilWhitespace() {
+		return peekUntil(WHITESPACE, true);
+	}
+
+	public function nextIsWhitespace() {
+		return rawString.length == 0 || WHITESPACE.indexOf(peek(1)) != -1;
+	}
+
+	public function putBack(s: String) {
+		rawString = s + rawString;
+		if (s.indexOf('\n') != -1) {
+			pos.line -= HStream.FromString(s).everyIndexOf('\n').length;
+			pos.column = 0;
+		} else {
+			pos.column -= s.length;
+		}
+	}
+
+	public function peekAll() {
+		return rawString;
+	}
 
 	public function isEmpty() {
 		return rawString.length == 0;

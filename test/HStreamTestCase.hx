@@ -53,6 +53,12 @@ class HStreamTestCase extends utest.Test {
         TestTools.assertEquals(Some("  hello-world"), stream.peekLine('r'));
     }
 
+    public function testDropWhitespace() {
+        stream.takeLine();
+        stream.dropWhitespace();
+        TestTools.assertEquals(Some("hello-world  "), stream.peekLine('l'));
+    }
+
     public function testTakeLine1() {
         stream.takeLine();
         TestTools.assertEquals(Some("  hello-world  "), stream.takeLine(''));
