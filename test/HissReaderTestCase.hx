@@ -5,15 +5,14 @@ import test.TestTools;
 
 class HissReaderTestCase extends utest.Test {
     
-    var interp: HissInterp;
-    var reader: HissReader;
+    var repl: HissRepl;
 
     function assertRead(v: HValue, s: String) {
-        TestTools.assertEquals(v, HissReader.read(Atom(String(s))));
+        TestTools.assertEquals(v, repl.read(s));
     }
 
     function assertReadList(v: HValue, s: String) {
-        var actual = HissReader.read(Atom(String(s))).toList();
+        var actual = repl.read(s).toList();
         var i = 0;
         for (lv in v.toList()) {
             TestTools.assertEquals(lv, actual[i++]);
@@ -22,8 +21,7 @@ class HissReaderTestCase extends utest.Test {
 
 
     public function setup() {
-        var interp = new HissInterp();
-        reader = new HissReader(interp); // Don't need to save it because it's static
+        repl = new HissRepl();
     }
 
     public function testReadSymbol() {
@@ -87,5 +85,13 @@ class HissReaderTestCase extends utest.Test {
         assertRead(Unquote(Atom(Symbol("fork"))), ",fork");
         assertRead(Quote(List([Atom(Symbol("fork")), Atom(String("hello"))])), "'(fork \"hello\")");
         assertRead(Quasiquote(List([Unquote(Atom(Symbol("fork"))), Atom(String("hello"))])), "`(,fork \"hello\")");
+    }
+
+    public function testCustomReaderMacro() {
+        repl.eval('(set-macro-string "#" (lambda (a b c) (list \'sharp (read-string a b))))');
+        assertRead(List([Atom(Symbol("sharp")), Atom(String("fork"))]), '#fork"');
+
+        /*repl.eval('(set-macro-string "^" (lambda (a b c) (cons \'sharp (read-delimited-list "]" \'("|") a b nil))))');
+        assertRead(List([Atom(Symbol("sharp")), Atom(String("fork"))]), '^fork|knife|shit]"');*/
     }
 }

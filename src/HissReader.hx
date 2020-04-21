@@ -16,7 +16,16 @@ class HissReader {
     static var interp: HissInterp;
     static var macroLengths = [];
 
-    function setMacroString(s: String, f: Dynamic) {
+    public static function setMacroString(s: HValue, f: HValue) {
+        var sk = s.toString();
+        readTable.put(sk, f);
+        if (macroLengths.indexOf(sk.length) == -1) {
+            macroLengths.push(sk.length);
+        }
+        return Nil;
+    }
+
+    static function internalSetMacroString(s: String, f: Dynamic) {
         readTable.put(s, Function(Haxe(Fixed, f, 'read$s')));
         if (macroLengths.indexOf(s.length) == -1) {
             macroLengths.push(s.length);
@@ -28,27 +37,27 @@ class HissReader {
         readTable = Dict(new HDict());
 
         // Literals
-        setMacroString('"', readString);
+        internalSetMacroString('"', readString);
         var numberChars = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"];
         for (s in numberChars) {
-            setMacroString(s, readNumber);
+            internalSetMacroString(s, readNumber);
         }
-        setMacroString("-", readSymbolOrSign);
-        setMacroString("+", readSymbolOrSign);
-        setMacroString(".", readSymbolOrSign);
+        internalSetMacroString("-", readSymbolOrSign);
+        internalSetMacroString("+", readSymbolOrSign);
+        internalSetMacroString(".", readSymbolOrSign);
 
         // Lists
-        setMacroString("(", readDelimitedList.bind(Atom(String(")")), null));
+        internalSetMacroString("(", readDelimitedList.bind(Atom(String(")")), null));
 
         // Quotes
         for (symbol in ["`", "'", ","]) {
-            setMacroString(symbol, readQuoteExpression);
+            internalSetMacroString(symbol, readQuoteExpression);
         }
 
         // Ignore comments
-        setMacroString("/*", readBlockComment);
-        setMacroString("//", readLineComment);
-        setMacroString(";", readLineComment);
+        internalSetMacroString("/*", readBlockComment);
+        internalSetMacroString("//", readLineComment);
+        internalSetMacroString(";", readLineComment);
     }
 
     static function toStream(stringOrStream: HValue) {
@@ -76,7 +85,7 @@ class HissReader {
         }
     }
 
-    public static function readNumber(start: HValue, str: HValue, terminator: HValue): HValue {
+    public static function readNumber(start: HValue, str: HValue, ?terminator: HValue): HValue {
         var stream = toStream(str);
         stream.putBack(start.toString());
 
@@ -110,12 +119,19 @@ class HissReader {
     }
 
     public static function readString(start: String, str: HValue, _: HValue): HValue {
-        return Atom(String(HaxeUtils.extract(toStream(str).takeUntil(['"']), Some(s) => s).output));
+        switch (toStream(str).takeUntil(['"'])) {
+            case Some(s): 
+                return Atom(String(s.output));
+            case None:
+                throw 'Expected close quote for read-string';
+        }
     }
 
-    static function nextToken(str: HValue, terminator: HValue): String {
+    static function nextToken(str: HValue, ?terminator: HValue): String {
         var whitespaceOrTerminator = HStream.WHITESPACE.copy();
-        whitespaceOrTerminator.push(terminator.toString());
+        if (terminator != null) {
+            whitespaceOrTerminator.push(terminator.toString());
+        }
         return HaxeUtils.extract(toStream(str).takeUntil(whitespaceOrTerminator, true, false), Some(s) => s).output;
     }
 
@@ -131,7 +147,7 @@ class HissReader {
         */
 
         var delims = [];
-        if (delimiters == null) {
+        if (delimiters == null || delimiters.match(Nil)) {
             delims = HStream.WHITESPACE.copy();
         } else {
             delims = [for (s in delimiters.toList()) s.toString()];

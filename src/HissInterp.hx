@@ -528,6 +528,12 @@ class HissInterp {
 
         vars['*readtable*'] = HissReader.readTable;
         importFixed(HissReader.read);
+        importFixed(HissReader.readString);
+        importFixed(HissReader.readNumber);
+        importFixed(HissReader.readSymbol);
+        importFixed(HissReader.readDelimitedList);
+        importFixed(HissReader.setMacroString);
+
         importFixed(eval);
 
         // Haxe math

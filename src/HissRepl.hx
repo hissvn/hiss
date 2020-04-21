@@ -19,10 +19,12 @@ class HissRepl {
 		interp.load(Atom(String('src/stdlib.hiss')));
 	}
 
+	public function read(hiss: String): HValue {
+		return HissReader.read(Atom(String(hiss+ "\n")));
+	}
+
 	public function eval(hiss: String): HValue {
-		var parsed = HissReader.read(Atom(String(hiss+ "\n")));
-		//trace(parsed);
-		var hval = interp.eval(parsed);
+		var hval = interp.eval(read(hiss));
 		
 		return hval;
 	}
