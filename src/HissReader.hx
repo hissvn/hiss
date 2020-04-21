@@ -41,6 +41,9 @@ class HissReader {
         setMacroString("(", readDelimitedList.bind(Atom(String(")")), null));
 
         // Quotes
+        for (symbol in ["`", "'", ","]) {
+            setMacroString(symbol, readQuoteExpression);
+        }
 
         // Ignore comments
         setMacroString("/*", readBlockComment);
@@ -55,6 +58,20 @@ class HissReader {
                 v;
             default:
                 throw 'Cannot make an hstream out of $stringOrStream';
+        }
+    }
+
+    public static function readQuoteExpression(start: HValue, str: HValue, terminator: HValue): HValue {
+        var expression = read(str, terminator);
+        return switch (start.toString()) {
+            case "`":
+                Quasiquote(expression);
+            case "'":
+                Quote(expression);
+            case ",":
+                Unquote(expression);
+            default:
+                throw 'Not a quote expression';
         }
     }
 

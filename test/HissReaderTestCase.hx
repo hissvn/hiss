@@ -78,4 +78,12 @@ class HissReaderTestCase extends utest.Test {
         assertReadList(nestedList, '("foo" 5 ("foo" 5 fork) fork)');
         assertReadList(nestedList, '("foo" 5 (  "foo" 5 fork )   fork)');
     }
+
+    public function testReadQuotes() {
+        assertRead(Quote(Atom(Symbol("fork"))), "'fork");
+        assertRead(Quasiquote(Atom(Symbol("fork"))), "`fork");
+        assertRead(Unquote(Atom(Symbol("fork"))), ",fork");
+        assertRead(Quote(List([Atom(Symbol("fork")), Atom(String("hello"))])), "'(fork \"hello\")");
+        assertRead(Quasiquote(List([Unquote(Atom(Symbol("fork"))), Atom(String("hello"))])), "`(,fork \"hello\")");
+    }
 }
