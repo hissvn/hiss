@@ -1,21 +1,21 @@
 package test;
 
 import HTypes;
-import test.TestTools;
+import test.HAssert;
 
 class HissReaderTestCase extends utest.Test {
     
     var repl: HissRepl;
 
     function assertRead(v: HValue, s: String) {
-        TestTools.assertEquals(v, repl.read(s));
+        HAssert.hvalEquals(v, repl.read(s));
     }
 
     function assertReadList(v: HValue, s: String) {
         var actual = repl.read(s).toList();
         var i = 0;
         for (lv in v.toList()) {
-            TestTools.assertEquals(lv, actual[i++]);
+            HAssert.hvalEquals(lv, actual[i++]);
         }
     }
 
@@ -31,12 +31,19 @@ class HissReaderTestCase extends utest.Test {
 
     public function testReadBlockComment() {
         assertRead(Atom(Symbol("fork")), "/* foo */ fork");
+        assertRead(Atom(Symbol("fork")), "/* foo */fork");
+
         assertRead(Atom(Symbol("fork")), "fork /* fu\nk */");
+        assertRead(Atom(Symbol("fork")), "fork/* fu\nk */");
+
         assertRead(List([Atom(Symbol("fo")), Atom(Symbol("rk"))]), "(fo /*fuuuuu*/ rk)");
+        assertRead(List([Atom(Symbol("fo")), Atom(Symbol("rk"))]), "(fo/*fuuuuu*/rk)");
+
     }
 
     public function testReadLineComment() {
         assertRead(Atom(Symbol("fork")), "fork // foo\n");
+        assertRead(Atom(Symbol("fork")), "fork// foo\n");
         assertRead(Atom(Symbol("fork")), "// foo \nfork");
     }
 
@@ -59,6 +66,11 @@ class HissReaderTestCase extends utest.Test {
     }
 
     public function testReadList() {
+        // Single-element lists
+        assertRead(List([Atom(Symbol("-"))]), "(-)");
+        assertRead(List([Atom(Symbol("fork"))]), "(fork)");
+
+
         var list = List([
             Atom(String("foo")),
             Atom(Int(5)),
@@ -80,11 +92,14 @@ class HissReaderTestCase extends utest.Test {
     }
 
     public function testReadQuotes() {
+        //trace("TESTING QUOTES");
         assertRead(Quote(Atom(Symbol("fork"))), "'fork");
         assertRead(Quasiquote(Atom(Symbol("fork"))), "`fork");
         assertRead(Unquote(Atom(Symbol("fork"))), ",fork");
         assertRead(Quote(List([Atom(Symbol("fork")), Atom(String("hello"))])), "'(fork \"hello\")");
         assertRead(Quasiquote(List([Unquote(Atom(Symbol("fork"))), Atom(String("hello"))])), "`(,fork \"hello\")");
+        //trace("DONE TESTING QUOTES");
+
     }
 
     public function testCustomReaderMacro() {

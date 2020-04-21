@@ -59,3 +59,7 @@ true
 ; Partial functions (currying)
 (setq add-a-bunch (apply-partially + 5 6 7))
 (= (add-a-bunch 3 6) 27)
+
+; eq semantics with nested HValues
+(let (fork "norts")
+    (eq '`(fork ,fork) '`(fork ,fork)))

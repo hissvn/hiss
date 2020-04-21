@@ -389,7 +389,7 @@ class HissInterp {
         return value;
     }
 
-    function eq(a: HValue, b: HValue): HValue {
+    public static function eq(a: HValue, b: HValue): HValue {
         try {
             var l1 = a.toList();
             var l2 = b.toList();
@@ -401,6 +401,7 @@ class HissInterp {
             }
             return T;
         } catch (s: Dynamic) {
+            // TODO use the Type API to inspect enum parameters one by one for full correctness
             return if (Type.enumEq(a, b)) T else Nil;
         }
     }
