@@ -6,6 +6,8 @@ using haxe.macro.ExprTools;
 using hx.strings.Strings;
 using StringTools;
 
+import haxe.Resource;
+
 using Lambda;
 
 import sys.io.File;
@@ -33,7 +35,10 @@ class HissInterp {
         if (wrappedIn == null || wrappedIn.match(Nil)) {
             wrappedIn = Atom(String('(progn * t)'));
         }
-        var contents = sys.io.File.getContent(file.toString());
+        var contents = Resource.getString(file.toString());
+        if (contents == null) {
+            contents = sys.io.File.getContent(file.toString());
+        }
         return eval(HissReader.read(Atom(String(wrappedIn.toString().replace('*', contents)))));
     }
 
