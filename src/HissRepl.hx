@@ -29,6 +29,10 @@ class HissRepl {
 		return hval;
 	}
 
+	public function load(file: String, wrappedIn: String) {
+		return interp.load(Atom(String(file)), Atom(String(wrappedIn)));
+	}
+
 	public function repl(hiss: String) {
 		Sys.println(eval(hiss).toPrint());
 	}

@@ -28,9 +28,12 @@ class HissInterp {
         return Atom(String(HaxeUtils.extract(v, Atom(Symbol(name)) => name, "symbol name")));
     }
 
-    public function load(file: HValue, wrappedIn: String = '(progn * t)') {
+    public function load(file: HValue, ?wrappedIn: HValue) {
+        if (wrappedIn == null || wrappedIn.match(Nil)) {
+            wrappedIn = Atom(String('(progn * t)'));
+        }
         var contents = sys.io.File.getContent(file.toString());
-        return eval(HissReader.read(Atom(String(wrappedIn.replace('*', contents)))));
+        return eval(HissReader.read(Atom(String(wrappedIn.toString().replace('*', contents)))));
     }
 
     /**

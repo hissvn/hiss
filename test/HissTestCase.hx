@@ -8,7 +8,7 @@ import HissInterp;
 
 class HissTestCase extends utest.Test {
 
-    var interp: HissInterp;
+    var repl: HissRepl;
     var file: String;
 
     public function new(hissFile: String) {
@@ -17,10 +17,10 @@ class HissTestCase extends utest.Test {
     }
 
     function testFile() {
-        interp = new HissInterp();
+        repl = new HissRepl();
         
-        var results = interp.load(Atom(String(file)), "(for statement '(*) (eval statement))").toList();
-        for (v in results) {
+        var results = repl.load(file, "(for statement '(*) (eval statement))");
+        for (v in results.toList()) {
             Assert.isTrue(HissInterp.truthy(v));
         }
     }
