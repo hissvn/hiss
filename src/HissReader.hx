@@ -80,10 +80,11 @@ class HissReader {
         var stream = toStream(str);
         stream.putBack(start.toString());
 
-        return if (stream.indexOf('.') != -1) {
-            Atom(Float(Std.parseFloat(nextToken(str, terminator))));
+        var token = nextToken(str, terminator);
+        return if (token.indexOf('.') != -1) {
+            Atom(Float(Std.parseFloat(token)));
         } else {
-            Atom(Int(Std.parseInt(nextToken(str, terminator))));
+            Atom(Int(Std.parseInt(token)));
         };
     }
 

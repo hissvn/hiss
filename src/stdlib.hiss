@@ -17,7 +17,7 @@
 
 (defmacro default (var value)
     `(setlocal ,var
-        (if (and (bound? (quote ,var)) (quote ,var))
+        (if (and (bound? (quote ,var)) ,var)
             ,var
             ,value)))
 
