@@ -1,4 +1,3 @@
--lib parsihax
 -lib haxe-strings
 -lib utest
 -cp src
