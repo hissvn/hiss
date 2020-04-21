@@ -3,8 +3,9 @@ package test;
 using hx.strings.Strings;
 import utest.Assert;
 
-import HTypes;
-import HissInterp;
+import hiss.HTypes;
+import hiss.HissRepl;
+import hiss.HissInterp;
 
 class HissTestCase extends utest.Test {
 

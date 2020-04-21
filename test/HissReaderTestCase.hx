@@ -1,7 +1,8 @@
 package test;
 
-import HTypes;
+import hiss.HTypes;
 import test.HAssert;
+import hiss.HissRepl;
 
 class HissReaderTestCase extends utest.Test {
     
@@ -106,7 +107,7 @@ class HissReaderTestCase extends utest.Test {
         repl.eval('(set-macro-string "#" (lambda (a b c) (list \'sharp (read-string a b))))');
         assertRead(List([Atom(Symbol("sharp")), Atom(String("fork"))]), '#fork"');
 
-        /*repl.eval('(set-macro-string "^" (lambda (a b c) (cons \'sharp (read-delimited-list "]" \'("|") a b nil))))');
-        assertRead(List([Atom(Symbol("sharp")), Atom(String("fork"))]), '^fork|knife|shit]"');*/
+        repl.eval('(set-macro-string "^" (lambda (a b c) (cons \'sharp (read-delimited-list "]" \'("|") a b nil))))');
+        assertRead(List([Atom(Symbol("sharp")), Atom(String("fork"))]), '^fork|knife|shit]"');
     }
 }

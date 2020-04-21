@@ -7,8 +7,8 @@ import haxe.ds.Option;
 
 import test.HAssert;
 
-import HaxeUtils;
-import HStream;
+import hiss.HaxeUtils;
+import hiss.HStream;
 
 class HStreamTestCase extends utest.Test {
 

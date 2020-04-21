@@ -1,4 +1,6 @@
-@:using(HissTools.HissTools)
+package hiss;
+
+@:using(hiss.HissTools.HissTools)
 enum HAtom {
     Int(value: Int);
     Float(value: Float);
@@ -6,7 +8,7 @@ enum HAtom {
     String(value: String);
 }
 
-@:using(HissTools.HissTools, HissInterp.HissInterp)
+@:using(hiss.HissTools.HissTools, hiss.HissInterp.HissInterp)
 enum HValue {
     Atom(a: HAtom);
     List(l: HList);

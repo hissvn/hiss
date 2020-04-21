@@ -1,4 +1,4 @@
-package;
+package hiss;
 
 import haxe.macro.Expr;
 import haxe.macro.ExprTools;

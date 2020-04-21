@@ -1,6 +1,7 @@
 -lib haxe-strings
 -lib utest
 -cp src
+-cp test
 -D analyzer-optimize
 -D no-deprecation-warnings
 -main test.TestAll

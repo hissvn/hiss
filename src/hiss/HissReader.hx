@@ -1,15 +1,15 @@
-package;
+package hiss;
 
 using hx.strings.Strings;
 
-using HissReader;
+using hiss.HissReader;
 
-import HTypes;
+import hiss.HTypes;
 
-using HissInterp;
-using HissTools;
+using hiss.HissInterp;
+using hiss.HissTools;
 
-@:allow(HissInterp)
+@:allow(hiss.HissInterp)
 class HissReader {
     static var readTable: HValue;
 

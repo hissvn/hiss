@@ -9,8 +9,6 @@
     "contributors": ["NQNStudios"],
     "dependencies": {
         "utest": "",
-        "haxe-strings": "",
-        "parsihax": "",
-        "lopper": ""
+        "haxe-strings": ""
     }
 }

@@ -1,4 +1,3 @@
--lib parsihax
 -lib haxe-strings
 -cp src
 -java build/java

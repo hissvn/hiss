@@ -1,6 +1,8 @@
+package hiss;
+
 import haxe.macro.Expr;
 
-import HTypes;
+import hiss.HTypes;
 
 class HissTools {
     public static function put(dict: HValue, key: String, v: HValue) {

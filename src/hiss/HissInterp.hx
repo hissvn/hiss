@@ -1,4 +1,4 @@
-package;
+package hiss;
 
 import haxe.macro.Context;
 import haxe.macro.Expr;
@@ -11,12 +11,13 @@ using Lambda;
 import sys.io.File;
 import Reflect;
 import Type;
+using Type;
 
-import HissReader;
-import HTypes;
+import hiss.HissReader;
+import hiss.HTypes;
 
-using HissInterp;
-import HissTools;
+using hiss.HissInterp;
+import hiss.HissTools;
 
 class HissInterp {
     public var variables: HValue;
@@ -191,6 +192,13 @@ class HissInterp {
             $f(HissInterp.valueOf(v));
             return Nil;
         }));
+    }
+
+    public function importEnum(e: Enum<Dynamic>, ?name: String) {
+        if (name == null) name = e.getEnumName().toLowerHyphen();
+        variables.toDict()[name] = Object("Enum", e);
+
+        // TODO import the constructors
     }
 
     public static function toInt(v: HValue): Int {
@@ -642,6 +650,9 @@ class HissInterp {
         vars['watched-functions'] = watchedFunctions;
         vars['watched-vars'] = watchedVariables;
         vars['stack-frames'] = stackFrames;
+
+        // Import enums and stuff
+        importEnum(haxe.ds.Option, "option");
 
         //try {
             // TODO obviously this needs to happen

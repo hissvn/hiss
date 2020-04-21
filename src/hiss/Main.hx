@@ -1,3 +1,5 @@
+package hiss;
+
 using Type;
 
 class Main {	

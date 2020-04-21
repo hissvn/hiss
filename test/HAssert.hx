@@ -2,7 +2,8 @@ package test;
 
 import utest.Assert;
 import Type;
-import HTypes;
+import hiss.HTypes;
+import hiss.HissInterp;
 
 class HAssert {
     public static function objectEquals(expected: Dynamic, actual: Dynamic) {
