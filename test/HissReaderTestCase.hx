@@ -32,12 +32,14 @@ class HissReaderTestCase extends utest.Test {
     }
 
     public function testReadBlockComment() {
-        assertRead(Comment, "/* foo */");
-        assertRead(Comment, "/* fu\nk */");
+        assertRead(Atom(Symbol("fork")), "/* foo */ fork");
+        assertRead(Atom(Symbol("fork")), "fork /* fu\nk */");
+        assertRead(List([Atom(Symbol("fo")), Atom(Symbol("rk"))]), "(fo /*fuuuuu*/ rk)");
     }
 
     public function testReadLineComment() {
-        assertRead(Comment, "// foo\n");
+        assertRead(Atom(Symbol("fork")), "fork // foo\n");
+        assertRead(Atom(Symbol("fork")), "// foo \nfork");
     }
 
     public function testReadString() {

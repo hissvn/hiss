@@ -48,6 +48,7 @@ class HissReader {
         // Ignore comments
         setMacroString("/*", readBlockComment);
         setMacroString("//", readLineComment);
+        setMacroString(";", readLineComment);
     }
 
     static function toStream(stringOrStream: HValue) {
@@ -123,9 +124,10 @@ class HissReader {
 
     public static function readDelimitedList(terminator: HValue, ?delimiters: HValue, start: HValue, str: HValue, _: HValue): HValue {
         var stream = toStream(str);
-        trace('t: ${terminator.toString()}');
+        /*trace('t: ${terminator.toString()}');
         trace('s: $start');
         trace('str: ${toStream(str).peekAll()}');
+        */
 
         var delims = [];
         if (delimiters == null) {
@@ -142,16 +144,16 @@ class HissReader {
         var values = [];
 
         stream.dropWhile(delims);
-        trace(stream.length());
+        //trace(stream.length());
         while (stream.length() >= terminator.toString().length && stream.peek(term.length) != term) {
             values.push(read(Object("HStream", stream)));
-            trace(values);
+            //trace(values);
             stream.dropWhile(delims);
-            trace(stream.peekAll());
-            trace(stream.length());
+            //trace(stream.peekAll());
+            //trace(stream.length());
         }
 
-        trace('made it');
+        //trace('made it');
         stream.drop(terminator.toString());
         return List(values);
     }
@@ -169,9 +171,17 @@ class HissReader {
             var couldBeAMacro = stream.peek(length);
             if (readTable.toDict().exists(couldBeAMacro)) {
                 stream.drop(couldBeAMacro);
-                return interp.funcall(
+                var expression = interp.funcall(
                     readTable.toDict()[couldBeAMacro], 
                     List([Atom(String(couldBeAMacro)), Object("HStream", stream), terminator]));
+
+                // If the expression is a comment, try to read the next one
+                return switch (expression) {
+                    case Comment:
+                        read(Object("HStream", stream), terminator); 
+                    default: 
+                        expression;
+                }
             }
         }
 

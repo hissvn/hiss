@@ -2,7 +2,6 @@ using Type;
 
 class Main {	
 	static function main() {
-	
-		Repl.run();
+		new HissRepl().run();
 	}
 }

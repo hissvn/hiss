@@ -25,11 +25,11 @@ class HissInterp {
     var watchedFunctions: HValue;
 
     static function symbolName(v: HValue): HValue {
-        return Atom(String(HaxeUtils.extract(v, Atom(Symbol(name)) => name)));
+        return Atom(String(HaxeUtils.extract(v, Atom(Symbol(name)) => name, "symbol name")));
     }
 
     public function load(file: HValue, wrappedIn: String = '(progn * t)') {
-        var contents = sys.io.File.getContent(HaxeUtils.extract(file, Atom(String(s)) => s));
+        var contents = sys.io.File.getContent(file.toString());
         return eval(HissReader.read(Atom(String(wrappedIn.replace('*', contents)))));
     }
 
@@ -82,7 +82,7 @@ class HissInterp {
     }
 
     static function toHFunction(hv: HValue): HFunction {
-        return HaxeUtils.extract(hv, Function(f) => f);
+        return HaxeUtils.extract(hv, Function(f) => f, "function");
     }
 
     // TODO optional docstrings lollll
@@ -191,7 +191,7 @@ class HissInterp {
     }
 
     public static function toInt(v: HValue): Int {
-        return HaxeUtils.extract(v, Atom(Int(i)) => i);
+        return HaxeUtils.extract(v, Atom(Int(i)) => i, "int");
     }
 
     public static macro function importBinops(prefix: Bool, rest: Array<ExprOf<String>>) {
@@ -267,7 +267,7 @@ class HissInterp {
     }
 
     public static function toString(hv: HValue): String {
-        return HaxeUtils.extract(hv, Atom(String(s)) => s);
+        return HaxeUtils.extract(hv, Atom(String(s)) => s, "string");
     }
 
      // TODO allow other sorting algorithms, Reflect.compare, etc.
@@ -412,6 +412,32 @@ class HissInterp {
         }
     }
 
+    function and(args: HValue): HValue {
+        switch (args.toList().length) {
+            case 0:
+                return T;
+            case 1:
+                return eval(first(args));
+            case 2:              
+                return if (truthy(eval(first(args)))) {
+                    eval(first(rest(args)));
+                } else {
+                    Nil;
+                }
+            default:
+                var l = args.toList();
+                var firstTwo = [l[0], l[1]];
+                var newArgs = [];
+                
+                newArgs.push(and(List(firstTwo)));
+                for (idx in 2...l.length) {
+                    newArgs.push(l[idx]);
+                }
+
+                return and(List(newArgs));
+        }
+    }
+
     function split(s: HValue, d: HValue) {
         return s.toString().split(d.toString()).toHValue();
     }
@@ -535,6 +561,7 @@ class HissInterp {
         importFixed(eq);
 
         vars['or'] = Function(Macro(false, Haxe(Var, or, "or")));
+        vars['and'] = Function(Macro(false, Haxe(Var, and, "and")));
 
         // Some binary operators are Lisp-compatible as-is
         importBinops(false, "%");  
@@ -608,7 +635,6 @@ class HissInterp {
 
         //try {
             // TODO obviously this needs to happen
-        //    load(Atom(String('src/stdlib.hiss')));
         //} catch (s: Dynamic) {
             // This catch expression makes things unsafe, and even if it is there, this trace should be uncommented eventually:
             // trace('Error loading the standard library: $s');
@@ -860,7 +886,7 @@ class HissInterp {
     }
 
     public static function toDict(dict: HValue): HDict {
-        return HaxeUtils.extract(dict, Dict(h) => h);
+        return HaxeUtils.extract(dict, Dict(h) => h, "dict");
     }
 
     public static function first(list: HValue): HValue {
@@ -887,11 +913,11 @@ class HissInterp {
     }
 
     public static function toList(list: HValue): HList {
-        return HaxeUtils.extract(list, List(l) => l);
+        return HaxeUtils.extract(list, List(l) => l, "list");
     }
 
     public static function toObject(obj: HValue): Dynamic {
-        return HaxeUtils.extract(obj, Object(_, o) => o);
+        return HaxeUtils.extract(obj, Object(_, o) => o, "object");
     }
 
     public static function reverse(list: HValue): HValue {
@@ -916,6 +942,8 @@ class HissInterp {
                 func = v.value;
             case Function(Haxe(_, _, fname)):
                 name = fname;
+            case Function(Macro(_, Haxe(_, _, fname))):
+                name = fname;
             default:
         }
 
@@ -935,9 +963,10 @@ class HissInterp {
 
         switch (func) {
             case Function(Macro(e, m)):
-                //trace('macroexpanding $m');
+                //trace('macroexpanding $name with args ${args.toPrint()}');
                 var macroExpansion = funcall(Function(m), args, Nil);
-                if (watched) trace('macroexpansion $name ${func.toPrint()} -> ${macroExpansion.toPrint()}');
+                if (watched)
+                     trace('macroexpansion $name ${func.toPrint()} -> ${macroExpansion.toPrint()}');
                 return if (e) {
                     eval(macroExpansion);
                 } else {
@@ -947,13 +976,15 @@ class HissInterp {
         }
         
 
-        if (watched) trace ('args before evalAll of $name are $args');
+        //if (watched) 
+        //    trace ('args before evalAll of $name are $args');
         var argVals = args;
         if (truthy(evalArgs)) {
-            // trace('evaling args ${argVals.toPrint()} for $name');
+        //    trace('evaling args ${argVals.toPrint()} for $name');
             argVals = evalAll(args);
         }
-        if (watched) trace ('args after evalAll are ${argVals.toPrint()}');
+        //if (watched) 
+        //    trace ('args after evalAll are ${argVals.toPrint()}');
 
         var argList: HList = argVals.toList().copy();
 

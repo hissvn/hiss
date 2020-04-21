@@ -1,4 +1,3 @@
-
 (defmacro let (bindings &rest body)
     ;(print bindings)
     `(progn
@@ -15,13 +14,6 @@
                 ,(cons 'progn (rest case-first))
                 ,(cons 'case (cons form case-rest)))
             nil)))
-
-(defmacro and (&rest --and-args)
-    (case (length --and-args)
-        (0 't)
-        (1 (first --and-args))
-        (2 (if (eval (first --and-args)) (eval (first (rest --and-args)))))
-        (t (funcall and (cons (and (funcall and (take --and-args 2))) (slice --and-args 2))))))
 
 (defmacro default (var value)
     `(setlocal ,var
