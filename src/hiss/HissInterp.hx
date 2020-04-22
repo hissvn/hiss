@@ -25,6 +25,8 @@ import hiss.HTypes;
 using hiss.HissInterp;
 import hiss.HissTools;
 
+import hiss.HaxeTools;
+
 class HissInterp {
     public var variables: HValue;
     private var stackFrames: HValue;
@@ -32,7 +34,7 @@ class HissInterp {
     var watchedFunctions: HValue;
 
     static function symbolName(v: HValue): HValue {
-        return Atom(String(HaxeUtils.extract(v, Atom(Symbol(name)) => name, "symbol name")));
+        return Atom(String(HaxeTools.extract(v, Atom(Symbol(name)) => name, "symbol name")));
     }
 
     public static function getContent(file: HValue): HValue {
@@ -105,7 +107,7 @@ class HissInterp {
     }
 
     static function toHFunction(hv: HValue): HFunction {
-        return HaxeUtils.extract(hv, Function(f) => f, "function");
+        return HaxeTools.extract(hv, Function(f) => f, "function");
     }
 
     // TODO optional docstrings lollll
@@ -214,7 +216,7 @@ class HissInterp {
     }
 
     public static function toInt(v: HValue): Int {
-        return HaxeUtils.extract(v, Atom(Int(i)) => i, "int");
+        return HaxeTools.extract(v, Atom(Int(i)) => i, "int");
     }
 
     public static macro function importBinops(prefix: Bool, rest: Array<ExprOf<String>>) {
@@ -227,7 +229,7 @@ class HissInterp {
     }
 
     /**
-     * Behind the scenes function to HaxeUtils.extract a haxe-compatible value from an HValue
+     * Behind the scenes function to HaxeTools.extract a haxe-compatible value from an HValue
      **/
     public static function valueOf(hv: HValue): Dynamic {
         return switch (hv) {
@@ -307,7 +309,7 @@ class HissInterp {
     }
 
     public static function toString(hv: HValue): String {
-        return HaxeUtils.extract(hv, Atom(String(s)) => s, "string");
+        return HaxeTools.extract(hv, Atom(String(s)) => s, "string");
     }
 
      // TODO allow other sorting algorithms, Reflect.compare, etc.
@@ -335,7 +337,7 @@ class HissInterp {
 
     function readLine(args: HValue) {
         if (args.toList().length == 1) {
-            HaxeUtils.print(first(args).toString());
+            HaxeTools.print(first(args).toString());
         }
         #if sys
             return Atom(String(Sys.stdin().readLine()));
@@ -427,54 +429,32 @@ class HissInterp {
     }
 
     function print(value: HValue) {
-        HaxeUtils.println(value.toPrint());
+        HaxeTools.println(value.toPrint());
         return value;
     }
 
     public static function eq(a: HValue, b: HValue): HValue {
-        try {
-            var l1 = a.toList();
-            var l2 = b.toList();
-            if (l1.length != l2.length) return Nil;
-            var i = 0;
-            while (i < l1.length) {
-                if (!truthy(eq(l1[i], l2[i]))) return Nil;
-                i++;
-            }
-            return T;
-        } catch (s: Dynamic) {
-            //return if (Type.enumEq(a, b)) T else Nil;
-            // TODO use the Type API to inspect enum parameters one by one for full correctness
-            var aParameters = Type.enumParameters(a);
-            var bParameters = Type.enumParameters(b);
-
-            if (aParameters.length != bParameters.length) { 
-                return Nil;
-            } else if (aParameters.length == 0) {
+        if (Type.enumIndex(a) != Type.enumIndex(b)) {
+            return Nil;
+        }
+        switch (a) {
+            case Atom(_) | T | Nil:
                 return if (Type.enumEq(a, b)) T else Nil;
-            } else {
-                for (idx in 0...aParameters.length) {
-                    var aP = aParameters[idx];
-                    var bP = aParameters[idx];
-
-                    var aPType = Type.getEnum(aP);
-                    var bPType = Type.getEnum(bP);
-                    if (aPType != bPType) {
-                        return Nil;
-                    } else if (aPType == null) {
-                        if (aP != bP) return Nil; // Compare primitive parts
-                    } else if (aPType.getEnumName() != "hiss.HValue") {
-                        if (!Type.enumEq(aP, bP)) return Nil; // Compare atoms
-                    } else {
-                        var equal = eq(cast(aP, HValue), cast(bP, HValue));
-                        //trace('$a compared to $b: $equal');
-                        if (!truthy(equal)) { // Compare nested HValues
-                            return Nil;
-                        }
-                    }
+            case List(_):
+                var l1 = a.toList();
+                var l2 = b.toList();
+                if (l1.length != l2.length) return Nil;
+                var i = 0;
+                while (i < l1.length) {
+                    if (!truthy(eq(l1[i], l2[i]))) return Nil;
+                    i++;
                 }
                 return T;
-            }
+            case Quote(aa) | Quasiquote(aa) | Unquote(aa):
+                var bb = HaxeTools.extract(b, Quote(e) | Quasiquote(e) | Unquote(e) => e);
+                return eq(aa, bb);
+            default:
+                return Nil;
         }
     }
 
@@ -1049,7 +1029,7 @@ class HissInterp {
     }
 
     public static function toDict(dict: HValue): HDict {
-        return HaxeUtils.extract(dict, Dict(h) => h, "dict");
+        return HaxeTools.extract(dict, Dict(h) => h, "dict");
     }
 
     public static function first(list: HValue): HValue {
@@ -1076,15 +1056,15 @@ class HissInterp {
     }
 
     public static function toList(list: HValue): HList {
-        return HaxeUtils.extract(list, List(l) => l, "list");
+        return HaxeTools.extract(list, List(l) => l, "list");
     }
 
     public static function toObject(obj: HValue): Dynamic {
-        return HaxeUtils.extract(obj, Object(_, o) => o, "object");
+        return HaxeTools.extract(obj, Object(_, o) => o, "object");
     }
 
     public static function toFunction(f: HValue): Dynamic {
-        return HaxeUtils.extract(f, Function(Haxe(_, v, _)) => v);
+        return HaxeTools.extract(f, Function(Haxe(_, v, _)) => v);
     }
 
     public static function reverse(list: HValue): HValue {

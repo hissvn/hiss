@@ -138,7 +138,7 @@
     `(call-method ,obj (to-lower-camel (symbol-name ',function)) (for arg ',args (eval arg))))
 
 (defmacro try (expression catch-expression)
-    `(when (error? (eval ,expression)) (eval ,catch-expression)))
+    `(when (error? ,expression) ,catch-expression))
 
 ; Temp functions -- eventually these will need to account for not knowing if hiss is run from repo root
 (defun lstd () (load "src/hiss/stdlib.hiss"))

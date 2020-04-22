@@ -235,7 +235,7 @@ class HStream {
 
 	public function takeLineAsStream(trimmed = ''): HStream {
 		var pos = position();
-		return HStream.FromString(HaxeUtils.extract(takeLine(trimmed), Some(s) => s), pos);
+		return HStream.FromString(HaxeTools.extract(takeLine(trimmed), Some(s) => s), pos);
 	}
 
 	public static var WHITESPACE = [" ", "\n", "\t"];

@@ -34,7 +34,7 @@ class HissRepl {
 	}
 
 	public function repl(hiss: String) {
-		HaxeUtils.println(eval(hiss).toPrint());
+		HaxeTools.println(eval(hiss).toPrint());
 	}
 
  	public function run() {
@@ -51,7 +51,7 @@ class HissRepl {
 		}, "quit"));
 
 		while (interp.variables.toDict()['__running__'].truthy()) {
-	 		HaxeUtils.print(">>> ");
+	 		HaxeTools.print(">>> ");
 			var input = "";
 			#if sys
 				input = Sys.stdin().readLine();
@@ -61,9 +61,9 @@ class HissRepl {
 				//trace(parsed);
 				var hval = interp.eval(parsed);
 				
-				HaxeUtils.println(hval.toPrint());
+				HaxeTools.println(hval.toPrint());
 			} catch (e: Dynamic) {
-				HaxeUtils.println('error $e');
+				HaxeTools.println('error $e');
 				// Sys.println(CallStack.exceptionStack());
 			}
 		}

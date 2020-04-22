@@ -136,7 +136,7 @@ class HissReader {
         if (terminator != null) {
             whitespaceOrTerminator.push(terminator.toString());
         }
-        return HaxeUtils.extract(toStream(str).takeUntil(whitespaceOrTerminator, true, false), Some(s) => s).output;
+        return HaxeTools.extract(toStream(str).takeUntil(whitespaceOrTerminator, true, false), Some(s) => s).output;
     }
 
     public static function readSymbol(str: HValue, terminator: HValue, position: HValue): HValue {
