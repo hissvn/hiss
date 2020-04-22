@@ -63,3 +63,7 @@ true
 ; eq semantics with nested HValues
 (let (fork "norts")
     (eq '`(fork ,fork) '`(fork ,fork)))
+
+; haxe-strings
+(eq "fork-you" (to-lower-hyphen "forkYou"))
+(eq "forkYou" (to-lower-camel "fork-you"))

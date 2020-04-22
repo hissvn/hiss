@@ -9,7 +9,7 @@ import hiss.HTypes;
 using hiss.HissTools;
 
 class HissRepl {
-	var interp: HissInterp;
+	public var interp: HissInterp;
 	var reader: HissReader;
 
 	public function new() {
@@ -29,29 +29,41 @@ class HissRepl {
 		return hval;
 	}
 
-	public function load(file: String, wrappedIn: String) {
+	public function load(file: String, wrappedIn: String = '(progn * t)') {
 		return interp.load(Atom(String(file)), Atom(String(wrappedIn)));
 	}
 
 	public function repl(hiss: String) {
-		Sys.println(eval(hiss).toPrint());
+		HaxeUtils.println(eval(hiss).toPrint());
 	}
 
  	public function run() {
+		#if !sys
+		throw 'Cannot run a repl on a non-system platform';
+		#end
+
 		interp.variables.toDict()['__running__'] = T;
-		interp.variables.toDict()['quit'] = Function(Haxe(Fixed, () -> { interp.variables.toDict()['__running__' ] = Nil; Sys.exit(0);}, "quit"));
+		interp.variables.toDict()['quit'] = Function(Haxe(Fixed, () -> {
+			interp.variables.toDict()['__running__' ] = Nil;
+			#if sys
+			Sys.exit(0);
+			#end
+		}, "quit"));
 
 		while (interp.variables.toDict()['__running__'].truthy()) {
-	 		Sys.print(">>> ");
-	 		var input = Sys.stdin().readLine();
+	 		HaxeUtils.print(">>> ");
+			var input = "";
+			#if sys
+				input = Sys.stdin().readLine();
+			#end
 			try {
 				var parsed = HissReader.read(Atom(String(input+ "\n")));
 				//trace(parsed);
 				var hval = interp.eval(parsed);
 				
-				Sys.println(hval.toPrint());
+				HaxeUtils.println(hval.toPrint());
 			} catch (e: Dynamic) {
-				Sys.println('error $e');
+				HaxeUtils.println('error $e');
 				// Sys.println(CallStack.exceptionStack());
 			}
 		}

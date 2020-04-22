@@ -6,6 +6,7 @@ class TestAll {
       new test.HissTestCase("test/std.hiss"),
       new test.HStreamTestCase(),
       new test.HissReaderTestCase(),
+      new test.NativeObjectTestCase(),
     ]);
     
   }

@@ -17,4 +17,20 @@ class HaxeUtils {
                 throw new Error("Invalid enum value extraction pattern", pattern.pos);
         }
     }
+
+    public static function print(str: String) {
+        #if sys
+            Sys.print(str);
+        #else
+            trace(str); // TODO this will have an unwanted newline
+        #end
+    }
+
+    public static function println(str: String) {
+        #if sys
+            Sys.println(str);
+        #else
+            trace(str);
+        #end
+    }
 }

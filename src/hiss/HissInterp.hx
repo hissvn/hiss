@@ -1,5 +1,6 @@
 package hiss;
 
+import haxe.ds.ListSort;
 import haxe.macro.Context;
 import haxe.macro.Expr;
 using haxe.macro.ExprTools;
@@ -10,7 +11,9 @@ import haxe.Resource;
 
 using Lambda;
 
+#if sys
 import sys.io.File;
+#end
 import Reflect;
 import Type;
 using Type;
@@ -31,14 +34,24 @@ class HissInterp {
         return Atom(String(HaxeUtils.extract(v, Atom(Symbol(name)) => name, "symbol name")));
     }
 
+    public static function getContent(file: HValue): HValue {
+        var contents = Resource.getString(file.toString());
+        if (contents == null) {
+            #if sys
+                contents = sys.io.File.getContent(file.toString());
+            #else
+                throw 'failed to load ${file.toString()}';
+            #end
+        }
+
+        return Atom(String(contents));
+    }
+
     public function load(file: HValue, ?wrappedIn: HValue) {
         if (wrappedIn == null || wrappedIn.match(Nil)) {
             wrappedIn = Atom(String('(progn * t)'));
         }
-        var contents = Resource.getString(file.toString());
-        if (contents == null) {
-            contents = sys.io.File.getContent(file.toString());
-        }
+        var contents = getContent(file).toString();
         return eval(HissReader.read(Atom(String(wrappedIn.toString().replace('*', contents)))));
     }
 
@@ -199,13 +212,6 @@ class HissInterp {
         }));
     }
 
-    public function importEnum(e: Enum<Dynamic>, ?name: String) {
-        if (name == null) name = e.getEnumName().toLowerHyphen();
-        variables.toDict()[name] = Object("Enum", e);
-
-        // TODO import the constructors
-    }
-
     public static function toInt(v: HValue): Int {
         return HaxeUtils.extract(v, Atom(Int(i)) => i, "int");
     }
@@ -258,6 +264,8 @@ class HissInterp {
                     default:
                         Object(name, v);
                 }
+            case TFunction:
+                Function(Haxe(Fixed, v, "[wrapped-function]"));
             default:
                 throw 'value $v cannot be wrapped as an HValue';
         }
@@ -311,9 +319,13 @@ class HissInterp {
 
     function readLine(args: HValue) {
         if (args.toList().length == 1) {
-            Sys.print(first(args).toString());
+            HaxeUtils.print(first(args).toString());
         }
-        return Atom(String(Sys.stdin().readLine()));
+        #if sys
+            return Atom(String(Sys.stdin().readLine()));
+        #else
+            return Atom(String(""));
+        #end
     }
 
     function getVariables() { return variables; }
@@ -398,7 +410,7 @@ class HissInterp {
     }
 
     function print(value: HValue) {
-        Sys.println(value.toPrint());
+        HaxeUtils.println(value.toPrint());
         return value;
     }
 
@@ -487,6 +499,39 @@ class HissInterp {
         return Atom(String(strings.join(sep.toString())));
     }
 
+    public function importObject(name: String, obj: Dynamic) {
+        variables.toDict()[name] = Object(Type.getClassName(Type.getClass(obj)), obj);
+    }
+
+    public function importEnum(e: Enum<Dynamic>, fullyQualifiedName = false) {
+        var name = e.getEnumName();
+        if (!fullyQualifiedName && name.indexOf(".") != -1) {
+            name = name.substr(name.lastIndexOf(".")+1);
+        }
+        name = name.toLowerHyphen();
+        variables.toDict()[name] = Object("Enum", e);
+
+        // TODO import the constructors or write a function that invokes them
+    }
+
+    public static function toUpperHyphen(s: String) {
+        var n = s.toLowerHyphen();
+        n = n.charAt(0).toUpperCase() + n.substr(1); // For some reason I like it Like-this for class names
+        return n;
+    }
+
+    public function importClass(c: Class<Dynamic>, fullyQualifiedName = false) {
+        var name = c.getClassName();
+        if (!fullyQualifiedName && name.indexOf(".") != -1) {
+            name = name.substr(name.lastIndexOf(".")+1);
+        }
+        variables.toDict()[name.toUpperHyphen()] = Object("Class", c);
+    }
+
+    public function createInstance(c: HValue, args: HValue) {
+        return Object(Type.getClassName(c.toObject()), Type.createInstance(c.toObject(), unwrapList(args)));
+    }
+
     public function new() {
         // The hiss standard library:
         variables = Dict([]);
@@ -509,6 +554,10 @@ class HissInterp {
         vars['sort'] = Function(Haxe(Var, sort, "sort"));
         importWrapped2(this, Reflect.compare);
         
+        importWrapped(this, toUpperHyphen);
+        importWrapped(this, hx.strings.Strings.toLowerHyphen);
+        importWrapped(this, hx.strings.Strings.toLowerCamel);
+
         importFixed(reverse);
 
         importFixed(intern);
@@ -519,6 +568,10 @@ class HissInterp {
         importFixed(indexOf);
         
         importFixed(contains);
+
+        importFixed(getProperty);
+        importFixed(callMethod);
+        importFixed(createInstance);
 
         vars['read-line'] = Function(Haxe(Var, readLine, "read-line"));
 
@@ -600,7 +653,7 @@ class HissInterp {
         importFixed(resolve);
         importFixed(funcall);
         importFixed(load);
-        importWrapped(this, sys.io.File.getContent);
+        importFixed(getContent);
         
         vars['split'] = Function(Haxe(Fixed, split, "split"));
         // TODO escape sequences aren't parsed so this needs its own function:
@@ -657,7 +710,7 @@ class HissInterp {
         vars['stack-frames'] = stackFrames;
 
         // Import enums and stuff
-        importEnum(haxe.ds.Option, "option");
+        importEnum(haxe.ds.Option);
 
         //try {
             // TODO obviously this needs to happen
@@ -665,6 +718,27 @@ class HissInterp {
             // This catch expression makes things unsafe, and even if it is there, this trace should be uncommented eventually:
             // trace('Error loading the standard library: $s');
         //}
+    }
+
+    /** Get a field out of a container (object/class) **/
+    function getProperty(container: HValue, field: HValue) {
+        switch (container) {
+            case Object(_, d):
+                return Reflect.getProperty(d, field.toString()).toHValue();
+            default:
+        }
+
+        throw 'Cannot retrieve field `${field.toString}` from object $container';
+    }
+
+    function callMethod(container: HValue, method: HValue, args: HValue) {
+        switch (container) {
+            case Object(_, d):
+                return Reflect.callMethod(d, getProperty(container, method).toFunction(), unwrapList(args)).toHValue();
+            default:
+        }
+
+        throw 'Cannot call method `${method.toString()}` from object $container';
     }
 
     function string(l: HValue): HValue {
@@ -946,6 +1020,10 @@ class HissInterp {
         return HaxeUtils.extract(obj, Object(_, o) => o, "object");
     }
 
+    public static function toFunction(f: HValue): Dynamic {
+        return HaxeUtils.extract(f, Function(Haxe(_, v, _)) => v);
+    }
+
     public static function reverse(list: HValue): HValue {
         var copy = list.toList().copy();
         copy.reverse();
@@ -955,6 +1033,10 @@ class HissInterp {
     function evalAll(hl: HValue): HValue {
         //trace(hl);
         return List([for (exp in hl.toList()) eval(exp)]);
+    }
+
+    function unwrapList(hl: HValue): Array<Dynamic> {
+        return [for (v in hl.toList()) valueOf(v)];
     }
 
     public function funcall(funcOrPointer: HValue, args: HValue, evalArgs: HValue = T): HValue {
