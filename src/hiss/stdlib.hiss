@@ -127,6 +127,16 @@
         (for i (range final-length)
             (map lists (lambda (l) (nth l i))))))
 
+;; Sleek interfaces to work with Haxe objects with lisp format:
+(defmacro new (class &rest args)
+    `(create-instance ,class ',args))
+
+(defmacro get (obj field)
+    `(get-property ,obj (to-lower-camel (symbol-name ',field))))
+
+(defmacro call (obj function &rest args)
+    `(call-method ,obj (to-lower-camel (symbol-name ',function)) ',args))
+
 ; Temp functions -- eventually these will need to account for not knowing if hiss is run from repo root
-(defun lstd () (load "src/stdlib.hiss"))
+(defun lstd () (load "src/hiss/stdlib.hiss"))
 (defun lp (num) (load (+ "aoc/p" num ".hiss")))
