@@ -67,3 +67,7 @@ true
 ; haxe-strings
 (eq "fork-you" (to-lower-hyphen "forkYou"))
 (eq "forkYou" (to-lower-camel "fork-you"))
+
+; haxe objects
+(import "String")
+(eq "8" (call String from-char-code 56))
