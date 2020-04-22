@@ -139,4 +139,7 @@
 
 ; Temp functions -- eventually these will need to account for not knowing if hiss is run from repo root
 (defun lstd () (load "src/hiss/stdlib.hiss"))
+;(defun test-std () 
+;    (load "test/std.hiss" 
+;        "(do-for statement '(*) (let (value (eval statement)) (when (not value) (print statement) (print value))))"))
 (defun lp (num) (load (+ "aoc/p" num ".hiss")))

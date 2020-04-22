@@ -1,5 +1,6 @@
 package hiss;
 
+import hiss.HStream.HPosition;
 import haxe.ds.ListSort;
 import haxe.macro.Context;
 import haxe.macro.Expr;
@@ -52,7 +53,7 @@ class HissInterp {
             wrappedIn = Atom(String('(progn * t)'));
         }
         var contents = getContent(file).toString();
-        return eval(HissReader.read(Atom(String(wrappedIn.toString().replace('*', contents)))));
+        return eval(HissReader.read(Atom(String(wrappedIn.toString().replace('*', contents))), Nil, Object("HPosition", new HPosition(file.toString(), 1, 1))));
     }
 
     /**
@@ -267,7 +268,18 @@ class HissInterp {
                         List([for (e in va) e.toHValue()]);
                     default:
                         Object(name, v);
-                }
+                };
+            /*case TEnum(e):
+                var name = Type.getEnumName(e);
+                trace(name);
+                return switch (name) {
+                    case "hiss.HValue":
+                        v;
+                    case "hiss.HAtom":
+                        Atom(v);
+                    default:
+                        Object(name, v);
+                };*/
             case TFunction:
                 Function(Haxe(Fixed, v, "[wrapped-function]"));
             default:
@@ -431,7 +443,32 @@ class HissInterp {
             return T;
         } catch (s: Dynamic) {
             // TODO use the Type API to inspect enum parameters one by one for full correctness
-            return if (Type.enumEq(a, b)) T else Nil;
+            var aParameters = Type.enumParameters(a);
+            var bParameters = Type.enumParameters(b);
+
+            if (aParameters.length != bParameters.length) { 
+                return Nil;
+            } else if (aParameters.length == 0) {
+                return if (Type.enumEq(a, b)) T else Nil;
+            } else {
+                for (idx in 0...aParameters.length) {
+                    var aP = aParameters[idx];
+                    var bP = aParameters[idx];
+
+                    var aPType = Type.getEnum(aP);
+                    var bPType = Type.getEnum(bP);
+                    if (aPType != bPType) {
+                        return Nil;
+                    } else if (aPType == null) {
+                        if (aP != bP) return Nil; // Compare primitive parts
+                    } else if (aPType.getEnumName() != "hiss.HValue") {
+                        if (!Type.enumEq(aP, bP)) return Nil; // Compare atoms
+                    } else if (!truthy(eq(cast(aP, HValue), cast(bP, HValue)))) { // Compare nested HValues
+                        return Nil;
+                    }
+                }
+                return T;
+            }
         }
     }
 
