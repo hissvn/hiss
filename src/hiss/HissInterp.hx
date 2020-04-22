@@ -238,6 +238,8 @@ class HissInterp {
                 v;
             case Atom(String(v)):
                 v;
+            case Object(_, v):
+                v;
             default: throw 'hvalue $hv cannot be unwrapped for a binary operation';
         }
     }
@@ -520,6 +522,20 @@ class HissInterp {
         return n;
     }
 
+    public function resolveClass(nameV: HValue, ?fullyQualifiedName: HValue) {
+        var c = Type.resolveClass(nameV.toString());
+        if (c == null) {
+            throw 'Cannot resolve class $nameV';
+        }
+        var name = c.getClassName();
+        if (fullyQualifiedName == null || (!truthy(fullyQualifiedName) && name.indexOf(".") != -1)) {
+            name = name.substr(name.lastIndexOf(".")+1);
+        }
+        var val = Object("Class", c);
+        variables.toDict()[name.toUpperHyphen()] = val;
+        return val;
+    }
+
     public function importClass(c: Class<Dynamic>, fullyQualifiedName = false) {
         var name = c.getClassName();
         if (!fullyQualifiedName && name.indexOf(".") != -1) {
@@ -552,6 +568,8 @@ class HissInterp {
         vars['not'] = Function(Haxe(Fixed, not, "not"));
        
         vars['sort'] = Function(Haxe(Var, sort, "sort"));
+
+        vars['import'] = Function(Haxe(Fixed, resolveClass, "import"));
         importWrapped2(this, Reflect.compare);
         
         importWrapped(this, toUpperHyphen);
