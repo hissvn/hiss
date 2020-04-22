@@ -41,9 +41,9 @@
 (variadic-binop * haxe* 1)
 
 (variadic-binop < haxe< (error "cannot evaluate less-than without operands") t (if (fun val1 val2) val2))
-(variadic-binop <= haxe<= (error "cannot evaluate less-than without operands") t (if (fun val1 val2) val2))
-(variadic-binop > haxe> (error "cannot evaluate less-than without operands") t (if (fun val1 val2) val2))
-(variadic-binop >= haxe>= (error "cannot evaluate less-than without operands") t (if (fun val1 val2) val2))
+(variadic-binop <= haxe<= (error "cannot evaluate less-than-equal without operands") t (if (fun val1 val2) val2))
+(variadic-binop > haxe> (error "cannot evaluate greater-than without operands") t (if (fun val1 val2) val2))
+(variadic-binop >= haxe>= (error "cannot evaluate greater-than-equal without operands") t (if (fun val1 val2) val2))
 
 
 (defun between-exclusive (a b c)
@@ -137,6 +137,9 @@
 (defmacro call (obj function &rest args)
     `(call-method ,obj (to-lower-camel (symbol-name ',function)) (for arg ',args (eval arg))))
 
+(defmacro try (expression catch-expression)
+    `(when (error? (eval ,expression)) (eval ,catch-expression)))
+
 ; Temp functions -- eventually these will need to account for not knowing if hiss is run from repo root
 (defun lstd () (load "src/hiss/stdlib.hiss"))
 (defun test-std () 
@@ -144,8 +147,10 @@
         "(do-for 
             statement 
             '(*) 
-            (let (value (eval statement))
+            (try (let (value (eval statement))
                 ;(print value)
-                (when (or (not value) (error? value))
-                    (print `(,statement : ,value)))))"))
+                (when (not value)
+                    (print `(,statement : ,value))))
+                (print `(caused by ,statement))))")
+    "Tests finished.")
 (defun lp (num) (load (+ "aoc/p" num ".hiss")))

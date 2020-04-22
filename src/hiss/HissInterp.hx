@@ -358,8 +358,8 @@ class HissInterp {
                 case Signal(Return(v)):
                     return v;
                 // This block breaks `let` expressions where the expression is an error:
-                /*case Signal(_):
-                    return value;*/
+                case Signal(_):
+                    return value;
                 default:
             }
         }
@@ -465,8 +465,12 @@ class HissInterp {
                         if (aP != bP) return Nil; // Compare primitive parts
                     } else if (aPType.getEnumName() != "hiss.HValue") {
                         if (!Type.enumEq(aP, bP)) return Nil; // Compare atoms
-                    } else if (!truthy(eq(cast(aP, HValue), cast(bP, HValue)))) { // Compare nested HValues
-                        return Nil;
+                    } else {
+                        var equal = eq(cast(aP, HValue), cast(bP, HValue));
+                        //trace('$a compared to $b: $equal');
+                        if (!truthy(equal)) { // Compare nested HValues
+                            return Nil;
+                        }
                     }
                 }
                 return T;
@@ -1341,7 +1345,7 @@ class HissInterp {
             case Nil | T:
                 expr;
             case Signal(Error(m)):
-                // print(expr);
+                print(expr);
                 // TODO make a modifiable variable for whether to throw errors or return them
                 expr;
                 //throw m;
