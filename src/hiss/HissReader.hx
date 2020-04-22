@@ -110,19 +110,19 @@ class HissReader {
         }
     }
 
-    public static function readBlockComment(start: String, str: HValue, _: HValue): HValue {
+    public static function readBlockComment(start: String, str: HValue, _: HValue, position: HValue): HValue {
         var text = toStream(str).takeUntil(["*/"]);
 
         return Comment;
     }
 
-    public static function readLineComment(start: String, str: HValue, _: HValue): HValue {
+    public static function readLineComment(start: String, str: HValue, _: HValue, position: HValue): HValue {
         var text = toStream(str).takeLine();
 
         return Comment;
     }
 
-    public static function readString(start: String, str: HValue, _: HValue): HValue {
+    public static function readString(start: String, str: HValue, _: HValue, position: HValue): HValue {
         switch (toStream(str).takeUntil(['"'])) {
             case Some(s): 
                 return Atom(String(s.output));
@@ -143,8 +143,8 @@ class HissReader {
         return Atom(Symbol(nextToken(str, terminator)));
     }
 
-    public static function readDelimitedList(terminator: HValue, ?delimiters: HValue, start: HValue, str: HValue, _: HValue): HValue {
-        var stream = toStream(str);
+    public static function readDelimitedList(terminator: HValue, ?delimiters: HValue, start: HValue, str: HValue, _: HValue, position: HValue): HValue {
+        var stream = toStream(str, position);
         /*trace('t: ${terminator.toString()}');
         trace('s: $start');
         trace('str: ${toStream(str).peekAll()}');
@@ -194,13 +194,14 @@ class HissReader {
                 stream.drop(couldBeAMacro);
                 var pos = stream.position();
                 var expression = null;
-                trace('read called');
+                //trace('read called');
                 try {
                     expression = interp.funcall(
                         readTable.toDict()[couldBeAMacro], 
                         List([Atom(String(couldBeAMacro)), Object("HStream", stream), terminator, Object("HPosition", pos)]));
                 } catch (s: Dynamic) {
-                    throw 'Reader error $s at ${pos.toString()}';
+                    if (s.indexOf("Reader error") == 0) throw s;
+                    throw 'Reader error `$s` at ${pos.toString()}';
                 }
 
                 // If the expression is a comment, try to read the next one

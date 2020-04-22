@@ -357,8 +357,9 @@ class HissInterp {
             switch (value) {
                 case Signal(Return(v)):
                     return v;
-                case Signal(_):
-                    return value;
+                // This block breaks `let` expressions where the expression is an error:
+                /*case Signal(_):
+                    return value;*/
                 default:
             }
         }
@@ -442,6 +443,7 @@ class HissInterp {
             }
             return T;
         } catch (s: Dynamic) {
+            //return if (Type.enumEq(a, b)) T else Nil;
             // TODO use the Type API to inspect enum parameters one by one for full correctness
             var aParameters = Type.enumParameters(a);
             var bParameters = Type.enumParameters(b);
@@ -1339,6 +1341,7 @@ class HissInterp {
             case Nil | T:
                 expr;
             case Signal(Error(m)):
+                // print(expr);
                 // TODO make a modifiable variable for whether to throw errors or return them
                 expr;
                 //throw m;
