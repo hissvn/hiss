@@ -226,7 +226,7 @@ class HissInterp {
     }
 
     /**
-     * Behind the scenes function to HaxeUtils.extract a haxe binop-compatible value from an HValue
+     * Behind the scenes function to HaxeUtils.extract a haxe-compatible value from an HValue
      **/
     public static function valueOf(hv: HValue): Dynamic {
         return switch (hv) {
@@ -240,6 +240,8 @@ class HissInterp {
                 v;
             case Object(_, v):
                 v;
+            case List(l):
+                [for (hvv in l) valueOf(hvv)];
             default: throw 'hvalue $hv cannot be unwrapped for a binary operation';
         }
     }

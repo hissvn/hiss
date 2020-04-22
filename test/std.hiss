@@ -71,3 +71,4 @@ true
 ; haxe objects
 (import "String")
 (eq "8" (call String from-char-code 56))
+(eq 1 (call (new String "hey") index-of "e"))

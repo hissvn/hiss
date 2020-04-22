@@ -129,13 +129,13 @@
 
 ;; Sleek interfaces to work with Haxe objects with lisp format:
 (defmacro new (class &rest args)
-    `(create-instance ,class ',args))
+    `(create-instance ,class (for arg ',args (eval arg))))
 
 (defmacro get (obj field)
     `(get-property ,obj (to-lower-camel (symbol-name ',field))))
 
 (defmacro call (obj function &rest args)
-    `(call-method ,obj (to-lower-camel (symbol-name ',function)) ',args))
+    `(call-method ,obj (to-lower-camel (symbol-name ',function)) (for arg ',args (eval arg))))
 
 ; Temp functions -- eventually these will need to account for not knowing if hiss is run from repo root
 (defun lstd () (load "src/hiss/stdlib.hiss"))
