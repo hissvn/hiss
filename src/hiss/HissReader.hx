@@ -62,7 +62,7 @@ class HissReader {
         internalSetMacroString(";", readLineComment);
         
     }
-
+    
     static function toStream(stringOrStream: HValue, ?pos: HValue) {
         var position = if (pos != null) HissInterp.valueOf(pos) else null;
 
@@ -104,7 +104,7 @@ class HissReader {
 
     public static function readSymbolOrSign(start: HValue, str: HValue, terminators: HValue, position: HValue): HValue {
         // Hyphen could either be a symbol, or the start of a negative numeral
-        return if (toStream(str).nextIsWhitespace()) {
+        return if (toStream(str).nextIsWhitespace() || toStream(str).nextIsOneOf([for (term in terminators.toList()) term.toString()])) {
             readSymbol(start, terminators, position);
         } else {
             readNumber(start, str, terminators, position);
@@ -146,7 +146,7 @@ class HissReader {
         return Atom(Symbol(nextToken(str, terminators)));
     }
 
-    public static function readDelimitedList(terminator: HValue, ?delimiters: HValue, start: HValue, str: HValue, _: HValue, position: HValue): HValue {
+    public static function readDelimitedList(terminator: HValue, ?delimiters: HValue, start: HValue, str: HValue, terminators: HValue, position: HValue): HValue {
         var stream = toStream(str, position);
         /*trace('t: ${terminator.toString()}');
         trace('s: $start');
@@ -160,8 +160,11 @@ class HissReader {
             delims = [for (s in delimiters.toList()) s.toString()];
         }
 
-        var delimsOrTerminator = delims.copy();
-        delimsOrTerminator.push(terminator.toString());
+        var delimsOrTerminator = [for (delim in delims) Atom(String(delim))];
+        delimsOrTerminator.push(terminator);
+        delimsOrTerminator.push(Atom(String("//")));
+        delimsOrTerminator.push(Atom(String("/*")));
+
 
         var term = terminator.toString();
 
@@ -170,7 +173,7 @@ class HissReader {
         stream.dropWhile(delims);
         //trace(stream.length());
         while (stream.length() >= terminator.toString().length && stream.peek(term.length) != term) {
-            values.push(read(Object("HStream", stream)));
+            values.push(read(Object("HStream", stream), /*terminator*/ List(delimsOrTerminator)));
             //trace(values);
             stream.dropWhile(delims);
             //trace(stream.peekAll());
@@ -226,22 +229,3 @@ class HissReader {
         }
     }
 }
-
-        /*
-
-        var hissList = '('.string().trim()
-            .then(hissExpression.many())
-            .skip(')'.string().trim())
-            .map((r) -> List(r));
-
-        var hissQuasiquote = '`'.string().then(hissExpression)
-            .map((r) -> Quasiquote(r));
-
-        var hissQuote = "'".string().then(hissExpression)
-            .map((r) -> Quote(r));
-
-        var hissUnquote = ",".string().then(hissExpression)
-            .map((r) -> Unquote(r)); 
-
-}
-*/

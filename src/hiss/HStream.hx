@@ -262,6 +262,15 @@ class HStream {
 		return rawString.length == 0 || WHITESPACE.indexOf(peek(1)) != -1;
 	}
 
+	public function nextIsOneOf(a: Array<String>) {
+		for (s in a) {
+			if (rawString.length >= s.length && rawString.indexOf(s) == 0) {
+				return true;
+			}
+		}
+		return false;
+	}
+
 	public function putBack(s: String) {
 		rawString = s + rawString;
 		if (s.indexOf('\n') != -1) {

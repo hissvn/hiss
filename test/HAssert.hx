@@ -12,6 +12,6 @@ class HAssert {
 
     public static function hvalEquals(expected: HValue, actual: HValue) {
         //trace('Comparing $expected with $actual');
-        Assert.isTrue(HissInterp.truthy(HissInterp.eq(expected, actual)));
+        Assert.isTrue(HissInterp.truthy(HissInterp.eq(expected, actual)), '$actual was supposed to equal $expected');
     }
 }
