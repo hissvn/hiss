@@ -60,6 +60,7 @@ class HissReader {
         internalSetMacroString("/*", readBlockComment);
         internalSetMacroString("//", readLineComment);
         internalSetMacroString(";", readLineComment);
+        
     }
 
     static function toStream(stringOrStream: HValue, ?pos: HValue) {
@@ -75,8 +76,8 @@ class HissReader {
         }
     }
 
-    public static function readQuoteExpression(start: HValue, str: HValue, terminator: HValue, position: HValue): HValue {
-        var expression = read(str, terminator, position);
+    public static function readQuoteExpression(start: HValue, str: HValue, terminators: HValue, position: HValue): HValue {
+        var expression = read(str, terminators, position);
         return switch (start.toString()) {
             case "`":
                 Quasiquote(expression);
@@ -89,11 +90,11 @@ class HissReader {
         }
     }
 
-    public static function readNumber(start: HValue, str: HValue, ?terminator: HValue, position: HValue): HValue {
+    public static function readNumber(start: HValue, str: HValue, ?terminators: HValue, position: HValue): HValue {
         var stream = toStream(str);
         stream.putBack(start.toString());
 
-        var token = nextToken(str, terminator);
+        var token = nextToken(str, terminators);
         return if (token.indexOf('.') != -1) {
             Atom(Float(Std.parseFloat(token)));
         } else {
@@ -101,12 +102,12 @@ class HissReader {
         };
     }
 
-    public static function readSymbolOrSign(start: HValue, str: HValue, terminator: HValue, position: HValue): HValue {
+    public static function readSymbolOrSign(start: HValue, str: HValue, terminators: HValue, position: HValue): HValue {
         // Hyphen could either be a symbol, or the start of a negative numeral
         return if (toStream(str).nextIsWhitespace()) {
-            readSymbol(start, terminator, position);
+            readSymbol(start, terminators, position);
         } else {
-            readNumber(start, str, terminator, position);
+            readNumber(start, str, terminators, position);
         }
     }
 
@@ -131,16 +132,18 @@ class HissReader {
         }
     }
 
-    static function nextToken(str: HValue, ?terminator: HValue): String {
+    static function nextToken(str: HValue, ?terminators: HValue): String {
         var whitespaceOrTerminator = HStream.WHITESPACE.copy();
-        if (terminator != null) {
-            whitespaceOrTerminator.push(terminator.toString());
+        if (terminators != null) {
+            for (terminator in terminators.toList()) {
+                whitespaceOrTerminator.push(terminator.toString());
+            }
         }
         return HaxeTools.extract(toStream(str).takeUntil(whitespaceOrTerminator, true, false), Some(s) => s).output;
     }
 
-    public static function readSymbol(str: HValue, terminator: HValue, position: HValue): HValue {
-        return Atom(Symbol(nextToken(str, terminator)));
+    public static function readSymbol(str: HValue, terminators: HValue, position: HValue): HValue {
+        return Atom(Symbol(nextToken(str, terminators)));
     }
 
     public static function readDelimitedList(terminator: HValue, ?delimiters: HValue, start: HValue, str: HValue, _: HValue, position: HValue): HValue {
@@ -179,12 +182,12 @@ class HissReader {
         return List(values);
     }
 
-    public static function read(str: HValue, ?terminator: HValue, ?pos: HValue): HValue {
+    public static function read(str: HValue, ?terminators: HValue, ?pos: HValue): HValue {
         var stream: HStream = toStream(str, pos);
         stream.dropWhitespace();
 
-        if (terminator == null || terminator == Nil) {
-            terminator = Atom(String(")"));
+        if (terminators == null || terminators == Nil) {
+            terminators = List([Atom(String(")")), Atom(String('/*')), Atom(String('//'))]);
         }
 
         for (length in macroLengths) {
@@ -198,7 +201,7 @@ class HissReader {
                 try {
                     expression = interp.funcall(
                         readTable.toDict()[couldBeAMacro], 
-                        List([Atom(String(couldBeAMacro)), Object("HStream", stream), terminator, Object("HPosition", pos)]));
+                        List([Atom(String(couldBeAMacro)), Object("HStream", stream), Quote(terminators), Object("HPosition", pos)]));
                 } catch (s: Dynamic) {
                     if (s.indexOf("Reader error") == 0) throw s;
                     throw 'Reader error `$s` at ${pos.toString()}';
@@ -207,7 +210,7 @@ class HissReader {
                 // If the expression is a comment, try to read the next one
                 return switch (expression) {
                     case Comment:
-                        read(Object("HStream", stream), terminator); 
+                        read(Object("HStream", stream), terminators); 
                     default: 
                         expression;
                 }
@@ -217,7 +220,7 @@ class HissReader {
 
         // Default to symbol
         try {
-            return readSymbol(Object("HStream", stream), terminator, pos);
+            return readSymbol(Object("HStream", stream), terminators, pos);
         } catch (s: Dynamic) {
             throw 'Failed to read from $stream because no macros matched and then $s';
         }

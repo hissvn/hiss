@@ -109,5 +109,7 @@ class HissReaderTestCase extends utest.Test {
 
         repl.eval('(set-macro-string "^" (lambda (a b c) (cons \'sharp (read-delimited-list "]" \'("|") a b nil))))');
         assertRead(List([Atom(Symbol("sharp")), Atom(String("fork"))]), '^fork|knife|shit]"');
+
+        // TODO Test whether block comment plays well with custom reader macro??
     }
 }
