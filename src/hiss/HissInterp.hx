@@ -786,7 +786,7 @@ class HissInterp {
             default:
         }
 
-        throw 'Cannot retrieve field `${field.toString}` from object $container';
+        throw 'Cannot retrieve field `${field.toString()}` from object $container';
     }
 
     function callMethod(container: HValue, method: HValue, args: HValue) {
