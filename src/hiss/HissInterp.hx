@@ -251,7 +251,8 @@ class HissInterp {
 
     static function toHValue(v: Dynamic): HValue {
         if (v == null) return Nil;
-        return switch (Type.typeof(v)) {
+        var t = Type.typeof(v);
+        return switch (t) {
             case TNull:
                 Nil;
             case TInt:
@@ -271,21 +272,24 @@ class HissInterp {
                     default:
                         Object(name, v);
                 };
-            /*case TEnum(e):
+            case TEnum(e):
                 var name = Type.getEnumName(e);
-                trace(name);
-                return switch (name) {
-                    case "hiss.HValue":
-                        v;
-                    case "hiss.HAtom":
-                        Atom(v);
+                //trace(name);
+                switch (name) {
+                    case "haxe.ds.Option":
+                        return switch (cast(v, haxe.ds.Option<Dynamic>)) {
+                            case Some(vInner): toHValue(vInner);
+                            case None: Nil;
+                        }
                     default:
-                        Object(name, v);
-                };*/
+                        throw 'unsupported enum $name';
+                };
+            case TObject:
+                Object("!ANONYMOUS!", v);
             case TFunction:
                 Function(Haxe(Fixed, v, "[wrapped-function]"));
             default:
-                throw 'value $v cannot be wrapped as an HValue';
+                throw 'value $v of type $t cannot be wrapped as an HValue';
         }
     }
 
