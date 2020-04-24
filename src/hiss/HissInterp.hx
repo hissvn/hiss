@@ -646,6 +646,8 @@ class HissInterp {
         importFixed(HissReader.readSymbol);
         importFixed(HissReader.readDelimitedList);
         importFixed(HissReader.setMacroString);
+        importFixed(HissReader.setDefaultReadFunction);
+
 
         importFixed(eval);
 

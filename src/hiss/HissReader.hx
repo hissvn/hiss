@@ -14,6 +14,7 @@ import hiss.HStream.HPosition;
 @:allow(hiss.HissInterp)
 class HissReader {
     static var readTable: HValue;
+    static var defaultReadFunction: HValue;
 
     static var interp: HissInterp;
     static var macroLengths = [];
@@ -25,6 +26,10 @@ class HissReader {
             macroLengths.push(sk.length);
         }
         return Nil;
+    }
+
+    public static function setDefaultReadFunction(f: HValue) {
+        defaultReadFunction = f;
     }
 
     static function internalSetMacroString(s: String, f: Dynamic) {
@@ -105,7 +110,7 @@ class HissReader {
     public static function readSymbolOrSign(start: HValue, str: HValue, terminators: HValue, position: HValue): HValue {
         // Hyphen could either be a symbol, or the start of a negative numeral
         return if (toStream(str).nextIsWhitespace() || toStream(str).nextIsOneOf([for (term in terminators.toList()) term.toString()])) {
-            readSymbol(start, terminators, position);
+            readSymbol(Atom(String("")), start, terminators, position);
         } else {
             readNumber(start, str, terminators, position);
         }
@@ -142,7 +147,7 @@ class HissReader {
         return HaxeTools.extract(toStream(str).takeUntil(whitespaceOrTerminator, true, false), Some(s) => s).output;
     }
 
-    public static function readSymbol(str: HValue, terminators: HValue, position: HValue): HValue {
+    public static function readSymbol(start: HValue, str: HValue, terminators: HValue, position: HValue): HValue {
         return Atom(Symbol(nextToken(str, terminators)));
     }
 
@@ -185,6 +190,16 @@ class HissReader {
         return List(values);
     }
 
+    static function callReadFunction(func: HValue, start: String, stream: HStream, terminators: HValue): HValue {
+        var pos = stream.position();
+        try {
+            return interp.funcall(func, List([Atom(String(start)), Object("HStream", stream), Quote(terminators), Object("HPosition", pos)]));
+        } catch (s: Dynamic) {
+            if (s.indexOf("Reader error") == 0) throw s;
+            throw 'Reader error `$s` at ${pos.toString()}';
+        }
+    }
+
     public static function read(str: HValue, ?terminators: HValue, ?pos: HValue): HValue {
         var stream: HStream = toStream(str, pos);
         stream.dropWhitespace();
@@ -201,14 +216,8 @@ class HissReader {
                 var pos = stream.position();
                 var expression = null;
                 //trace('read called');
-                try {
-                    expression = interp.funcall(
-                        readTable.toDict()[couldBeAMacro], 
-                        List([Atom(String(couldBeAMacro)), Object("HStream", stream), Quote(terminators), Object("HPosition", pos)]));
-                } catch (s: Dynamic) {
-                    if (s.indexOf("Reader error") == 0) throw s;
-                    throw 'Reader error `$s` at ${pos.toString()}';
-                }
+                
+                expression = callReadFunction(readTable.toDict()[couldBeAMacro], couldBeAMacro, stream, terminators);
 
                 // If the expression is a comment, try to read the next one
                 return switch (expression) {
@@ -221,11 +230,7 @@ class HissReader {
         }
 
 
-        // Default to symbol
-        try {
-            return readSymbol(Object("HStream", stream), terminators, pos);
-        } catch (s: Dynamic) {
-            throw 'Failed to read from $stream because no macros matched and then $s';
-        }
+        // Call default read function
+        return callReadFunction(Function(Haxe(Fixed, readSymbol, "read-symbol")), "", stream, terminators);
     }
 }
