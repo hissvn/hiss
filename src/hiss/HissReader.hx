@@ -43,6 +43,8 @@ class HissReader {
         interp = globalInterp;
         readTable = Dict(new HDict());
 
+        defaultReadFunction = Function(Haxe(Fixed, readSymbol, "read-symbol"));
+
         // Literals
         internalSetMacroString('"', readString);
         var numberChars = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"];
@@ -231,6 +233,6 @@ class HissReader {
 
 
         // Call default read function
-        return callReadFunction(Function(Haxe(Fixed, readSymbol, "read-symbol")), "", stream, terminators);
+        return callReadFunction(defaultReadFunction, "", stream, terminators);
     }
 }
