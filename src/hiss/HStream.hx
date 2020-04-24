@@ -108,11 +108,13 @@ class HStream {
 			}
 		}
 
-		return if (index < rawString.length || eofTerminates) {
+		return if (index < rawString.length) {
 			Some({
 				output: rawString.substr(0, index),
 				terminator: whichTerminator
 			});
+		} else if (eofTerminates) {
+			Some({output: rawString, terminator: null});
 		} else {
 			None;
 		}
@@ -147,7 +149,7 @@ class HStream {
 				drop(s);
 
 				// Remove the terminator that followed the data from the buffer
-				if (dropTerminator) {
+				if (dropTerminator && t != null) {
 					//trace('dropping the terminator which is "$t"');
 					drop(t);
 				}
