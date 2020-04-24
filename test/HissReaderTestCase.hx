@@ -112,4 +112,8 @@ class HissReaderTestCase extends utest.Test {
 
         // TODO Test whether block comment plays well with custom reader macro??
     }
+
+    public function testStringEscapeSequences() {
+        assertRead(Atom(String("\n")), '"\n"');
+    }
 }
