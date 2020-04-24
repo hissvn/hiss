@@ -6,6 +6,7 @@ import haxe.macro.Context;
 import haxe.macro.Expr;
 using haxe.macro.ExprTools;
 using hx.strings.Strings;
+import hx.strings.StringBuilder;
 using StringTools;
 
 import haxe.Resource;
@@ -52,10 +53,18 @@ class HissInterp {
 
     public function load(file: HValue, ?wrappedIn: HValue) {
         if (wrappedIn == null || wrappedIn.match(Nil)) {
-            wrappedIn = Atom(String('(progn * t)'));
+            wrappedIn = Atom(String('(progn \n*\nt)'));
         }
+        var ghostCode = wrappedIn.toString();
+        if (ghostCode.charAt(ghostCode.indexOf("*") -1) != '\n') {
+            var builder = new StringBuilder(ghostCode);
+            builder.insert(ghostCode.indexOf("*"), "\n");
+            ghostCode = builder.toString();
+        }
+        var ghostLines = ghostCode.substr(0, ghostCode.indexOf("*")).split('\n').length - 1;
         var contents = getContent(file).toString();
-        return eval(HissReader.read(Atom(String(wrappedIn.toString().replace('*', contents))), Nil, Object("HPosition", new HPosition(file.toString(), 1, 1))));
+
+        return eval(HissReader.read(Atom(String(wrappedIn.toString().replace('*', contents))), Nil, Object("HPosition", new HPosition(file.toString(), -ghostLines, 1))));
     }
 
     /**

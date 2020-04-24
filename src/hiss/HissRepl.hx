@@ -27,8 +27,9 @@ class HissRepl {
 		return hval;
 	}
 
-	public function load(file: String, wrappedIn: String = '(progn * t)') {
-		return interp.load(Atom(String(file)), Atom(String(wrappedIn)));
+	public function load(file: String, ?wrappedIn: String) {
+		var wrapp = if (wrappedIn != null) Atom(String(wrappedIn)) else Nil;
+		return interp.load(Atom(String(file)), wrapp);
 	}
 
 	public function repl(hiss: String) {
