@@ -133,7 +133,16 @@ class HissReader {
     public static function readString(start: String, str: HValue, _: HValue, position: HValue): HValue {
         switch (toStream(str).takeUntil(['"'])) {
             case Some(s): 
-                return Atom(String(s.output));
+                var escaped = s.output;
+
+                // Via https://haxe.org/manual/std-String-literals.html, missing ASCII and Unicode code point support:
+                escaped = escaped.replaceAll("\\t", "\t");
+                escaped = escaped.replaceAll("\\n", "\n");
+                escaped = escaped.replaceAll("\\r", "\r");
+                escaped = escaped.replaceAll("\\\"", "\"");
+                // Single quotes are not a thing in Hiss
+
+                return Atom(String(escaped));
             case None:
                 throw 'Expected close quote for read-string';
         }
