@@ -52,9 +52,15 @@ class HissInterp {
     }
 
     public function load(file: HValue, ?wrappedIn: HValue) {
+        var contents = getContent(file).toString();
+
         if (wrappedIn == null || wrappedIn.match(Nil)) {
-            wrappedIn = Atom(String('(progn \n*\nt)'));
+            var nuts = '($contents\n)';
+            var whatIRead = HissReader.read(Atom(String(nuts)), Nil, Object("HPosition", new HPosition(file.toString(), 1, 0)));
+            //trace(whatIRead.toPrint());
+            return progn(whatIRead);
         }
+
         var ghostCode = wrappedIn.toString();
         if (ghostCode.charAt(ghostCode.indexOf("*") -1) != '\n') {
             var builder = new StringBuilder(ghostCode);
@@ -62,7 +68,6 @@ class HissInterp {
             ghostCode = builder.toString();
         }
         var ghostLines = ghostCode.substr(0, ghostCode.indexOf("*")).split('\n').length - 1;
-        var contents = getContent(file).toString();
 
         return eval(HissReader.read(Atom(String(wrappedIn.toString().replace('*', contents))), Nil, Object("HPosition", new HPosition(file.toString(), -ghostLines, 1))));
     }
