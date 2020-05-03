@@ -1,7 +1,5 @@
 package hiss;
 
-import haxe.CallStack;
-
 import hiss.HissReader;
 import hiss.HissInterp;
 import hiss.HTypes;
