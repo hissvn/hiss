@@ -1,5 +1,3 @@
 -lib haxe-strings
 -cp src
---resource src/hiss/stdlib.hiss
---resource test/std.hiss
 -java build/java

@@ -43,9 +43,11 @@ class HissInterp {
         if (contents == null) {
             #if sys
                 contents = sys.io.File.getContent(file.toString());
-            #else
-                throw 'failed to load ${file.toString()}';
             #end
+        }
+
+        if (contents == null) {
+            contents = StaticFiles.getContent(file.toString());
         }
 
         return Atom(String(contents));
@@ -592,6 +594,10 @@ class HissInterp {
     }
 
     public function new() {
+        // Load the standard library and test files:
+        StaticFiles.compileWith("src/hiss/stdlib.hiss");
+        StaticFiles.compileWith("test/std.hiss");
+
         // The hiss standard library:
         variables = Dict([]);
         var vars: HDict = variables.toDict();
