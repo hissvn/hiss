@@ -42,7 +42,11 @@ class HissInterp {
         var contents = Resource.getString(file.toString());
         if (contents == null) {
             #if sys
-                contents = sys.io.File.getContent(file.toString());
+                try {
+                    contents = sys.io.File.getContent(file.toString());
+                } catch (s: Dynamic) {
+                    contents = null;
+                }
             #end
         }
 
@@ -595,8 +599,8 @@ class HissInterp {
 
     public function new() {
         // Load the standard library and test files:
-        StaticFiles.compileWith("src/hiss/stdlib.hiss");
-        StaticFiles.compileWith("test/std.hiss");
+        StaticFiles.compileWith("stdlib.hiss");
+        StaticFiles.compileWith("../../test/std.hiss");
 
         // The hiss standard library:
         variables = Dict([]);

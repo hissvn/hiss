@@ -1,5 +1,9 @@
 package hiss;
 
+import haxe.io.Path;
+import haxe.macro.Context;
+import sys.FileSystem;
+
 class StaticFiles {
     static var files: Map<String, String> = new Map<String, String>();
     
@@ -8,7 +12,11 @@ class StaticFiles {
     }
 
     public static macro function compileWith(file: String) {
-        var content = sys.io.File.getContent(file);
+        // Search for the file relative to module root.
+
+        var posInfos = Context.getPosInfos(Context.currentPos());
+        var directory = FileSystem.absolutePath(Path.directory(posInfos.file));
+        var content = sys.io.File.getContent(Path.join([directory, file]));
         return macro StaticFiles.registerFileContent($v{file}, $v{content});
     }
 
