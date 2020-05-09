@@ -14,7 +14,7 @@ class HissRepl {
 		// TODO it's weird that all of these parts are necessary in this order to get a working hiss environment, and once we have it, it's actually static.
 		interp = new HissInterp();
 		var reader = new HissReader(interp);
-		interp.load(Atom(String('src/hiss/stdlib.hiss')));
+		interp.load(Atom(String('stdlib.hiss')));
 	}
 
 	public function read(hiss: String): HValue {
