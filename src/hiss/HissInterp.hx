@@ -418,6 +418,10 @@ class HissInterp {
         }
     }
 
+    function nil(value: HValue) {
+        return if (value == Nil) T else Nil;
+    }
+
     function bound(value: HValue) {
         return if (resolve(symbolName(value).toString()).value != null) T else Nil;
     }
@@ -526,8 +530,11 @@ class HissInterp {
         return s.toString().split("\n").toHValue();
     }
 
-    function scopeIn() {
-        stackFrames.toList().push(Dict(new HDict()));
+    function scopeIn(s: HValue = Nil) {
+        if (s == Nil) {
+            s = Dict(new HDict());
+        }
+        stackFrames.toList().push(s);
         return Nil;
     }
 
@@ -655,6 +662,7 @@ class HissInterp {
 
         vars['quote'] = Function(Macro(false, Haxe(Fixed, quote, "quote")));
 
+        importPredicate(nil);
         importPredicate(bound);
         importPredicate(int);
         importPredicate(list);

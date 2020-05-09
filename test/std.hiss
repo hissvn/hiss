@@ -72,3 +72,11 @@ true
 (import "String")
 (eq "8" (call String from-char-code 56))
 (eq 1 (call (new String "hey") index-of "e"))
+
+; Scope in on an HDict
+(setq fork (dict))
+(set-in-dict fork "hey" 'babe)
+(nil? hey)
+(nil? (scope-in fork))
+(eq 'babe hey)
+(nil? (scope-out))
