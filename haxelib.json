@@ -11,6 +11,7 @@
     "main": "hiss.Main",
     "dependencies": {
         "utest": "",
-        "haxe-strings": ""
+        "haxe-strings": "",
+        "yield": ""
     }
 }

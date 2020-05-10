@@ -1,0 +1,7 @@
+-lib haxe-strings
+-lib utest
+-lib yield
+-cp src
+-cp test
+-main Sandbox
+--interp
