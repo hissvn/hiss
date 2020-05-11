@@ -146,6 +146,11 @@
 (defun run-hook (hook &rest args)
     (do-for fun hook (funcall fun args)))
 
+(defmacro cond (&rest forms)
+    `(and ',forms (if (eval (first (first ',forms)))
+            (eval (cons 'progn (rest (first ',forms))))
+        (eval (cons 'cond (rest ',forms))))))
+
 ; Temp functions -- eventually these will need to account for not knowing if hiss is run from repo root
 (defun lstd () (load "src/hiss/stdlib.hiss"))
 (defun test-std () 
