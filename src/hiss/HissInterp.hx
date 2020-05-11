@@ -570,6 +570,7 @@ class HissInterp {
         variables.toDict()[name] = Object("Enum", e);
 
         // TODO import the constructors or write a function that invokes them
+        // TODO make a lisp switch
     }
 
     public static function toUpperHyphen(s: String) {
@@ -786,9 +787,11 @@ class HissInterp {
         stackFrames = List([]);
 
         // TODO make these all imported getters
-        vars['watched-functions'] = watchedFunctions;
-        vars['watched-vars'] = watchedVariables;
-        vars['stack-frames'] = stackFrames;
+        vars['*watched-functions*'] = watchedFunctions;
+        vars['*watched-vars*'] = watchedVariables; // TODO watched vars don't seem to be actually watched
+        vars['*stack-frames*'] = stackFrames;
+
+        // 
 
         // Import enums and stuff
         importEnum(haxe.ds.Option);
@@ -1144,7 +1147,7 @@ class HissInterp {
 
         //var watchedFunctions = ['=', 'haxe=='];
         //var watchedFunctions = ["variadic-binop", "-", "haxe-", "funcall"];
-        var watched = truthy(contains(variables.toDict()["watched-functions"], Atom(String(name))));
+        var watched = truthy(contains(variables.toDict()["*watched-functions*"], Atom(String(name))));
 
         var oldStackFrames = List(stackFrames.toList().copy());
 
