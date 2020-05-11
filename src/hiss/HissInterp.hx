@@ -605,6 +605,20 @@ class HissInterp {
         return Object(Type.getClassName(c.toObject()), Type.createInstance(c.toObject(), unwrapList(args)));
     }
 
+    public function set(varName: String, value: HValue) {
+        variables.toDict()[varName] = value;
+    }
+
+    public function copyReadtable(): HValue {
+        return Dict(HissReader.readTable.toDict().copy());
+    }
+
+    public function setReadtable(table: HValue): HValue {
+        HissReader.readTable = table;
+        variables.toDict()["*readtable*"] = table;
+        return table;
+    }
+
     public function new() {
         // Load the standard library and test files:
         StaticFiles.compileWith("stdlib.hiss");
@@ -636,6 +650,9 @@ class HissInterp {
         importWrapped(this, toUpperHyphen);
         importWrapped(this, hx.strings.Strings.toLowerHyphen);
         importWrapped(this, hx.strings.Strings.toLowerCamel);
+
+        importFixed(copyReadtable);
+        importFixed(setReadtable);
 
         importFixed(reverse);
 
@@ -676,7 +693,6 @@ class HissInterp {
         importWrapped(this, Std.parseInt);
         importWrapped(this, Std.parseFloat);
 
-        vars['*readtable*'] = HissReader.readTable;
         importFixed(HissReader.read);
         importFixed(HissReader.readString);
         importFixed(HissReader.readNumber);
