@@ -42,6 +42,7 @@ class HissReader {
     public function new(globalInterp: HissInterp) {
         interp = globalInterp;
         readTable = Dict(new HDict());
+        interp.set("*readtable*", readTable);
 
         defaultReadFunction = Function(Haxe(Fixed, readSymbol, "read-symbol"));
 
