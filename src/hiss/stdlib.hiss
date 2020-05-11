@@ -140,6 +140,12 @@
 (defmacro try (expression catch-expression)
     `(when (error? ,expression) ,catch-expression))
 
+(defmacro add-hook (hook-name hook-function)
+    `(push ,hook-name ,hook-function))
+
+(defun run-hook (hook &rest args)
+    (do-for fun hook (funcall fun args)))
+
 ; Temp functions -- eventually these will need to account for not knowing if hiss is run from repo root
 (defun lstd () (load "src/hiss/stdlib.hiss"))
 (defun test-std () 
