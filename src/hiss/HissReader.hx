@@ -162,7 +162,7 @@ class HissReader {
                 whitespaceOrTerminator.push(terminator.toString());
             }
         }
-        return HaxeTools.extract(toStream(str).takeUntil(whitespaceOrTerminator, true, false), Some(s) => s).output;
+        return HaxeTools.extract(toStream(str).takeUntil(whitespaceOrTerminator, true, false), Some(s) => s, "next token").output;
     }
 
     public static function readSymbol(start: HValue, str: HValue, terminators: HValue, position: HValue): HValue {
@@ -240,15 +240,28 @@ class HissReader {
                 // If the expression is a comment, try to read the next one
                 return switch (expression) {
                     case Comment:
-                        read(Object("HStream", stream), terminators); 
+                        return if (stream.isEmpty()) {
+                            Nil; // This is awkward but better than always erroring when the last expression is a comment
+                        } else {
+                            read(Object("HStream", stream), terminators); 
+                        }
                     default: 
                         expression;
                 }
             }
         }
 
-
         // Call default read function
         return callReadFunction(defaultReadFunction, "", stream, terminators);
+    }
+
+    public static function readAll(str: HValue, ?terminators: HValue, ?pos: HValue): HValue {
+        var stream: HStream = toStream(str, pos);
+
+        var exprs = [];
+        while (!stream.isEmpty()) {
+            exprs.push(read(Object("HStream", stream), terminators, pos));
+        }
+        return List(exprs);
     }
 }
