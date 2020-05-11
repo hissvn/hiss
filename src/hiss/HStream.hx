@@ -125,6 +125,7 @@ class HStream {
 	}
 
 	public function drop(s:String) {
+		//trace('dropping $s');
 		var next = peek(s.length);
 		if (next != s) {
 			throw 'Expected to drop $s from buffer but found $next';

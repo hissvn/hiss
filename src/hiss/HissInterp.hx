@@ -61,8 +61,7 @@ class HissInterp {
         var contents = getContent(file).toString();
 
         if (wrappedIn == null || wrappedIn.match(Nil)) {
-            var nuts = '($contents\n)';
-            var whatIRead = HissReader.read(Atom(String(nuts)), Nil, Object("HPosition", new HPosition(file.toString(), 1, 0)));
+            var whatIRead = HissReader.readAll(Atom(String(contents)), Nil, Object("HPosition", new HPosition(file.toString(), 1, 0)));
             //trace(whatIRead.toPrint());
             return progn(whatIRead);
         }
@@ -710,6 +709,7 @@ class HissInterp {
         importWrapped(this, Std.parseFloat);
 
         importFixed(HissReader.read);
+        importFixed(HissReader.readAll);
         importFixed(HissReader.readString);
         importFixed(HissReader.readNumber);
         importFixed(HissReader.readSymbol);
@@ -820,10 +820,8 @@ class HissInterp {
 
         // TODO make these all imported getters
         vars['*watched-functions*'] = watchedFunctions;
-        vars['*watched-vars*'] = watchedVariables; // TODO watched vars don't seem to be actually watched
+        vars['*watched-vars*'] = watchedVariables;
         vars['*stack-frames*'] = stackFrames;
-
-        // 
 
         // Import enums and stuff
         importEnum(haxe.ds.Option);
@@ -1366,7 +1364,8 @@ class HissInterp {
                 var value = switch (funcInfo) {
                     case VarInfo(v):
                         v.value;
-                    default: return Signal(Error('${expr.toPrint()}: ${funcInfo.toPrint()} is not a function pointer'));
+                    default: 
+                        return Signal(Error('${expr.toPrint()}: ${funcInfo.toPrint()} is not a function pointer'));
                 }
                 if (funcInfo == null || value == null) { trace(funcInfo); }
                 var args = rest(expr);

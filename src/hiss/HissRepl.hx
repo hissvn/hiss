@@ -21,6 +21,10 @@ class HissRepl {
 		return HissReader.read(Atom(String(hiss+ "\n")));
 	}
 
+	public function readAll(hiss: String): HValue {
+		return HissReader.readAll(Atom(String(hiss+"\n")));
+	}
+
 	public function eval(hiss: String): HValue {
 		var hval = interp.eval(read(hiss));
 		
