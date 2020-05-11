@@ -25,6 +25,9 @@ class HissReader {
         if (macroLengths.indexOf(sk.length) == -1) {
             macroLengths.push(sk.length);
         }
+        // Sort macro lengths from longest to shortest so, for example, ,@ and , can both be operators.
+        macroLengths.sort(function(a, b) { return b - a; });
+        //trace(macroLengths[0]);
         return Nil;
     }
 
@@ -37,6 +40,7 @@ class HissReader {
         if (macroLengths.indexOf(s.length) == -1) {
             macroLengths.push(s.length);
         }
+        macroLengths.sort(function(a, b) { return b - a; });
     }
 
     public function new(globalInterp: HissInterp) {
@@ -60,7 +64,7 @@ class HissReader {
         internalSetMacroString("(", readDelimitedList.bind(Atom(String(")")), null));
 
         // Quotes
-        for (symbol in ["`", "'", ","]) {
+        for (symbol in ["`", "'", ",", ",@"]) {
             internalSetMacroString(symbol, readQuoteExpression);
         }
 
@@ -93,6 +97,8 @@ class HissReader {
                 Quote(expression);
             case ",":
                 Unquote(expression);
+            case ",@":
+                UnquoteList(expression);
             default:
                 throw 'Not a quote expression';
         }
