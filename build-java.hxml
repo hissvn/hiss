@@ -1,4 +1,3 @@
 -lib haxe-strings
--lib yield
 -cp src
 -java build/java

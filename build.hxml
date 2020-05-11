@@ -1,5 +1,4 @@
 -lib haxe-strings
--lib yield
 -cp src
 -D analyzer-optimize
 -D no-deprecation-warnings
