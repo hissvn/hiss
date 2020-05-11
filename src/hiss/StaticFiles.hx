@@ -24,7 +24,7 @@ class StaticFiles {
         var posInfos = Context.getPosInfos(Context.currentPos());
         var dir = FileSystem.absolutePath(Path.directory(posInfos.file));
         var files = recursiveLoop(Path.join([dir, directory]));
-        files = [for (file in files) file.replace(dir, "")];
+        files = [for (file in files) file.replace(dir + "/", "")];
 
         var exprs = [];
         for (file in files) {
