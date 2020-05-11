@@ -456,7 +456,16 @@ class HissInterp {
         }
     }
 
-    function print(value: HValue) {
+    function isString(value: HValue) {
+        try {
+            value.toString();
+            return T;
+        } catch (s: Dynamic) {
+            return Nil;
+        }
+    }
+
+    public function print(value: HValue) {
         HaxeTools.println(value.toPrint());
         return value;
     }
@@ -685,6 +694,7 @@ class HissInterp {
         importPredicate(int);
         importPredicate(list);
         importPredicate(symbol);
+        vars['string?'] = Function(Haxe(Fixed, isString, "string?"));
         vars['error?'] = Function(Haxe(Fixed, isError, "error?"));
 
         // Haxe std io
