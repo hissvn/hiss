@@ -470,6 +470,11 @@ class HissInterp {
         return value;
     }
 
+    public function uglyPrint(value: HValue) {
+        HaxeTools.println(Std.string(value));
+        return value;
+    }
+
     public static function eq(a: HValue, b: HValue): HValue {
         if (Type.enumIndex(a) != Type.enumIndex(b)) {
             return Nil;
@@ -487,8 +492,8 @@ class HissInterp {
                     i++;
                 }
                 return T;
-            case Quote(aa) | Quasiquote(aa) | Unquote(aa):
-                var bb = HaxeTools.extract(b, Quote(e) | Quasiquote(e) | Unquote(e) => e);
+            case Quote(aa) | Quasiquote(aa) | Unquote(aa) | UnquoteList(aa):
+                var bb = HaxeTools.extract(b, Quote(e) | Quasiquote(e) | Unquote(e) | UnquoteList(e) => e);
                 return eq(aa, bb);
             default:
                 return Nil;
@@ -699,6 +704,7 @@ class HissInterp {
 
         // Haxe std io
         importFixed(print);
+        importFixed(uglyPrint);
         
         importWrapped(this, Std.parseInt);
         importWrapped(this, Std.parseFloat);
@@ -862,7 +868,6 @@ class HissInterp {
     function setq(l: HValue): HValue {
         var list = l.toList();
         var name = symbolName(list[0]).toString();
-        //trace(list[1]);
         var value = eval(list[1]);
         
         var watched = truthy(contains(watchedVariables, Atom(String(name))));
@@ -925,14 +930,12 @@ class HissInterp {
                 List([for (v in it) {
                     setlocal(List([name, Atom(Int(v))]));
 
-                    //trace('innter funcall');
                     eval(cons(Atom(Symbol("progn")), body));
                 }]);
             case List(l):
                 List([for (v in l) {
                     setlocal(List([name, Quote(v)]));
 
-                    //trace('innter funcall');
                     eval(cons(Atom(Symbol("progn")), body));
                 }]);
             default:
@@ -958,7 +961,6 @@ class HissInterp {
                 for (v in it) {
                     setlocal(List([name, Atom(Int(v))]));
 
-                    //trace('innter funcall');
                     var value = eval(cons(Atom(Symbol("progn")), body));
                     switch (value) {
                         case Signal(Continue):
@@ -972,7 +974,6 @@ class HissInterp {
                 for (v in l) {
                     setlocal(List([name, Quote(v)]));
 
-                    //trace('innter funcall');
                     var value = eval(cons(Atom(Symbol("progn")), body));
                     switch (value) {
                         case Signal(Continue):
@@ -996,7 +997,6 @@ class HissInterp {
         var body: HValue = List(argList.slice(1));
         
         while (truthy(eval(cond))) {
-            //trace('innter funcall');
             var value = eval(cons(Atom(Symbol("progn")), body));
             switch (value) {
                 case Signal(Break):
@@ -1012,7 +1012,6 @@ class HissInterp {
     function doList(list: HValue, func: HValue) {
         for (v in list.toList()) {
             
-            //trace('calling ${funcInfo} with arg ${v}');
             funcall(func, List([v]), Nil);
         }
         return Nil;
@@ -1100,7 +1099,6 @@ class HissInterp {
     }
 
     public static function first(list: HValue): HValue {
-        //trace('calling first on ${list.toPrint()}');
         var v = list.toList()[0];
         if (v == null) v = Nil;
         return v;
@@ -1141,7 +1139,6 @@ class HissInterp {
     }
 
     function evalAll(hl: HValue): HValue {
-        //trace(hl);
         return List([for (exp in hl.toList()) eval(exp)]);
     }
 
@@ -1177,11 +1174,8 @@ class HissInterp {
 
         var oldStackFrames = List(stackFrames.toList().copy());
 
-        // trace('calling function $name whose value is $func');
-
         switch (func) {
             case Function(Macro(e, m)):
-                //trace('macroexpanding $name with args ${args.toPrint()}');
                 var macroExpansion = funcall(Function(m), args, Nil);
                 if (watched)
                      trace('macroexpansion $name ${func.toPrint()} -> ${macroExpansion.toPrint()}');
@@ -1194,21 +1188,16 @@ class HissInterp {
         }
         
 
-        //if (watched) 
-        //    trace ('args before evalAll of $name are $args');
+        
         var argVals = args;
         if (truthy(evalArgs)) {
-        //    trace('evaling args ${argVals.toPrint()} for $name');
             argVals = evalAll(args);
         }
-        //if (watched) 
-        //    trace ('args after evalAll are ${argVals.toPrint()}');
 
         var argList: HList = argVals.toList().copy();
 
         // TODO trace the args
 
-        //trace('convert $name: ${func} to h function');
         var hfunc = func.toHFunction();
 
         var message = 'calling `$name`: $hfunc with args ${argVals.toPrint()}';
@@ -1220,12 +1209,10 @@ class HissInterp {
                     name = fname;
                     switch (t) {
                         case Var: 
-                            // trace('varargs -- putting them in a list');
                             argList = [List(argList)];
                         case Fixed:
                     }
 
-                    // trace('calling haxe function $name with $argList');
                     var result: HValue = Reflect.callMethod(container, hxfunc, argList);
 
                     if (watched) trace('returning ${result.toPrint()} from ${name}');
@@ -1270,13 +1257,6 @@ class HissInterp {
                     var lastResult = null;
                     for (expression in funDef.body) {
                         try {
-                            if (watched) {
-                                //trace('there are ${stackFrames.toList().length} stack frames when calling $name');
-                                //trace('top stack frame:');
-                                //trace(stackFrames.toList()[stackFrames.toList().length-1].toPrint());
-                                //trace('variables:');
-                                //trace(variables.toPrint());
-                            } 
                             lastResult = eval(expression);
                         }/* catch (e: Dynamic) {
                             stackFrames = oldStackFrames;
@@ -1284,13 +1264,9 @@ class HissInterp {
                         }*/
                     }
 
-                    if (watched) trace('restoring stack frames from ${stackFrames.toPrint()} to ${oldStackFrames.toPrint()}');
                     while (!stackFrames.toList().empty()) stackFrames.toList().pop();
                     while (!oldStackFrames.toList().empty()) stackFrames.toList().push(oldStackFrames.toList().pop());
                     stackFrames.toList().reverse();
-                    if (watched) trace('stack frames are ${stackFrames}');
-
-                    //trace('returning ${lastResult.toPrint()} from ${func.toPrint()}');
 
                     return lastResult;
                 default: throw 'cannot call $funcOrPointer as a function';
@@ -1330,16 +1306,32 @@ class HissInterp {
     }
 
     public function evalUnquotes(expr: HValue): HValue {
-        return switch (expr) {
+        switch (expr) {
             case List(exps):
-                List(exps.map((exp) -> evalUnquotes(exp)));
+                var copy = exps.copy();
+                // If any of exps is an UnquoteList, expand it and insert the values at that index
+                var idx = 0;
+                while (idx < copy.length) {
+                    switch (copy[idx]) {
+                        case UnquoteList(exp):
+                            copy.splice(idx, 1);
+                            var innerList = eval(exp);
+                            for (exp in innerList.toList()) {
+                                
+                                copy.insert(idx++, exp);
+                            }
+                        default:
+                    }
+                    idx++;
+                }
+                return List(copy.map((exp) -> evalUnquotes(exp)));
             case Quote(exp):
-                Quote(evalUnquotes(exp));
+                return Quote(evalUnquotes(exp));
             case Unquote(h):
-                eval(h);
+                return eval(h);
             case Quasiquote(exp):
-                evalUnquotes(exp);
-            default: expr;
+                return evalUnquotes(exp);
+            default: return expr;
         };
     }
 
@@ -1406,10 +1398,7 @@ class HissInterp {
         if (value == null) {
             throw('Expression evaluated null: ${expr.toPrint()}');
         }
-        //trace(expr);
-        //trace(value);
         // trace('${expr.toPrint()} -> ${value.toPrint()}'); // Good for debugging crazy stuff
-        //trace(value);
         return value;
     }
 }

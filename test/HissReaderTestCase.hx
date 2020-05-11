@@ -99,6 +99,9 @@ class HissReaderTestCase extends utest.Test {
         assertRead(Unquote(Atom(Symbol("fork"))), ",fork");
         assertRead(Quote(List([Atom(Symbol("fork")), Atom(String("hello"))])), "'(fork \"hello\")");
         assertRead(Quasiquote(List([Unquote(Atom(Symbol("fork"))), Atom(String("hello"))])), "`(,fork \"hello\")");
+        assertRead(Quasiquote(List([Unquote(List([Atom(Symbol("fork")), Atom(Symbol("you"))])), Atom(String("hello"))])), "`(,(fork you) \"hello\")");
+        assertRead(Quasiquote(List([UnquoteList(Atom(Symbol("fork"))), Atom(String("hello"))])), "`(,@fork \"hello\")");
+        assertRead(Quasiquote(List([UnquoteList(List([Atom(Symbol("fork")), Atom(Symbol("you"))])), Atom(String("hello"))])), "`(,@(fork you) \"hello\")");
         //trace("DONE TESTING QUOTES");
 
     }
