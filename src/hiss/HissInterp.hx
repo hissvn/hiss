@@ -268,7 +268,7 @@ class HissInterp {
         }
     }
 
-    static function toHValue(v: Dynamic): HValue {
+    static function toHValue(v: Dynamic, hint:String = "HValue"): HValue {
         if (v == null) return Nil;
         var t = Type.typeof(v);
         return switch (t) {
@@ -308,7 +308,7 @@ class HissInterp {
             case TFunction:
                 Function(Haxe(Fixed, v, "[wrapped-function]"));
             default:
-                throw 'value $v of type $t cannot be wrapped as an HValue';
+                throw 'value $v of type $t cannot be wrapped as $hint';
         }
     }
 
@@ -848,7 +848,7 @@ class HissInterp {
     function callMethod(container: HValue, method: HValue, args: HValue) {
         switch (container) {
             case Object(_, d):
-                return Reflect.callMethod(d, getProperty(container, method).toFunction(), unwrapList(args)).toHValue();
+                return Reflect.callMethod(d, getProperty(container, method).toFunction("haxe method"), unwrapList(args)).toHValue("hiss result");
             default:
         }
 
@@ -1118,16 +1118,16 @@ class HissInterp {
         return List(list.toList().slice(0, n.toInt()));
     }
 
-    public static function toList(list: HValue): HList {
+    public static function toList(list: HValue, hint: String = "list"): HList {
         return HaxeTools.extract(list, List(l) => l, "list");
     }
 
-    public static function toObject(obj: HValue): Dynamic {
+    public static function toObject(obj: HValue, ?hint: String = "object"): Dynamic {
         return HaxeTools.extract(obj, Object(_, o) => o, "object");
     }
 
-    public static function toFunction(f: HValue): Dynamic {
-        return HaxeTools.extract(f, Function(Haxe(_, v, _)) => v);
+    public static function toFunction(f: HValue, hint: String = "function"): Dynamic {
+        return HaxeTools.extract(f, Function(Haxe(_, v, _)) => v, hint);
     }
 
     public static function reverse(list: HValue): HValue {
@@ -1211,8 +1211,8 @@ class HissInterp {
                         case Fixed:
                     }
 
+                    message += ". Are you sure you are passing the right arguments?";
                     var result: HValue = Reflect.callMethod(container, hxfunc, argList);
-
                     if (watched) trace('returning ${result.toPrint()} from ${name}');
 
                     return result;
@@ -1310,7 +1310,7 @@ class HissInterp {
                 // If any of exps is an UnquoteList, expand it and insert the values at that index
                 var idx = 0;
                 while (idx < copy.length) {
-                    switch (copy[idx]) {
+                    switch (copy[idx]) {   
                         case UnquoteList(exp):
                             copy.splice(idx, 1);
                             var innerList = eval(exp);
@@ -1319,10 +1319,14 @@ class HissInterp {
                                 copy.insert(idx++, exp);
                             }
                         default:
+                            var exp = copy[idx];
+                            copy.splice(idx, 1);
+                            copy.insert(idx, evalUnquotes(exp));
                     }
                     idx++;
+ 
                 }
-                return List(copy.map((exp) -> evalUnquotes(exp)));
+                return List(copy);
             case Quote(exp):
                 return Quote(evalUnquotes(exp));
             case Unquote(h):

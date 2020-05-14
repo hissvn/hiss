@@ -162,6 +162,7 @@ class HissReader {
                 whitespaceOrTerminator.push(terminator.toString());
             }
         }
+
         return HaxeTools.extract(toStream(str).takeUntil(whitespaceOrTerminator, true, false), Some(s) => s, "next token").output;
     }
 
@@ -255,12 +256,17 @@ class HissReader {
         return callReadFunction(defaultReadFunction, "", stream, terminators);
     }
 
-    public static function readAll(str: HValue, ?terminators: HValue, ?pos: HValue): HValue {
+    public static function readAll(str: HValue, ?dropWhitespace: HValue, ?terminators: HValue, ?pos: HValue): HValue {
         var stream: HStream = toStream(str, pos);
+
+        if (dropWhitespace == null) dropWhitespace = T;
 
         var exprs = [];
         while (!stream.isEmpty()) {
             exprs.push(read(Object("HStream", stream), terminators, pos));
+            if (dropWhitespace != Nil) {
+                stream.dropWhitespace();
+            }
         }
         return List(exprs);
     }
