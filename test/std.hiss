@@ -82,8 +82,8 @@ true
 (nil? (scope-out))
 
 ; Test unquoting lists
-
-
 (setq inner-list (list 5 6 7))
 (eq `(1 2 3 4 ,@inner-list) (list 1 2 3 4 5 6 7))
 (eq (eval `(+ 1 2 3 4 ,@inner-list)) 28)
+(defun adhoc-list (l) `(1 2 3 4 ,@l))
+(eq `(,@(adhoc-list inner-list)) '(1 2 3 4 5 6 7))
