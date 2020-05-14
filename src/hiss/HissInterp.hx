@@ -1,7 +1,10 @@
 package hiss;
 
+import haxe.macro.Context;
+
 import hiss.HStream.HPosition;
 import haxe.ds.ListSort;
+import haxe.io.Path;
 import haxe.macro.Context;
 import haxe.macro.Expr;
 using haxe.macro.ExprTools;
@@ -15,6 +18,7 @@ using Lambda;
 
 #if sys
 import sys.io.File;
+import sys.io.Process;
 #end
 import Reflect;
 import Type;
@@ -29,15 +33,16 @@ import hiss.HissTools;
 import hiss.HaxeTools;
 
 class HissInterp {
-    public var variables: HValue;
-    private var stackFrames: HValue;
+    /** Debugging **/
     var watchedVariables: HValue;
     var watchedFunctions: HValue;
 
+    // *
     static function symbolName(v: HValue): HValue {
         return Atom(String(HaxeTools.extract(v, Atom(Symbol(name)) => name, "symbol name")));
     }
 
+    // *
     public static function getContent(file: HValue): HValue {
         var contents = Resource.getString(file.toString());
         if (contents == null) {
@@ -57,6 +62,7 @@ class HissInterp {
         return Atom(String(contents));
     }
 
+    // *
     public function load(file: HValue, ?wrappedIn: HValue) {
         var contents = getContent(file).toString();
 
@@ -93,6 +99,8 @@ class HissInterp {
     /**
      * Implementation of the `if` macro. Returns value of `thenExp` if condition is truthy, else * evaluates `elseExp`
      **/
+
+    // *
     function hissIf(condExp: HValue, thenExp: HValue, elseExp: Null<HValue>) {
         var cond = eval(condExp);
         return if (truthy(cond)) {
@@ -105,6 +113,7 @@ class HissInterp {
         }
     }
 
+    // *
     static function length(arg:HValue): HValue {
         return switch (arg) {
             case Atom(String(s)): Atom(Int(s.length));
@@ -113,6 +122,7 @@ class HissInterp {
         }
     }
 
+    // *
     function lambda(args: HValue): HValue {
         var argNames = first(args).toList().map(s -> symbolName(s).toString());
         
@@ -129,6 +139,7 @@ class HissInterp {
         return HaxeTools.extract(hv, Function(f) => f, "function");
     }
 
+    // *
     // TODO optional docstrings lollll
     function defun(args: HValue, isMacro: HValue = Nil) {
         var name = symbolName(first(args)).toString();
@@ -136,14 +147,16 @@ class HissInterp {
         if (truthy(isMacro)) {
             fun = Function(Macro(true, fun.toHFunction()));
         }
-        variables.toDict()[name] = fun;
-        return fun;
+        env.toDict()[name] = fun;
+        funcall(callback, fun, env);
     }
 
+    // *
     function defmacro(args: HValue): HValue {
         return defun(args, T);
     }
     
+    // *
     function intern(arg: HValue): HValue {
         return Atom(Symbol(arg.toString()));
     }
@@ -325,6 +338,7 @@ class HissInterp {
         return expr;
     }
 
+    // *
     static function cons(hv: HValue, hl: HValue): HValue {
         var l = hl.toList().copy();
         l.insert(0, hv);
@@ -335,6 +349,7 @@ class HissInterp {
         return HaxeTools.extract(hv, Atom(String(s)) => s, "string");
     }
 
+    // *
      // TODO allow other sorting algorithms, Reflect.compare, etc.
     function sort(args: HValue) {
         var argList = args.toList();
@@ -349,6 +364,7 @@ class HissInterp {
         return List(sorted);
     }
 
+    // *
     function reverseSort(v: HValue) {
         // TODO implement better
         var sorted = v.toList().copy();
@@ -358,6 +374,7 @@ class HissInterp {
         return List(sorted);
     }
 
+    // *
     function readLine(args: HValue) {
         if (args.toList().length == 1) {
             HaxeTools.print(first(args).toString());
@@ -369,12 +386,15 @@ class HissInterp {
         #end
     }
 
+    // *
     function getVariables() { return variables; }
 
+    // *
     function not(v: HValue) {
         return if (truthy(v)) Nil else T;
     }
 
+    // *
     function progn(exps: HValue) {
         var value = null;
         for (exp in exps.toList()) {
@@ -391,14 +411,17 @@ class HissInterp {
         return value;
     }
 
+    // *
     function makeList(exps: HValue) {
         return exps;
     }
 
+    // *
     function quote(exp: HValue) {
         return exp;
     }
 
+    // *
     function isError(exp: HValue) {
         return switch (exp) {
             case Signal(Error(_)):
@@ -408,6 +431,7 @@ class HissInterp {
         };
     }
 
+    // *
     function int(value: HValue) {
         try {
             value.toInt();
@@ -417,14 +441,17 @@ class HissInterp {
         }
     }
 
+    // *
     function nil(value: HValue) {
         return if (value == Nil) T else Nil;
     }
 
+    // *
     function bound(value: HValue) {
         return if (resolve(symbolName(value).toString()).value != null) T else Nil;
     }
 
+    // *
     function list(value: HValue) {
         try {
             value.toList();
@@ -434,18 +461,22 @@ class HissInterp {
         }
     }
 
+    // *
     function hissReturn(value: HValue): HValue {
         return Signal(Return(value));
     }
 
+    // *
     function hissContinue(): HValue {
         return Signal(Continue);
     }
 
+    // *
     function hissBreak(): HValue {
         return Signal(Break);
     }
 
+    // *
     function symbol(value: HValue) {
         try {
             symbolName(value);
@@ -455,6 +486,7 @@ class HissInterp {
         }
     }
 
+    // *
     function isString(value: HValue) {
         try {
             value.toString();
@@ -464,16 +496,19 @@ class HissInterp {
         }
     }
 
+    // *
     public function print(value: HValue) {
         HaxeTools.println(value.toPrint());
         return value;
     }
 
+    // *
     public function uglyPrint(value: HValue) {
         HaxeTools.println(Std.string(value));
         return value;
     }
 
+    // *
     public static function eq(a: HValue, b: HValue): HValue {
         if (Type.enumIndex(a) != Type.enumIndex(b)) {
             return Nil;
@@ -499,6 +534,7 @@ class HissInterp {
         }
     }
 
+    // *
     function or(args: HValue) {
         return if (args.toList().length == 0) {
             Nil;
@@ -509,6 +545,7 @@ class HissInterp {
         }
     }
 
+    // *
     function and(args: HValue): HValue {
         switch (args.toList().length) {
             case 0:
@@ -535,14 +572,17 @@ class HissInterp {
         }
     }
 
+    // *
     function split(s: HValue, d: HValue) {
         return s.toString().split(d.toString()).toHValue();
     }
 
+    // *
     function splitLines(s: HValue) {
         return s.toString().split("\n").toHValue();
     }
 
+    // *
     function scopeIn(s: HValue = Nil) {
         if (s == Nil) {
             s = Dict(new HDict());
@@ -551,20 +591,24 @@ class HissInterp {
         return Nil;
     }
 
+    // *
     function scopeOut() {
         stackFrames.toList().pop();
         return Nil;
     }
 
+    // *
     function scopeReturn(v: HValue) {
         stackFrames.toList().pop();
         return v;
     }
 
+    // *
     function error(message: HValue) {
         return Signal(Error(message.toString()));
     }
 
+    // *
     function join(arr: HValue, sep: HValue) {
         var strings = [for (val in arr.toList()) string(val).toString()];
         return Atom(String(strings.join(sep.toString())));
@@ -614,6 +658,7 @@ class HissInterp {
         variables.toDict()[name.toUpperHyphen()] = Object("Class", c);
     }
 
+    // *
     public function createInstance(c: HValue, args: HValue) {
         return Object(Type.getClassName(c.toObject()), Type.createInstance(c.toObject(), unwrapList(args)));
     }
@@ -622,10 +667,12 @@ class HissInterp {
         variables.toDict()[varName] = value;
     }
 
+    // *
     public function copyReadtable(): HValue {
         return Dict(HissReader.readTable.toDict().copy());
     }
 
+    // *
     public function setReadtable(table: HValue): HValue {
         HissReader.readTable = table;
         variables.toDict()["*readtable*"] = table;
@@ -712,6 +759,7 @@ class HissInterp {
         importFixed(HissReader.readAll);
         importFixed(HissReader.readString);
         importFixed(HissReader.readNumber);
+        //vars['read-symbol'] = Function(Haxe(Fixed, HissReader.readSymbol.bind(Atom(String(""))), "read-symbol"));
         importFixed(HissReader.readSymbol);
         importFixed(HissReader.readDelimitedList);
         importFixed(HissReader.setMacroString);
@@ -835,6 +883,7 @@ class HissInterp {
     }
 
     /** Get a field out of a container (object/class) **/
+    // *
     function getProperty(container: HValue, field: HValue) {
         switch (container) {
             case Object(_, d):
@@ -845,6 +894,7 @@ class HissInterp {
         throw 'Cannot retrieve field `${field.toString()}` from object $container';
     }
 
+    // *
     function callMethod(container: HValue, method: HValue, args: HValue) {
         switch (container) {
             case Object(_, d):
@@ -855,6 +905,7 @@ class HissInterp {
         throw 'Cannot call method `${method.toString()}` from object $container';
     }
 
+    // *
     function string(l: HValue): HValue {
         return Atom(String(try {
             valueOf(l).toString();
@@ -863,6 +914,7 @@ class HissInterp {
         }));
     }
 
+    // *
     function setq(l: HValue): HValue {
         var list = l.toList();
         var name = symbolName(list[0]).toString();
@@ -887,6 +939,7 @@ class HissInterp {
         }
     }
 
+    // *
     function setlocal (l: HValue) {
         var list = l.toList();
         var name = symbolName(list[0]).toString();
@@ -910,10 +963,12 @@ class HissInterp {
         }
     }
 
+    // *
     function setNth(arr: HValue, idx: HValue, val: HValue) { 
         arr.toList()[idx.toInt()] = val; return arr;
     }
 
+    // *
     function hissFor(args: HValue): HValue {
         var argList = args.toList();
         var name = argList[0];
@@ -944,6 +999,7 @@ class HissInterp {
         //return Nil;
     }
 
+    // *
     function hissDoFor(args: HValue): HValue {
         var argList = args.toList();
         var name = argList[0];
@@ -989,6 +1045,7 @@ class HissInterp {
         return Nil;
     }
 
+    // *
     function hissWhile(args: HValue){
         var argList = args.toList();
         var cond = argList[0];
@@ -1007,6 +1064,7 @@ class HissInterp {
         return Nil;
     }
 
+    // *
     function doList(list: HValue, func: HValue) {
         for (v in list.toList()) {
             
@@ -1015,10 +1073,12 @@ class HissInterp {
         return Nil;
     }
 
+    // *
     function map(arr: HValue, func: HValue) {
         return List([for (v in arr.toList()) funcall(func, List([v]), Nil)]);
     }
 
+    // *
     function dict(pairs: HValue) {
         var dict = new HDict();
         for (pair in pairs.toList()) {
@@ -1029,32 +1089,38 @@ class HissInterp {
         return Dict(dict);
     }
 
+    // *
     function setInDict(dict: HValue, key: HValue, value: HValue) {
         var dictObj: HDict = dict.toDict();
         dictObj[key.toString()] = value;
         return dict;
     }
 
+    // *
     function eraseInDict(dict: HValue, key: HValue, value: HValue) {
         var dictObj: HDict = dict.toDict();
         dictObj.remove(key.toString());
         return dict;
     }
 
+    // *
     function getInDict(dict: HValue, key: HValue) {
         var dictObj: HDict = dict.toDict();
         return if (dictObj[key.toString()] != null) dictObj[key.toString()] else Nil;
     }
 
+    // *
     function keys(dict: HValue) {
         var dictObj: HDict = dict.toDict();
         return List([for (key in dictObj.keys()) Atom(String(key))]);
     }
 
+    // *
     function charAt (str: HValue, idx: HValue) {
         return Atom(String(str.toString().charAt(idx.toInt())));
     }
 
+    // *
     function substr(args: HValue){
         var l = args.toList();
         var str = l[0].toString();
@@ -1064,6 +1130,8 @@ class HissInterp {
         return Atom(String(str.substr(start, len)));
     }
 
+
+    // *
     function append(args: HValue) {
         var firstList: HList = first(args).toList();
 
@@ -1078,16 +1146,18 @@ class HissInterp {
         }
     };
 
+    // *
     function indexOf(l: HValue, v: HValue): HValue {
         var list = l.toList();
         var idx = 0;
         for (lv in list) {
-            if (Type.enumEq(v, lv)) return Atom(Int(idx));
+            if (eq(v, lv)) return Atom(Int(idx));
             idx++;
         }
         return Nil;
     }
 
+    // *
     function contains(l: HValue, v: HValue):HValue {
         return if (truthy(indexOf(l, v))) T else Nil;
     }
@@ -1096,24 +1166,29 @@ class HissInterp {
         return HaxeTools.extract(dict, Dict(h) => h, "dict");
     }
 
+    // *
     public static function first(list: HValue): HValue {
         var v = list.toList()[0];
         if (v == null) v = Nil;
         return v;
     }
 
+    // *
     public static function rest(list: HValue): HValue {
         return List(list.toList().slice(1));
     }
 
+    // *
     public static function nth(list: HValue, idx: HValue):HValue {
         return list.toList()[idx.toInt()];
     }
 
+    // *
     public static function slice(list: HValue, idx: HValue):HValue {
         return List(list.toList().slice(idx.toInt()));
     }
 
+    // *
     public static function take(list: HValue, n: HValue):HValue {
         return List(list.toList().slice(0, n.toInt()));
     }
@@ -1130,12 +1205,14 @@ class HissInterp {
         return HaxeTools.extract(f, Function(Haxe(_, v, _)) => v, hint);
     }
 
+    // *
     public static function reverse(list: HValue): HValue {
         var copy = list.toList().copy();
         copy.reverse();
         return List(copy);
     }
 
+    // *
     function evalAll(hl: HValue): HValue {
         return List([for (exp in hl.toList()) eval(exp)]);
     }
@@ -1144,6 +1221,7 @@ class HissInterp {
         return [for (v in hl.toList()) valueOf(v)];
     }
 
+    // *
     public function funcall(funcOrPointer: HValue, args: HValue, evalArgs: HValue = T): HValue {
         var container = null;
         var name = "anonymous";
@@ -1303,6 +1381,7 @@ class HissInterp {
         return info;
     }
 
+    // *
     public function evalUnquotes(expr: HValue): HValue {
         switch (expr) {
             case List(exps):
@@ -1337,6 +1416,7 @@ class HissInterp {
         };
     }
 
+    // *
     public function eval(expr: HValue, returnScope: HValue = Nil): HValue {
         //trace('eval called on ${expr.toPrint()}');
         var value = switch (expr) {
@@ -1349,7 +1429,7 @@ class HissInterp {
                     case String(v):
                         expr;
                     case Symbol(name):
-                        var varInfo = resolve(name);
+                        var varInfo = resolve(name, env);
                         if (varInfo.value == null) {
                             // TODO make this error message come back!
                             // trace('Tried to access undefined variable $name with stackFrames ${stackFrames.toPrint()}');
