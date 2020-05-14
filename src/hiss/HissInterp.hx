@@ -33,6 +33,9 @@ import hiss.HissTools;
 import hiss.HaxeTools;
 
 class HissInterp {
+    var stackFrames: HValue;
+    public var variables: HValue;
+
     /** Debugging **/
     var watchedVariables: HValue;
     var watchedFunctions: HValue;
@@ -147,8 +150,8 @@ class HissInterp {
         if (truthy(isMacro)) {
             fun = Function(Macro(true, fun.toHFunction()));
         }
-        env.toDict()[name] = fun;
-        funcall(callback, fun, env);
+        variables.toDict()[name] = fun;
+        return fun;
     }
 
     // *
@@ -1151,7 +1154,7 @@ class HissInterp {
         var list = l.toList();
         var idx = 0;
         for (lv in list) {
-            if (eq(v, lv)) return Atom(Int(idx));
+            if (eq(v, lv) != Nil) return Atom(Int(idx));
             idx++;
         }
         return Nil;
@@ -1429,7 +1432,7 @@ class HissInterp {
                     case String(v):
                         expr;
                     case Symbol(name):
-                        var varInfo = resolve(name, env);
+                        var varInfo = resolve(name);
                         if (varInfo.value == null) {
                             // TODO make this error message come back!
                             // trace('Tried to access undefined variable $name with stackFrames ${stackFrames.toPrint()}');
