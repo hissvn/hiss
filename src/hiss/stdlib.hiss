@@ -22,17 +22,26 @@
             ,value)))
 
 (defmacro register-function (class function &optional name)
-    `(defun ,(default name function) (&rest args)
+    (default name 
+        (intern (call-method Strings "toLowerHyphen" (list (symbol-name function)))))
+    `(defun ,name (&rest args)
         (call-method ,class (symbol-name ',function) args)))
 
 (defmacro register-method (method &optional name)
-    `(defun ,(default name method) (instance &rest args)
+    (default name
+        (intern (call-method Strings "toLowerHyphen" (list (symbol-name method)))))
+    `(defun ,name (instance &rest args)
         (call-method instance (symbol-name ',method) args)))
 
 (import "Std")
+(import "hx.strings.Strings")
+(register-function Strings toLowerHyphen)
 (register-function Std string)
 (register-method join)
 (register-method split)
+
+(import "Type")
+(register-function Type createInstance)
 
 (defmacro variadic-binop (symbol base-function &optional zero-case one-case two-case)
     (default zero-case 0)

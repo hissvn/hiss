@@ -645,11 +645,6 @@ class HissInterp {
         variables.toDict()[name.toUpperHyphen()] = Object("Class", c);
     }
 
-    // *
-    public function createInstance(c: HValue, args: HValue) {
-        return Object(Type.getClassName(c.toObject()), Type.createInstance(c.toObject(), unwrapList(args)));
-    }
-
     public function set(varName: String, value: HValue) {
         variables.toDict()[varName] = value;
     }
@@ -695,7 +690,7 @@ class HissInterp {
         importWrapped2(this, Reflect.compare);
         
         importWrapped(this, toUpperHyphen);
-        importWrapped(this, hx.strings.Strings.toLowerHyphen);
+        //importWrapped(this, hx.strings.Strings.toLowerHyphen);
         importWrapped(this, hx.strings.Strings.toLowerCamel);
 
         importFixed(copyReadtable);
@@ -713,7 +708,6 @@ class HissInterp {
 
         importFixed(getProperty);
         importFixed(callMethod);
-        importFixed(createInstance);
 
         vars['read-line'] = Function(Haxe(Var, readLine, "read-line"));
 
@@ -873,7 +867,8 @@ class HissInterp {
         }
     }
 
-    function callMethod(container: HValue, method: HValue, args: HValue) {
+    function callMethod(container: HValue, method: HValue, ?args: HValue) {
+        if (args == null) args = List([]);
         try {
             return Reflect.callMethod(valueOf(container), getProperty(container, method).toFunction("haxe method"), unwrapList(args)).toHValue("hiss result");
         } catch (s: Dynamic) {
