@@ -102,6 +102,10 @@ class HStream {
 		var whichTerminator = '';
 		for (terminator in terminators) {
 			var nextIndex = rawString.indexOf(terminator);
+			// Don't acknowledge terminators preceded by the escape operator 
+			while (nextIndex > 0 && rawString.charAt(nextIndex-1) == '\\') {
+				nextIndex = rawString.indexOf(terminator, nextIndex+1);
+			}
 			if (nextIndex != -1 && nextIndex < index) {
 				index = nextIndex;
 				whichTerminator = terminator;
