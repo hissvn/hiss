@@ -28,7 +28,7 @@ class HissReader {
         // Sort macro lengths from longest to shortest so, for example, ,@ and , can both be operators.
         macroLengths.sort(function(a, b) { return b - a; });
         //trace(macroLengths[0]);
-        return Nil;
+        return f;
     }
 
     public static function setDefaultReadFunction(f: HValue) {
@@ -138,6 +138,7 @@ class HissReader {
     }
 
     public static function readString(start: String, str: HValue, _: HValue, position: HValue): HValue {
+        //trace(str);
         switch (toStream(str).takeUntil(['"'])) {
             case Some(s): 
                 var escaped = s.output;
@@ -146,12 +147,12 @@ class HissReader {
                 escaped = escaped.replaceAll("\\t", "\t");
                 escaped = escaped.replaceAll("\\n", "\n");
                 escaped = escaped.replaceAll("\\r", "\r");
-                escaped = escaped.replaceAll("\\\"", "\"");
+                escaped = escaped.replaceAll('\\"', '"');
                 // Single quotes are not a thing in Hiss
 
                 return Atom(String(escaped));
             case None:
-                throw 'Expected close quote for read-string';
+                throw 'Expected close quote for read-string of $str';
         }
     }
 

@@ -5,6 +5,4 @@
 -D analyzer-optimize
 -D no-deprecation-warnings
 -main test.TestAll
---resource src/hiss/stdlib.hiss
---resource test/std.hiss
 --interp

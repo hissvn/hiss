@@ -117,15 +117,6 @@ class HissInterp {
     }
 
     // *
-    static function length(arg:HValue): HValue {
-        return switch (arg) {
-            case Atom(String(s)): Atom(Int(s.length));
-            case List(l): Atom(Int(l.length));
-            default: throw 'HValue $arg has no length';
-        }
-    }
-
-    // *
     function lambda(args: HValue): HValue {
         var argNames = first(args).toList().map(s -> symbolName(s).toString());
         
@@ -280,7 +271,7 @@ class HissInterp {
                 v;
             case List(l):
                 [for (hvv in l) valueOf(hvv)];
-            default: throw 'hvalue $hv cannot be unwrapped for a binary operation';
+            default: throw 'hvalue $hv cannot be unwrapped for a native Haxe operation';
         }
     }
 
@@ -317,12 +308,13 @@ class HissInterp {
                             case None: Nil;
                         }
                     default:
-                        throw 'unsupported enum $name';
+                        return Object(name, e);
                 };
             case TObject:
                 Object("!ANONYMOUS!", v);
             case TFunction:
                 Function(Haxe(Fixed, v, "[wrapped-function]"));
+            
             default:
                 throw 'value $v of type $t cannot be wrapped as $hint';
         }
@@ -645,32 +637,24 @@ class HissInterp {
         variables.toDict()[name.toUpperHyphen()] = Object("Class", c);
     }
 
-    public function set(varName: String, value: HValue) {
-        variables.toDict()[varName] = value;
-    }
-
-    // *
-    public function copyReadtable(): HValue {
-        return Dict(HissReader.readTable.toDict().copy());
-    }
-
-    // *
-    public function setReadtable(table: HValue): HValue {
-        HissReader.readTable = table;
-        variables.toDict()["*readtable*"] = table;
-        return table;
+    public function set(varName: String, value: Dynamic) {
+        variables.toDict()[varName] = value.toHValue();
     }
 
     public function new() {
         // Load the standard library and test files:
         StaticFiles.compileWith("stdlib.hiss");
-        StaticFiles.compileWith("../../test/std.hiss");
+        StaticFiles.compileWith("../../test/test-std.hiss");
 
         // The hiss standard library:
         variables = Dict([]);
         var vars: HDict = variables.toDict();
 
-        vars['variables'] = Function(Haxe(Fixed, getVariables, "variables")); 
+        vars['variables'] = Function(Haxe(Fixed, getVariables, "variables"));
+        
+        vars['Type'] = Object("Class", Type);
+        vars['Strings'] = Object("Class", Strings);
+
 
         vars['return'] = Function(Haxe(Fixed, hissReturn, "return"));
         vars['break'] = Function(Haxe(Fixed, hissBreak, "break"));
@@ -686,23 +670,16 @@ class HissInterp {
        
         vars['sort'] = Function(Haxe(Var, sort, "sort"));
 
-        vars['import'] = Function(Haxe(Fixed, resolveClass, "import"));
+        //vars['import'] = Function(Haxe(Fixed, resolveClass, "import"));
         importWrapped2(this, Reflect.compare);
         
         importWrapped(this, toUpperHyphen);
-        //importWrapped(this, hx.strings.Strings.toLowerHyphen);
-        importWrapped(this, hx.strings.Strings.toLowerCamel);
-
-        importFixed(copyReadtable);
-        importFixed(setReadtable);
 
         importFixed(reverse);
 
         importFixed(intern);
 
         importFixed(reverseSort);
-
-        importFixed(indexOf);
         
         importFixed(contains);
 
@@ -739,12 +716,10 @@ class HissInterp {
         importFixed(HissReader.readAll);
         importFixed(HissReader.readString);
         importFixed(HissReader.readNumber);
-        //vars['read-symbol'] = Function(Haxe(Fixed, HissReader.readSymbol.bind(Atom(String(""))), "read-symbol"));
         importFixed(HissReader.readSymbol);
         importFixed(HissReader.readDelimitedList);
         importFixed(HissReader.setMacroString);
         importFixed(HissReader.setDefaultReadFunction);
-
 
         importFixed(eval);
 
@@ -787,8 +762,6 @@ class HissInterp {
         vars['lambda'] = Function(Macro(false, Haxe(Var, lambda, "lambda")));
         vars['defun'] = Function(Macro(false, Haxe(Var, defun, "defun")));
         vars['defmacro'] = Function(Macro(false, Haxe(Var, defmacro, "defmacro")));
-
-        importFixed(length);
 
         importFixed(cons);
 
@@ -917,7 +890,7 @@ class HissInterp {
             stackFrame = stackFrames.toList()[stackFrames.toList().length-1].toDict();
             // But if a higher scope already binds the variable, it will be modified instead. TODO or not??!?!?!
         }
-        if (watched) trace('calling setlocal for $name on frame ${Dict(stackFrame).toPrint()} with ${stackFrames.length} frames and new value ${value.toPrint()} evaluated from ${list[1].toPrint()}');
+        if (watched) trace('calling setlocal for $name on frame ${Dict(stackFrame).toPrint()} with ${stackFrames.toList().length} frames and new value ${value.toPrint()} evaluated from ${list[1].toPrint()}');
         stackFrame[name] = value;
         if (list.length > 2) {
             return setlocal(List(list.slice(2)));
@@ -1189,6 +1162,7 @@ class HissInterp {
         var container = null;
         var name = "anonymous";
         var func = funcOrPointer;
+        //trace(func);
         switch (funcOrPointer) {    
             case VarInfo(v):
                 name = v.name;
@@ -1297,10 +1271,10 @@ class HissInterp {
                     for (expression in funDef.body) {
                         try {
                             lastResult = eval(expression);
-                        }/* catch (e: Dynamic) {
+                        } catch (e: Dynamic) {
                             stackFrames = oldStackFrames;
                             throw e;
-                        }*/
+                        }
                     }
 
                     while (!stackFrames.toList().empty()) stackFrames.toList().pop();
