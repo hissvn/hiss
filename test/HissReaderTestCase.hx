@@ -106,16 +106,6 @@ class HissReaderTestCase extends utest.Test {
 
     }
 
-    public function testCustomReaderMacro() {
-        repl.eval('(set-macro-string "#" (lambda (a b c) (list \'sharp (read-string a b))))');
-        assertRead(List([Atom(Symbol("sharp")), Atom(String("fork"))]), '#fork"');
-
-        repl.eval('(set-macro-string "^" (lambda (a b c) (cons \'sharp (read-delimited-list "]" \'("|") a b nil))))');
-        assertRead(List([Atom(Symbol("sharp")), Atom(Symbol("fork")), Atom(Int(5)), Atom(String("shit"))]), '^fork|5|"shit"]"');
-
-        // TODO Test whether block comment plays well with custom reader macro??
-    }
-
     public function testStringEscapeSequences() {
         assertRead(Atom(String("\n")), '"\n"');
     }

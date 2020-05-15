@@ -21,27 +21,8 @@
             ,var
             ,value)))
 
-(defmacro register-function (class function &optional name)
-    (default name 
-        (intern (call-method Strings "toLowerHyphen" (list (symbol-name function)))))
-    `(defun ,name (&rest args)
-        (call-method ,class (symbol-name ',function) args)))
-
-(defmacro register-method (method &optional name)
-    (default name
-        (intern (call-method Strings "toLowerHyphen" (list (symbol-name method)))))
-    `(defun ,name (instance &rest args)
-        (call-method instance (symbol-name ',method) args)))
-
-(import "Std")
-(import "hx.strings.Strings")
-(register-function Strings toLowerHyphen)
-(register-function Std string)
-(register-method join)
-(register-method split)
-
-(import "Type")
-(register-function Type createInstance)
+(defun length (str-or-list)
+    (get-property str-or-list "length"))
 
 (defmacro variadic-binop (symbol base-function &optional zero-case one-case two-case)
     (default zero-case 0)
@@ -77,13 +58,77 @@
 (variadic-binop max > (error "cannot find min of 0 elements") val (if (fun val1 val2) val1 val2))
 
 (variadic-binop = haxe== (error "can't check equality without an operand") t (if (fun val1 val2) val1 nil))
-; TODO add advice to this function to coerce to t or nil to avoid errors, although technically it *does* return truthy when it should(combine-like-operators '(+ 2 (+ 5 3)))
 
-; (variadic-binop and haxe&& t val (if val1 val2 nil))
+; and/or are not variadic binops because they rely on truthy() for now 
 
+; Haxe interop
+(defmacro register-method (method &optional name)
+    (default name
+        (intern (call-method Strings "toLowerHyphen" (list (symbol-name method)))))
+    `(defun ,name (instance &rest args)
+        (call-method instance (symbol-name ',method) args)))
+
+(register-method substr)
+(register-method join)
+(register-method split)
+(register-method replace)
+(register-method toUpperCase)
+(register-method toLowerCase)
+(register-method indexOf)
+(register-method lastIndexOf)
 
 (defmacro when (cond &rest body)
     `(if ,cond ,(cons 'progn body)))
+
+(defmacro try (expression catch-expression)
+    `(let (val ,expression)
+        (if (error? val)
+                ,catch-expression
+            val)))
+
+(defmacro register-function (class function &optional name)
+    (default name 
+        (intern (call-method Strings "toLowerHyphen" (list (symbol-name function)))))
+    `(defun ,name (&rest args)
+        (call-method ,class (symbol-name ',function) args)))
+
+(register-function Type createInstance)
+
+(register-function Strings toLowerHyphen)
+(register-function Strings toUpperCamel)
+(register-function Strings toLowerCamel)
+
+(defun replace-at (str index new-value)
+    (if (>= (length (substr str index)) (length new-value))
+        (+ (substr str 0 index) new-value (substr str (+ index (length new-value))))
+        (error (+ "Not enough characters to replace at " index " in " str))))
+(defun to-upper-hyphen (str)
+    (join (for token (split (to-lower-hyphen str) "-") (replace-at token 0 (to-upper-case (char-at token 0)))) "-"))
+
+(defmacro import (class-or-enum-path &optional fully-qualified)
+    (let 
+            (type-name 
+                (to-upper-hyphen (if (and (not fully-qualified) (<= 0 (index-of class-or-enum-path ".")))
+                        (substr class-or-enum-path (+ 1 (last-index-of class-or-enum-path ".")))
+                    class-or-enum-path))
+            type
+                (try (call-method Type "resolveClass" (list class-or-enum-path))
+                    (call-method Type "resolveEnum" (list class-or-enum-path))))
+        `(setq ,(intern type-name) ,type)))
+
+(import "Std")
+
+(register-function Std string)
+
+;; Sleek interfaces to work with Haxe objects with lisp format:
+(defmacro new (class &rest args)
+    `(create-instance ,class (for arg ',args (eval arg))))
+
+(defmacro get (obj field)
+    `(get-property ,obj (to-lower-camel (symbol-name ',field))))
+
+(defmacro call (obj function &rest args)
+    `(call-method ,obj (to-lower-camel (symbol-name ',function)) (for arg ',args (eval arg))))
 
 (defmacro unless (cond &rest body)
 `(if (not ,cond) ,(cons 'progn body)))
@@ -101,9 +146,8 @@
 
 (defun sum (args)
     (let (total 0)
-        (for arg args (setlocal total (+ total arg)))
-        total
-        ))
+        (do-for arg args (setlocal total (+ total arg)))
+        total))
 
 (defmacro push (l elt)
     `(setlocal ,l (append ,l (list ,elt))))
@@ -149,19 +193,6 @@
         (for i (range final-length)
             (map lists (lambda (l) (nth l i))))))
 
-;; Sleek interfaces to work with Haxe objects with lisp format:
-(defmacro new (class &rest args)
-    `(create-instance ,class (for arg ',args (eval arg))))
-
-(defmacro get (obj field)
-    `(get-property ,obj (to-lower-camel (symbol-name ',field))))
-
-(defmacro call (obj function &rest args)
-    `(call-method ,obj (to-lower-camel (symbol-name ',function)) (for arg ',args (eval arg))))
-
-(defmacro try (expression catch-expression)
-    `(when (error? ,expression) ,catch-expression))
-
 (defmacro add-hook (hook-name hook-function)
     `(push ,hook-name ,hook-function))
 
@@ -176,7 +207,7 @@
 ; Temp functions -- eventually these will need to account for not knowing if hiss is run from repo root
 (defun lstd () (load "src/hiss/stdlib.hiss"))
 (defun test-std () 
-    (load "test/std.hiss" 
+    (load "test/test-std.hiss" 
         "(do-for 
             statement 
             '(*) 
