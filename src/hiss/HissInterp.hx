@@ -677,6 +677,7 @@ class HissInterp {
         
         importWrapped(this, toUpperHyphen);
 
+        importFixed(body);
         importFixed(reverse);
 
         importFixed(intern);
@@ -1148,6 +1149,20 @@ class HissInterp {
 
     function unwrapList(hl: HValue): Array<Dynamic> {
         return [for (v in hl.toList()) valueOf(v)];
+    }
+
+    function body(funcOrList: HValue): HValue {
+        switch (funcOrList) {
+            case List(l):
+                if (eq(first(funcOrList), Atom(Symbol("lambda"))) != Nil) {
+                    return slice(funcOrList, Atom(Int(3)));
+                }
+            case Function(Hiss(def)) | Function(Macro(_, Hiss(def))):
+                return List(def.body);
+            default:
+        }
+
+        return Signal(Error('Cannot get function body from ${funcOrList.toPrint()}'));
     }
 
     // *
