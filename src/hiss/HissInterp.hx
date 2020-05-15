@@ -576,16 +576,6 @@ class HissInterp {
     }
 
     // *
-    function split(s: HValue, d: HValue) {
-        return s.toString().split(d.toString()).toHValue();
-    }
-
-    // *
-    function splitLines(s: HValue) {
-        return s.toString().split("\n").toHValue();
-    }
-
-    // *
     function scopeIn(s: HValue = Nil) {
         if (s == Nil) {
             s = Dict(new HDict());
@@ -609,12 +599,6 @@ class HissInterp {
     // *
     function error(message: HValue) {
         return Signal(Error(message.toString()));
-    }
-
-    // *
-    function join(arr: HValue, sep: HValue) {
-        var strings = [for (val in arr.toList()) string(val).toString()];
-        return Atom(String(strings.join(sep.toString())));
     }
 
     public function importObject(name: String, obj: Dynamic) {
@@ -721,7 +705,6 @@ class HissInterp {
 
         importFixed(intern);
 
-        importFixed(join);
         importFixed(reverseSort);
 
         importFixed(indexOf);
@@ -820,10 +803,6 @@ class HissInterp {
         importFixed(load);
         importFixed(getContent);
         
-        vars['split'] = Function(Haxe(Fixed, split, "split"));
-        // TODO escape sequences aren't parsed so this needs its own function:
-        vars['split-lines'] = Function(Haxe(Fixed, splitLines, "split-lines"));
-
         vars['scope-in'] = Function(Haxe(Fixed, scopeIn, "scope-in"));
         vars['scope-out'] = Function(Haxe(Fixed, scopeOut, "scope-out"));
         vars['scope-return'] = Function(Haxe(Fixed, scopeReturn, "scope-return"));
@@ -832,7 +811,7 @@ class HissInterp {
 
         // TODO strings with interpolation
 
-        importFixed(string);        
+        //importFixed(string);        
 
         vars['append'] = Function(Haxe(Var, append, "append"));
 
@@ -886,35 +865,21 @@ class HissInterp {
     }
 
     /** Get a field out of a container (object/class) **/
-    // *
     function getProperty(container: HValue, field: HValue) {
-        switch (container) {
-            case Object(_, d):
-                return Reflect.getProperty(d, field.toString()).toHValue();
-            default:
-        }
-
-        throw 'Cannot retrieve field `${field.toString()}` from object $container';
-    }
-
-    // *
-    function callMethod(container: HValue, method: HValue, args: HValue) {
-        switch (container) {
-            case Object(_, d):
-                return Reflect.callMethod(d, getProperty(container, method).toFunction("haxe method"), unwrapList(args)).toHValue("hiss result");
-            default:
-        }
-
-        throw 'Cannot call method `${method.toString()}` from object $container';
-    }
-
-    // *
-    function string(l: HValue): HValue {
-        return Atom(String(try {
-            valueOf(l).toString();
+        try {
+            return Reflect.getProperty(valueOf(container), field.toString()).toHValue();
         } catch (s: Dynamic) {
-            Std.string(valueOf(l));
-        }));
+            throw 'Cannot retrieve field `${field.toString()}` from object $container because $s';
+        }
+    }
+
+    function callMethod(container: HValue, method: HValue, args: HValue) {
+        try {
+            return Reflect.callMethod(valueOf(container), getProperty(container, method).toFunction("haxe method"), unwrapList(args)).toHValue("hiss result");
+        } catch (s: Dynamic) {
+
+            throw 'Cannot call method `${method.toString()}` from object $container because $s';
+        }
     }
 
     // *
