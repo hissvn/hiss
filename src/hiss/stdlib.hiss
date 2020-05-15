@@ -21,6 +21,19 @@
             ,var
             ,value)))
 
+(defmacro register-function (class function &optional name)
+    `(defun ,(default name function) (&rest args)
+        (call-method ,class (symbol-name ',function) args)))
+
+(defmacro register-method (method &optional name)
+    `(defun ,(default name method) (instance &rest args)
+        (call-method instance (symbol-name ',method) args)))
+
+(import "Std")
+(register-function Std string)
+(register-method join)
+(register-method split)
+
 (defmacro variadic-binop (symbol base-function &optional zero-case one-case two-case)
     (default zero-case 0)
     (default one-case 'val)

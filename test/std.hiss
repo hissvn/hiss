@@ -17,6 +17,11 @@ true
 (not (> 7 8))
 (not (> 7 6 6))
 
+; String tools
+(eq "5" (string 5))
+(eq "5, 6, 7" (join (list 5 6 7) ", "))
+(eq '("5" "6" "7") (split "5,6,7" ","))
+
 (error? (/))
 
 (setq unsorted-int-list '(1 7 4 3 6 2 5))
