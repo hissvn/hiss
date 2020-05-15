@@ -119,6 +119,16 @@
 (import "Std")
 
 (register-function Std string)
+(register-function Std parseInt)
+(register-function Std parseFloat)
+
+(import "Math")
+(register-function Math round)
+(register-function Math floor)
+(register-function Math ceil)
+(register-function Math abs)
+
+
 
 ;; Sleek interfaces to work with Haxe objects with lisp format:
 (defmacro new (class &rest args)
