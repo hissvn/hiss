@@ -708,9 +708,6 @@ class HissInterp {
         // Haxe std io
         importFixed(print);
         importFixed(uglyPrint);
-        
-        importWrapped(this, Std.parseInt);
-        importWrapped(this, Std.parseFloat);
 
         importFixed(HissReader.read);
         importFixed(HissReader.readAll);
@@ -722,12 +719,6 @@ class HissInterp {
         importFixed(HissReader.setDefaultReadFunction);
 
         importFixed(eval);
-
-        // Haxe math
-        importWrapped(this, Math.round);
-        importWrapped(this, Math.floor);
-        importWrapped(this, Math.ceil);
-        importWrapped(this, Math.abs);
 
         importFixed(first);
         importFixed(rest);
