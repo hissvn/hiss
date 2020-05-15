@@ -128,7 +128,9 @@
 (register-function Math ceil)
 (register-function Math abs)
 
-
+(import "uuid.Uuid")
+(defun gensym ()
+    (intern (call-method Uuid "v4")))
 
 ;; Sleek interfaces to work with Haxe objects with lisp format:
 (defmacro new (class &rest args)

@@ -32,6 +32,8 @@ import hiss.HissTools;
 
 import hiss.HaxeTools;
 
+import uuid.Uuid;
+
 class HissInterp {
     var stackFrames: HValue;
     public var variables: HValue;

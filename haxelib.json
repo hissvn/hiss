@@ -10,6 +10,7 @@
     "classPath": "src/",
     "main": "hiss.Main",
     "dependencies": {
+        "uuid": "",
         "utest": "",
         "haxe-strings": ""
     }
