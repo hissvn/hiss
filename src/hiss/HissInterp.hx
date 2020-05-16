@@ -531,14 +531,17 @@ class HissInterp {
         }
     }
 
-    // *
+    // Maybe can't be put in Hiss because it uses truthy
     function or(args: HValue) {
-        return if (args.toList().length == 0) {
-            Nil;
-        } else if (truthy(eval(first(args)))) {
-            T;
+        if (args.toList().length == 0) {
+            return Nil;
         } else {
-            or(rest(args));
+            var firstValue = eval(first(args));
+            if (truthy(firstValue)) {
+                return firstValue;
+            } else {
+                return or(rest(args));
+            }
         }
     }
 
