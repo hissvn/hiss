@@ -141,7 +141,13 @@
         (t
             (if (eq tree old) new tree))))
 
-(setq *advice-meta* (dict))
+(defun remove (value tree)
+    ; TODO because lambdas don't capture values, this safer implementation won't work:
+    /*(let (remove-this (gensym))
+        (filter (subst remove-this value tree) (lambda (v) (not (eq v (print remove-this)))))))*/
+    // This unsafe implementation works well enough:
+    (filter (subst '--hiss-remove-this value tree) (lambda (v) (not (eq v '--hiss-remove-this)))))
+
 (defmacro advice-add (func where advice)
     (let (original-func-alias (uuid)
             safe-advice-alias (uuid)
