@@ -123,6 +123,7 @@ class HissInterp {
         var argNames = first(args).toList().map(s -> symbolName(s).toString());
         
         var body: HList = rest(args).toList();
+
         var def: HFunDef = {
             argNames: argNames,
             body: body
@@ -545,7 +546,7 @@ class HissInterp {
         }
     }
 
-    // *
+    // Maybe can't be put in Hiss because it uses truthy
     function and(args: HValue): HValue {
         switch (args.toList().length) {
             case 0:
@@ -680,6 +681,7 @@ class HissInterp {
         
         importWrapped(this, toUpperHyphen);
 
+        importFixed(args);
         importFixed(body);
         importFixed(reverse);
 
@@ -1183,7 +1185,6 @@ class HissInterp {
         return Signal(Error('Cannot get function body from ${funcOrList.toPrint()}'));
     }
 
-    // *
     public function funcall(funcOrPointer: HValue, args: HValue, evalArgs: HValue = T): HValue {
         var container = null;
         var name = "anonymous";
