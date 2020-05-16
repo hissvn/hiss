@@ -192,7 +192,7 @@
     `(setlocal ,l (append ,l (list ,elt))))
 
 (defun filter (l &optional criterion)
-    (default criterion (lambda (val) val))
+    (default criterion (lambda (val) (not val)))
     ;(print result)
     ;(print l)
     (let (result '())
