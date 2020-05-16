@@ -131,7 +131,7 @@
 (import "uuid.Uuid")
 (register-function Uuid v4 uuid)
 (defun gensym ()
-    (intern uuid))
+    (intern (+ "_g_" (uuid))))
 
 (defun subst (new old tree)
     (cond 
