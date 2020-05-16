@@ -1154,11 +1154,26 @@ class HissInterp {
         return [for (v in hl.toList()) valueOf(v)];
     }
 
-    function body(funcOrList: HValue): HValue {
+    function args (funcOrList: HValue): HValue {
         switch (funcOrList) {
             case List(l):
                 if (eq(first(funcOrList), Atom(Symbol("lambda"))) != Nil) {
-                    return slice(funcOrList, Atom(Int(3)));
+                    return nth(funcOrList, Atom(Int(1)));
+                }
+            case Function(Hiss(def)) | Function(Macro(_, Hiss(def))):
+                return def.argNames.toHValue();
+            default:
+        }
+        return Nil;
+    }
+
+    function body(funcOrList: HValue): HValue {
+        switch (funcOrList) {
+            case List(l):
+                trace(l);
+                if (eq(first(funcOrList), Atom(Symbol("lambda"))) != Nil) {
+                    trace(slice(funcOrList, Atom(Int(2))));
+                    return slice(funcOrList, Atom(Int(2)));
                 }
             case Function(Hiss(def)) | Function(Macro(_, Hiss(def))):
                 return List(def.body);
