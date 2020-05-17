@@ -42,6 +42,8 @@ class HissInterp {
     var watchedVariables: HValue;
     var watchedFunctions: HValue;
 
+    public var functionStats: Map<String, Int> = new Map<String, Int>();
+
     // *
     static function symbolName(v: HValue): HValue {
         return Atom(String(HaxeTools.extract(v, Atom(Symbol(name)) => name, "symbol name")));
@@ -140,6 +142,7 @@ class HissInterp {
     // TODO optional docstrings lollll
     function defun(args: HValue, isMacro: HValue = Nil) {
         var name = symbolName(first(args)).toString();
+        functionStats[name] = 0;
         var fun: HValue = lambda(rest(args));
         if (truthy(isMacro)) {
             fun = Function(Macro(true, fun.toHFunction()));
@@ -1202,14 +1205,9 @@ class HissInterp {
             default:
         }
 
-        // watchedFunctions = ["filter"];
-        //watchedFunctions = ["nth", "set-nth", "+", "progn"];
-        //watchedFunctions = ["distance", "anonymous"];
-        // watchedFunctions = ["intersection", "and", "not"];
-        //watchedFunctions = ["dolist"];
+        if (!functionStats.exists(name)) functionStats[name] = 0;
+        functionStats[name] = functionStats[name] + 1;
 
-        //var watchedFunctions = ['=', 'haxe=='];
-        //var watchedFunctions = ["variadic-binop", "-", "haxe-", "funcall"];
         var watched = truthy(contains(variables.toDict()["*watched-functions*"], Atom(String(name))));
 
         var oldStackFrames = List(stackFrames.toList().copy());

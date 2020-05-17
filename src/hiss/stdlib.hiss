@@ -148,23 +148,6 @@
     // This unsafe implementation works well enough:
     (filter (subst '--hiss-remove-this value tree) (lambda (v) (not (eq v '--hiss-remove-this)))))
 
-(defmacro advice-add (func where advice)
-    (let (original-func-alias (uuid)
-            safe-advice-alias (uuid)
-            call-original-func `(funcall (get-in-dict *advice-meta* ,original-func-alias) args)
-            call-advice-func `(funcall (get-in-dict *advice-meta* ,safe-advice-alias) args)
-            safe-advice-body (subst `,call-original-func `,func (body `,advice))
-            safe-advice-function (subst safe-advice-body (body `,advice) `,advice))
-        (print `(progn
-            (set-in-dict *advice-meta* ,safe-advice-alias ,safe-advice-function)
-            (set-in-dict *advice-meta* ,original-func-alias ,func)
-            (defun ,func (&rest args)
-                (when (eq ',where ':before) ,call-advice-func)
-                ,call-original-func
-                (when (eq ',where ':after) ,call-advice-func))))))
-
-(defun add-my () (advice-add print :before (lambda (value) (print (+ "extra " value)))))
-
 ;; Sleek interfaces to work with Haxe objects with lisp format:
 (defmacro new (class &rest args)
     `(create-instance ,class (for arg ',args (eval arg))))
@@ -198,7 +181,7 @@
     `(setlocal ,l (append ,l (list ,elt))))
 
 (defun filter (l &optional criterion)
-    (default criterion (lambda (val) (not val)))
+    (default criterion (lambda (val) val))
     ;(print result)
     ;(print l)
     (let (result '())

@@ -27,6 +27,10 @@ class HissTestCase extends utest.Test {
             var value = HissInterp.nth(v, Atom(Int(1)));
             Assert.isTrue(HissInterp.truthy(value), 'Failure: ${HissTools.toPrint(expression)} evaluated to ${HissTools.toPrint(value)}');
         }
+
+        for (fun => callCount in repl.interp.functionStats) {
+            Assert.isTrue(callCount > 0, 'Failure: $fun was never called in testing');
+        }
     }
 
 }
