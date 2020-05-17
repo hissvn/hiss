@@ -3,6 +3,7 @@ package hiss;
 import hiss.HissReader;
 import hiss.HissInterp;
 import hiss.HTypes;
+import hiss.StaticFiles;
 
 using hiss.HissTools;
 
@@ -14,7 +15,9 @@ class HissRepl {
 		// TODO it's weird that all of these parts are necessary in this order to get a working hiss environment, and once we have it, it's actually static.
 		interp = new HissInterp();
 		var reader = new HissReader(interp);
-		interp.load(Atom(String('stdlib.hiss')));
+		var list = [Atom(Symbol("progn"))];
+		list = list.concat(HissReader.readAll(Atom(String(StaticFiles.getContent('stdlib.hiss')))).toList());
+		interp.eval(List(list));
 	}
 
 	public function read(hiss: String): HValue {

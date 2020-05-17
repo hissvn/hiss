@@ -180,7 +180,6 @@
 (register-function Math abs)
 
 (import "StringTools")
-
 (register-function String-Tools replace)
 (register-function String-Tools ltrim)
 (register-function String-Tools rtrim)
@@ -220,6 +219,15 @@
 
 (defmacro call (obj function &rest args)
     `(call-method ,obj (to-lower-camel (symbol-name ',function)) (for arg ',args (eval arg))))
+
+(import "haxe.Resource")
+(import "sys.io.File")
+(import "hiss.StaticFiles")
+(defun get-content (file)
+    (or
+        (call Resource getString file)
+        (try (call File getContent file))
+        (call Static-Files getContent file)))
 
 (defun dict (&rest pairs)
     (let (new-dict (empty-dict))

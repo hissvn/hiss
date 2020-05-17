@@ -53,28 +53,8 @@ class HissInterp {
     }
 
     // *
-    public static function getContent(file: HValue): HValue {
-        var contents = Resource.getString(file.toString());
-        if (contents == null) {
-            #if sys
-                try {
-                    contents = sys.io.File.getContent(file.toString());
-                } catch (s: Dynamic) {
-                    contents = null;
-                }
-            #end
-        }
-
-        if (contents == null) {
-            contents = StaticFiles.getContent(file.toString());
-        }
-
-        return Atom(String(contents));
-    }
-
-    // *
     public function load(file: HValue, ?wrappedIn: HValue) {
-        var contents = getContent(file).toString();
+        var contents = eval(List([Atom(String("get-content")), file])).toString();
 
         if (wrappedIn == null || wrappedIn.match(Nil)) {
             var whatIRead = HissReader.readAll(Atom(String(contents)), Nil, Object("HPosition", new HPosition(file.toString(), 1, 0)));
@@ -313,8 +293,8 @@ class HissInterp {
                 case Signal(Return(v)):
                     return v;
                 // This block breaks `let` expressions where the expression is an error:
-                case Signal(_):
-                    return value;
+                /*case Signal(_):
+                    return value;*/
                 default:
             }
         }
@@ -582,7 +562,6 @@ class HissInterp {
         importFixed(resolve);
         vars['funcall'] = Function(Haxe(Fixed, funcall.bind(Nil), "funcall"));
         importFixed(load);
-        importFixed(getContent);
         
         vars['scope-in'] = Function(Haxe(Fixed, scopeIn, "scope-in"));
         vars['scope-out'] = Function(Haxe(Fixed, scopeOut, "scope-out"));
@@ -644,8 +623,7 @@ class HissInterp {
         try {
             return HissTools.toHValue(Reflect.callMethod(HissTools.valueOf(container, truthy(callOnReference)), HissTools.toFunction(getProperty(container, method, callOnReference)), callArgs));
         } catch (s: Dynamic) {
-
-            throw 'Cannot call method `${method.toString()}` from object $container because $s';
+            return Signal(Error('Cannot call method `${method.toString()}` from object $container because $s'));
         }
     }
 

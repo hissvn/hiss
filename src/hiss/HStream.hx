@@ -66,7 +66,7 @@ class HStream {
 	}
 
 	public static function FromFile(path: String): HStream {
-		return new HStream(path, HissInterp.getContent(Atom(String(path))).toString());
+		return new HStream(path, sys.io.File.getContent(path));
 	}
 
 	public function indexOf(s:String, start:Int = 0):Int {
