@@ -1,6 +1,9 @@
 (defun length (str-or-list)
     (get-property str-or-list "length"))
 
+(defun not (b)
+    (if b nil t))
+
 (defmacro or (&rest args)
     `(if (haxe== ,(length args) 0)
         nil
@@ -19,8 +22,10 @@
                 (and ,@(rest args))
                 nil))))
 
+(defun last (l)
+    (nth l (- (length l) 1)))
+
 (defmacro let (bindings &rest body)
-    ;(print bindings)
     `(progn
         (scope-in)
         ,(cons 'setlocal ,bindings)
@@ -84,11 +89,11 @@
         (scope-return (progn ,@body))))
 
 ; Haxe interop
-(defmacro register-method (method &optional name return-instance)
+(defmacro register-method (method &optional name call-on-reference return-instance)
     (default name
         (intern (call-method Strings "toLowerHyphen" (list (symbol-name method)))))
     `(defun ,name (instance &rest args)
-        (let (result (call-method instance (symbol-name ',method) args))
+        (let (result (call-method instance (symbol-name ',method) args call-on-reference))
             (if ,return-instance instance result))))
 
 (register-method substr)
@@ -99,6 +104,20 @@
 (register-method indexOf)
 (register-method lastIndexOf)
 (register-method charAt)
+
+(register-method copy)
+(register-method slice)
+(defun take (l num)
+    (slice l 0 num))
+(defun reverse (l)
+    (setlocal c (- (length l) 1))
+    (setlocal r (list))
+    (while (>= c 0)
+        (push r (nth l c))
+        (setlocal c (- c 1)))
+    r)
+(defun reverse-sort (l &optional fun)
+    (reverse (sort l fun)))
 
 (defun groups (l size &optional take-remainder)
     (cond
@@ -150,7 +169,6 @@
         `(setq ,(intern type-name) ,type)))
 
 (import "Std")
-
 (register-function Std string)
 (register-function Std parseInt)
 (register-function Std parseFloat)
@@ -208,8 +226,8 @@
         (do-for pair (groups pairs 2) (dict-set new-dict (first pair) (nth pair 1)))
         new-dict))
 (register-method get dict-get)
-(register-method set dict-set t)
-(register-method remove dict-erase t)
+(register-method set dict-set t t)
+(register-method remove dict-erase t t)
 
 (defmacro unless (cond &rest body)
     `(if (not ,cond) ,(cons 'progn body)))
@@ -231,19 +249,20 @@
         (haxe... arg1 arg2)
         (haxe... 0 arg1)))
 
-(defmacro push (l elt)
-    `(setlocal ,l (append ,l (list ,elt))))
+(defun push (l elt)
+    (call-method l "push" (list elt) t t)
+    l)
 
 (defun filter (l &optional criterion)
     (default criterion (lambda (val) val))
-    (let (result '())
-        (for val l
+    (let (result (list))
+        (do-for val l
             (if (funcall criterion `(,val))
                 (push result val)))
         result))
 
 (defun unique (l)
-    (let (result '())
+    (let (result (list))
         (do-for v (sort l) (if (not (contains result v)) (push result v)))
         result))
 

@@ -176,6 +176,16 @@ true
 (between-exclusive 6 5 7)
 (between-exclusive 6 7 5)
 
+(setq fizz '(5 6 7))
+(setq fizz2 (copy fizz))
+(push fizz2 8)
+(not (eq fizz fizz2))
+
+(contains '(4 5 6) 5)
+(not (contains '(4 5 6) 7))
+
+(eq 8 (last '(5 6 7 8)))
+
 ; Test custom reader macros
 (set-macro-string "#" (lambda (a b c) (list 'sharp (read-string a b))))
 (eq '(sharp "fork") (read "#fork\""))

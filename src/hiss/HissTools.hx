@@ -74,7 +74,6 @@ class HissTools {
             case Dict(hdict):
                 '${[for (k => v in hdict) '$k => ${v.toPrint()}, ']}';
             case VarInfo(hvi):
-                //trace(hvi);
                 var container = if (hvi.container != null) Std.string(hvi.container) else "null";
                 '{name: ${hvi.name}, value: ${hvi.value.toPrint()}, container: $container}';
             case Quasiquote(e):
@@ -114,7 +113,6 @@ class HissTools {
                 };
             case TEnum(e):
                 var name = Type.getEnumName(e);
-                //trace(name);
                 switch (name) {
                     case "haxe.ds.Option":
                         return switch (cast(v, haxe.ds.Option<Dynamic>)) {
@@ -143,7 +141,7 @@ class HissTools {
     /**
      * Behind the scenes function to HaxeTools.extract a haxe-compatible value from an HValue
      **/
-     public static function valueOf(hv: HValue): Dynamic {
+     public static function valueOf(hv: HValue, reference: Bool = false): Dynamic {
         return switch (hv) {
             case Nil: false;
             case T: true;
@@ -156,7 +154,11 @@ class HissTools {
             case Object(_, v):
                 v;
             case List(l):
-                [for (hvv in l) HissTools.valueOf(hvv)];
+                if (reference) {
+                    l;
+                } else {
+                    [for (hvv in l) HissTools.valueOf(hvv)];
+                }
             case Dict(d):
                 d;
             default: 
