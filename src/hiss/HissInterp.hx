@@ -10,7 +10,9 @@ import haxe.macro.Expr;
 using haxe.macro.ExprTools;
 using hx.strings.Strings;
 import hx.strings.StringBuilder;
+import StringTools;
 using StringTools;
+import StringBuf;
 
 import haxe.Resource;
 

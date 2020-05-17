@@ -69,9 +69,9 @@
 (variadic-binop append (lambda (l1 l2) (call-method l1 "concat" (list l2))) (error "cannot append without argument lists"))
 
 (defun between-exclusive (a b c)
-    (or (< b a c) (> c a b)))
+    (or (< b a c) (< c a b)))
 (defun between-inclusive (a b c)
-    (or (<= b a c) (>= c a b)))
+    (or (<= b a c) (<= c a b)))
 
 (variadic-binop min < (error "cannot find min of 0 elements") val (if (fun val1 val2) val1 val2))
 (variadic-binop max > (error "cannot find min of 0 elements") val (if (fun val1 val2) val1 val2))
@@ -94,7 +94,6 @@
 (register-method substr)
 (register-method join)
 (register-method split)
-(register-method replace)
 (register-method toUpperCase)
 (register-method toLowerCase)
 (register-method indexOf)
@@ -162,6 +161,25 @@
 (register-function Math ceil)
 (register-function Math abs)
 
+(import "StringTools")
+
+(register-function String-Tools replace)
+(register-function String-Tools ltrim)
+(register-function String-Tools rtrim)
+(register-function String-Tools trim)
+; For some reason these don't work with reflection:
+;(register-function String-Tools lpad)
+;(register-function String-Tools rpad)
+(defun lpad (s c l)
+    (while (< (length s) l)
+        (setlocal s (+ c s)))
+    s)
+(defun rpad (s c l)
+    (while (< (length s) l)
+        (setlocal s (+ s c)))
+    s)
+
+
 (import "uuid.Uuid")
 (register-function Uuid v4 uuid)
 (defun gensym ()
@@ -174,13 +192,6 @@
             )
         (t
             (if (eq tree old) new tree))))
-
-(defun remove (value tree)
-    ; TODO because lambdas don't capture values, this safer implementation won't work:
-    //(let (remove-this (gensym))
-      //  (filter (subst remove-this value tree) (lambda (v) (not (eq v (print remove-this)))))))
-    // This unsafe implementation works well enough:
-    (filter (subst '--hiss-remove-this value tree) (lambda (v) (not (eq v '--hiss-remove-this)))))
 
 ;; Sleek interfaces to work with Haxe objects with lisp format:
 (defmacro new (class &rest args)
@@ -204,10 +215,10 @@
     `(if (not ,cond) ,(cons 'progn body)))
 
 ; Useful for AOC 2019 day 2 ;)
-(defun swap-nth (list n1 n2)
-    (setlocal temp (nth list n1))
-    (set-nth list n1 (nth list n2))
-    (set-nth list n2 temp))
+(defun swap-nth (l n1 n2)
+    (setlocal temp (nth l n1))
+    (set-nth l n1 (nth l n2))
+    (set-nth l n2 temp))
 
 (defun map (l func)
     (for val l (funcall func (list val))))
@@ -220,43 +231,31 @@
         (haxe... arg1 arg2)
         (haxe... 0 arg1)))
 
-(defun sum (args)
-    (let (total 0)
-        (do-for arg args (setlocal total (+ total arg)))
-        total))
-
 (defmacro push (l elt)
     `(setlocal ,l (append ,l (list ,elt))))
 
 (defun filter (l &optional criterion)
     (default criterion (lambda (val) val))
-    ;(print result)
-    ;(print l)
     (let (result '())
-        ;(setlocal result '())
-        ;(print "in the let")
-        ;(print result)
         (for val l
-            ;(print result)
             (if (funcall criterion `(,val))
                 (push result val)))
         result))
 
-(defun unique (list)
+(defun unique (l)
     (let (result '())
-        (do-for v (sort list) (if (not (contains result v)) (push result v)))
+        (do-for v (sort l) (if (not (contains result v)) (push result v)))
         result))
 
-(defun contains (list value)
-    (do-for val list (when (eq val value) (return t)))
-    nil)
+(defun contains (l value)
+    (< 0 (length (filter l (apply-partially eq value)))))
 
-(defun reverse-sort (list &optional compare-function)
-    (reverse (sort list compare-function)))
+(defun reverse-sort (l &optional compare-function)
+    (reverse (sort l compare-function)))
 
-(defun sort-by (list function)
+(defun sort-by (l function)
     "Sort a list by applying a function that returns a comparable to each element"
-    (sort list (lambda (a b) (- (funcall function `(,a)) (funcall function `(,b))))))
+    (sort l (lambda (a b) (- (funcall function `(,a)) (funcall function `(,b))))))
 
 (defmacro apply-partially (function &rest args)
     (setlocal evaled-args (for arg args (eval arg)))

@@ -62,8 +62,7 @@ true
 (setq sorted-list-of-lists '(
     (1 2 3)
     (5 4 3)
-    (6 7 8)
-))
+    (6 7 8)))
 (eq sorted-list-of-lists (sort-by list-of-lists first))
 
 ; Partial functions (currying)
@@ -77,11 +76,14 @@ true
 ; haxe-strings
 (eq "fork-you" (to-lower-hyphen "forkYou"))
 (eq "forkYou" (to-lower-camel "fork-you"))
+(eq "ForkYou" (to-upper-camel "fork_you"))
+(eq "forkyou" (to-lower-case "FORKyoU"))
 
 ; haxe objects
 (import "String")
 (eq "8" (call String from-char-code 56))
 (eq 1 (call (new String "hey") index-of "e"))
+(eq 3 (get (new String "hey") length))
 
 ; Stuff with dictionaries
 
@@ -106,8 +108,73 @@ true
 
 (eq '((1 4 7) (2 5 8) (3 6 9)) (zip '(1 2 3) '(4 5 6) '(7 8 9)))
 
-; Funcall is weird
+(eq '(2 1 3) (swap-nth '(1 2 3) 0 1))
+
+(eq '(hey (whats up)) (subst 'whats 'shut '(hey (shut up))))
+
+; Funcall was acting weird
 (eq 3 (funcall length '((5 6 7))))
+
+(eq "hey fork knife" (replace "hey spoon knife" "spoon" "fork"))
+
+(not (setq stuff '()))
+(defun what (val) (setq stuff (cons val stuff)))
+(nil? (do-list '(5 6 7) what))
+(eq 3 (length stuff))
+
+(setq str "    fork   ")
+(eq "fork" (trim str))
+(eq "fork   " (ltrim str))
+(eq "    fork" (rtrim str))
+(setq str "fork")
+(eq "      fork" (lpad str " " 10))
+(eq "fork      " (rpad str " " 10))
+
+; test (when)
+(nil? (when nil 
+    nil t))
+(nil? (when t 
+    t nil))
+(when t 
+    nil t)
+
+; test (unless)
+(nil? (unless t
+    t t))
+(nil? (unless nil
+    t nil))
+(unless nil
+    nil t)
+
+; test (uuid)
+(not (eq (uuid) (uuid)))
+(not (eq (gensym) (gensym)))
+
+; test (unique)
+(eq '(1 2 3 4) (unique '(4 2 2 1 4 3)))
+
+; test hooks
+(setq hook-func-counter 0)
+(not (setq hook '()))
+(add-hook hook (lambda (value) (setq hook-func-counter (+ hook-func-counter value))))
+(add-hook hook (lambda (value) (setq hook-func-counter (* hook-func-counter value))))
+(nil? (run-hook hook 3))
+(eq 9 hook-func-counter)
+
+(eq '(hey hey hey) (list-of 3 'hey))
+
+(eq 3 (min 5 3 9 10 5))
+(eq 10 (max 5 3 9 10 5))
+(eq 5 (round 4.5))
+(eq 4 (round 4.4))
+(eq 4 (floor 4.5))
+(eq 5 (ceil 4.4))
+(eq 5 (abs -5))
+(eq 5 (abs 5))
+
+(between-inclusive 5 5 5)
+(between-exclusive 6 5 7)
+(between-exclusive 6 7 5)
 
 ; Test custom reader macros
 (set-macro-string "#" (lambda (a b c) (list 'sharp (read-string a b))))

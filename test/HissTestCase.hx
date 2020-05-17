@@ -29,7 +29,7 @@ class HissTestCase extends utest.Test {
         }
 
         for (fun => callCount in repl.interp.functionStats) {
-            if (fun != "test-std" && fun != "lp" && fun != "lstd")
+            if (fun != "test-std" && fun != "lp" && fun != "lstd" && fun != "compare-by-even-odd" && fun != "what")
                 Assert.isTrue(callCount > 0, 'Failure: $fun was never called in testing');
         }
     }
