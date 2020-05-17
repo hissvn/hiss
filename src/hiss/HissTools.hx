@@ -3,10 +3,36 @@ package hiss;
 import haxe.macro.Expr;
 
 import hiss.HTypes;
+import Type;
 
 class HissTools {
     public static function put(dict: HValue, key: String, v: HValue) {
         dict.toDict()[key] = v;
+    }
+
+    public static function toList(list: HValue, hint: String = "list"): HList {
+        return HaxeTools.extract(list, List(l) => l, "list");
+    }
+
+    public static function toObject(obj: HValue, ?hint: String = "object"): Dynamic {
+        return HaxeTools.extract(obj, Object(_, o) => o, "object");
+    }
+
+    public static function toFunction(f: HValue, hint: String = "function"): Dynamic {
+        trace(f);
+        return HaxeTools.extract(f, Function(Haxe(_, v, _)) => v, hint);
+    }
+
+    public static function toInt(v: HValue): Int {
+        return HaxeTools.extract(v, Atom(Int(i)) => i, "int");
+    }
+
+    public static function toHFunction(hv: HValue): HFunction {
+        return HaxeTools.extract(hv, Function(f) => f, "function");
+    }
+
+    public static function toDict(dict: HValue): HDict {
+        return HaxeTools.extract(dict, Dict(h) => h, "dict");
     }
 
     public static function toPrint(v: HValue): String {
@@ -57,6 +83,76 @@ class HissTools {
 
             default: 
                 throw 'Not clear why $v is being converted to string';
+        }
+    }
+
+    public static function toHValue(v: Dynamic, hint:String = "HValue"): HValue {
+        if (v == null) return Nil;
+        var t = Type.typeof(v);
+        return switch (t) {
+            case TNull:
+                Nil;
+            case TInt:
+                Atom(Int(v));
+            case TFloat:
+                Atom(Float(v));
+            case TBool:
+                if (v) T else Nil;
+            case TClass(c):
+                var name = Type.getClassName(c);
+                return switch (name) {
+                    case "String":
+                        Atom(String(v));
+                    case "Array":
+                        var va = cast(v, Array<Dynamic>);
+                        List([for (e in va) HissTools.toHValue(e)]);
+                    default:
+                        Object(name, v);
+                };
+            case TEnum(e):
+                var name = Type.getEnumName(e);
+                //trace(name);
+                switch (name) {
+                    case "haxe.ds.Option":
+                        return switch (cast(v, haxe.ds.Option<Dynamic>)) {
+                            case Some(vInner): HissTools.toHValue(vInner);
+                            case None: Nil;
+                        }
+                    default:
+                        return Object(name, e);
+                };
+            case TObject:
+                Object("!ANONYMOUS!", v);
+            case TFunction:
+                Function(Haxe(Fixed, v, "[wrapped-function]"));
+            
+            default:
+                throw 'value $v of type $t cannot be wrapped as $hint';
+        }
+    }
+
+    public static function unwrapList(hl: HValue): Array<Dynamic> {
+        return [for (v in hl.toList()) HissTools.valueOf(v)];
+    }
+
+    /**
+     * Behind the scenes function to HaxeTools.extract a haxe-compatible value from an HValue
+     **/
+     public static function valueOf(hv: HValue): Dynamic {
+        return switch (hv) {
+            case Nil: false;
+            case T: true;
+            case Atom(Int(v)):
+                v;
+            case Atom(Float(v)):
+                v;
+            case Atom(String(v)):
+                v;
+            case Object(_, v):
+                v;
+            case List(l):
+                [for (hvv in l) HissTools.valueOf(hvv)];
+            default: throw 'hvalue $hv cannot be unwrapped for a native Haxe operation';
         }
     }
 }
