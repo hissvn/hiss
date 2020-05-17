@@ -256,22 +256,21 @@
 
 (defun sort-by (list function)
     "Sort a list by applying a function that returns a comparable to each element"
-    (sort list (lambda (a b) (- (funcall function `(,a) nil) (funcall function `(,b) nil)))))
+    (sort list (lambda (a b) (- (funcall function `(,a)) (funcall function `(,b))))))
 
 (defmacro apply-partially (function &rest args)
     (setlocal evaled-args (for arg args (eval arg)))
     `(lambda (&rest missing-args)
-        (funcall ,function (append ',evaled-args missing-args) nil)))
+        (funcall ,function (append ',evaled-args missing-args))))
 
 (defun list-of (size element)
     (for i (range size) element))
 
 (defun zip (&rest lists)
     "Create a list of tuples by grouping all same-nth elements in the given lists. Discards elements with no corresponding element in all other lists"
-    (let (final-length (funcall min (map lists length))
-            result (list-of final-length '()))
+    (let (final-length (funcall min (map lists length)))
         (for i (range final-length)
-            (map lists (lambda (l) (nth l i))))))
+            (for l lists (nth l i)))))
 
 (defmacro add-hook (hook-name hook-function)
     `(push ,hook-name ,hook-function))

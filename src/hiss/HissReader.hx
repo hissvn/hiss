@@ -217,7 +217,7 @@ class HissReader {
     static function callReadFunction(func: HValue, start: String, stream: HStream, terminators: HValue): HValue {
         var pos = stream.position();
         try {
-            return interp.funcall(func, List([Atom(String(start)), Object("HStream", stream), Quote(terminators), Object("HPosition", pos)]));
+            return interp.funcall(T, func, List([Atom(String(start)), Object("HStream", stream), Quote(terminators), Object("HPosition", pos)]));
         } catch (s: Dynamic) {
             if (s.indexOf("Reader error") == 0) throw s;
             throw 'Reader error `$s` at ${pos.toString()}';
