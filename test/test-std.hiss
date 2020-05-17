@@ -1,0 +1,105 @@
+t
+true
+(not nil)
+(not false)
+(not null)
+
+(= 6 6)
+(not (= 6 5))
+(= 6 6 6)
+(= 6 6 6 6 6 6 6 6 6)
+(not (= 6 6 6 6 5))
+
+(< 5 6 7)
+(not (< 5 5))
+(> 10 9 8)
+(not (> 6 6))
+(not (> 7 8))
+(not (> 7 6 6))
+
+; String tools
+(eq "5" (string 5))
+(eq "5, 6, 7" (join (list 5 6 7) ", "))
+(eq '("5" "6" "7") (split "5,6,7" ","))
+(eq "fork me" (replace-at "flankme" 1 "ork "))
+(eq "You-All-Everybody" (to-upper-hyphen "youAllEverybody"))
+(eq 5 (parse-int "5"))
+(eq 5.0 (parse-float "5.0"))
+(eq 5 (parse-int "5.0"))
+
+(error? (/))
+
+(setq unsorted-int-list '(1 7 4 3 6 2 5))
+(setq unsorted-string-list '("baby" "Dont" "hurt" "me"))
+
+; sort function should default to use Reflect.compare
+(eq '(1 2 3 4 5 6 7) (sort unsorted-int-list))
+(eq '("Dont" "baby" "hurt" "me") (sort unsorted-string-list))
+; sort function should have no side effects
+(eq unsorted-int-list '(1 7 4 3 6 2 5))
+(eq unsorted-string-list '("baby" "Dont" "hurt" "me"))
+
+; sort function should allow custom Hiss compare functions
+(defun compare-by-even-odd (a b)
+    (- (% a 2) (% b 2)))
+(setq sorted-by-even-odd (sort unsorted-int-list compare-by-even-odd))
+(defun all-true (list)
+    (= (length list) (length (filter list))))
+(all-true (for val (take sorted-by-even-odd 3) (= (% val 2) 0)))
+(all-true (for val (slice sorted-by-even-odd 3) (= (% val 2) 1)))
+
+; reverse short should invert whatever compare function is used
+(eq '(7 6 5 4 3 2 1) (reverse-sort unsorted-int-list))
+(setq reverse-sorted-by-even-odd (reverse-sort unsorted-int-list compare-by-even-odd))
+(all-true (for val (take reverse-sorted-by-even-odd 4) (= (% val 2) 1)))
+(all-true (for val (slice reverse-sorted-by-even-odd 4) (= (% val 2) 0)))
+
+; sort-by should be able to sort data structures conveniently
+(setq list-of-lists '(
+    (5 4 3)
+    (6 7 8)
+    (1 2 3)))
+(setq sorted-list-of-lists '(
+    (1 2 3)
+    (5 4 3)
+    (6 7 8)
+))
+(eq sorted-list-of-lists (sort-by list-of-lists first))
+
+; Partial functions (currying)
+(setq add-a-bunch (apply-partially + 5 6 7))
+(= (add-a-bunch 3 6) 27)
+
+; eq semantics with nested HValues
+(let (fork "norts")
+    (eq '`(fork ,fork) '`(fork ,fork)))
+
+; haxe-strings
+(eq "fork-you" (to-lower-hyphen "forkYou"))
+(eq "forkYou" (to-lower-camel "fork-you"))
+
+; haxe objects
+(import "String")
+(eq "8" (call String from-char-code 56))
+(eq 1 (call (new String "hey") index-of "e"))
+
+; Scope in on an HDict
+(setq fork (dict))
+(set-in-dict fork "hey" 'babe)
+(nil? hey)
+(nil? (scope-in fork))
+(eq 'babe hey)
+(nil? (scope-out))
+
+; Test unquoting lists
+(setq inner-list (list 5 6 7))
+(eq `(1 2 3 4 ,@inner-list) (list 1 2 3 4 5 6 7))
+(eq (eval `(+ 1 2 3 4 ,@inner-list)) 28)
+(defun adhoc-list (l) `(1 2 3 4 ,@l))
+(eq `(,@(adhoc-list inner-list)) '(1 2 3 4 5 6 7))
+
+; Test custom reader macros
+(set-macro-string "#" (lambda (a b c) (list 'sharp (read-string a b))))
+(eq '(sharp "fork") (read "#fork\""))
+(set-macro-string "^" (lambda (a b c) (cons 'sharp (read-delimited-list "]" '("|") a b nil))))
+(eq '(sharp fork 5 "shit") (read "^fork|5|\"shit\"]"))
