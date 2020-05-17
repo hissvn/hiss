@@ -1,3 +1,6 @@
+(defun load (file)
+    (eval `(progn ,@(read-all (get-content file)))))
+
 (defun length (str-or-list)
     (get-property str-or-list "length"))
 
@@ -310,16 +313,5 @@
         (eval (cons 'cond (rest ',forms))))))
 
 ; Temp functions -- eventually these will need to account for not knowing if hiss is run from repo root
-(defun lstd () (load "src/hiss/stdlib.hiss"))
-(defun test-std () 
-    (load "test/test-std.hiss" 
-        "(do-for 
-            statement 
-            '(*) 
-            (try (let (value (eval statement))
-                ;(print value)
-                (when (not value)
-                    (print `(,statement : ,value))))
-                (print `(caused by ,statement))))")
-    "Tests finished.")
+(defun lstd () (load "stdlib.hiss"))
 (defun lp (num) (load (+ "aoc/p" num ".hiss")))
