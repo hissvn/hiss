@@ -191,6 +191,8 @@ true
 (= 3 (length (split (get-content "test/expressions.hiss") "\n")))
 (nil? (get-content "doesntexists"))
 
+(eq 'working (load "module.hiss"))
+
 ; Test custom reader macros
 (set-macro-string "#" (lambda (a b c) (list 'sharp (read-string a b))))
 (eq '(sharp "fork") (read "#fork\""))

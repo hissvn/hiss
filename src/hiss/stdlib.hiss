@@ -312,6 +312,12 @@
             (eval (cons 'progn (rest (first ',forms))))
         (eval (cons 'cond (rest ',forms))))))
 
+(import "Sys")
+(import "hiss.HaxeTools")
+(defun read-line (&optional prompt)
+    (when prompt (call Haxe-Tools print prompt))
+    (call (call Sys stdin) read-line))
+
 ; Temp functions -- eventually these will need to account for not knowing if hiss is run from repo root
 (defun lstd () (load "stdlib.hiss"))
 (defun lp (num) (load (+ "aoc/p" num ".hiss")))

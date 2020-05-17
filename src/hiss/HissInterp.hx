@@ -36,14 +36,11 @@ import hiss.HaxeTools;
 using hiss.HaxeTools;
 
 import uuid.Uuid;
+import Sys;
 
 class HissInterp {
     var stackFrames: HValue;
     public var variables: HValue;
-
-    /** Debugging **/
-    var watchedVariables: HValue;
-    var watchedFunctions: HValue;
 
     public var functionStats: Map<String, Int> = new Map<String, Int>();
 
@@ -246,18 +243,6 @@ class HissInterp {
             HissTools.valueOf(funcall(Nil, sortFunction, List([v1, v2])));
         });
         return List(sorted);
-    }
-
-    // *
-    function readLine(args: HValue) {
-        if (args.toList().length == 1) {
-            HaxeTools.print(first(args).toString());
-        }
-        #if sys
-            return Atom(String(Sys.stdin().readLine()));
-        #else
-            return Atom(String(""));
-        #end
     }
 
     // *
@@ -473,8 +458,6 @@ class HissInterp {
         importFixed(getProperty);
         importFixed(callMethod);
 
-        vars['read-line'] = Function(Haxe(Var, readLine, "read-line"));
-
         // Control flow
         vars['if'] = Function(Macro(false, Haxe(Fixed, hissIf, "if")));
 
@@ -561,13 +544,9 @@ class HissInterp {
 
         vars['while'] = Function(Macro(false, Haxe(Var, hissWhile, "while")));
         
-        watchedFunctions = List([]);
-        watchedVariables = List([]);
         stackFrames = List([]);
 
         // TODO make these all imported getters
-        vars['*watched-functions*'] = watchedFunctions;
-        vars['*watched-vars*'] = watchedVariables;
         vars['*stack-frames*'] = stackFrames;
 
         // Import enums and stuff
@@ -605,23 +584,12 @@ class HissInterp {
         }
     }
 
-    function contains(list: HValue, v: HValue): HValue {
-        for (val in list.toList()) {
-            if (eq(v, val) != Nil) return T;
-        }
-
-        return Nil;
-    }
-
     // *
     function setq(l: HValue): HValue {
         var list = l.toList();
         var name = HissTools.toString(symbolName(list[0]));
         var value = eval(list[1]);
         
-        var watched = truthy(contains(watchedVariables, Atom(String(name))));
-        if (watched) trace('calling setq for $name. New value ${value.toPrint()}');
-
         try {
             if (value.toList().length == 0 && variables.toDict()[name].toList().length != 0) {
                 while (!variables.toDict()[name].toList().empty()) variables.toDict()[name].toList().pop();
@@ -642,9 +610,6 @@ class HissInterp {
     function setlocal (l: HValue) {
         var list = l.toList();
         var name = symbolName(list[0]).toString();
-        var watched = truthy(contains(watchedVariables, Atom(String(name))));
-
-        if (watched) trace(l.toPrint());
 
         var value = eval(list[1]);
         var stackFrame: HDict = variables.toDict();
@@ -653,7 +618,6 @@ class HissInterp {
             stackFrame = stackFrames.toList()[stackFrames.toList().length-1].toDict();
             // But if a higher scope already binds the variable, it will be modified instead. TODO or not??!?!?!
         }
-        if (watched) trace('calling setlocal for $name on frame ${Dict(stackFrame).toPrint()} with ${stackFrames.toList().length} frames and new value ${value.toPrint()} evaluated from ${list[1].toPrint()}');
         stackFrame[name] = value;
         if (list.length > 2) {
             return setlocal(List(list.slice(2)));
@@ -805,15 +769,11 @@ class HissInterp {
         if (!functionStats.exists(name)) functionStats[name] = 0;
         functionStats[name] = functionStats[name] + 1;
 
-        var watched = truthy(contains(variables.toDict()["*watched-functions*"], Atom(String(name))));
-
         var oldStackFrames = List(stackFrames.toList().copy());
 
         switch (func) {
             case Function(Macro(e, m)):
                 var macroExpansion = funcall(Nil, Function(m), args);
-                if (watched)
-                     trace('macroexpansion $name ${func.toPrint()} -> ${macroExpansion.toPrint()}');
                 return if (e) {
                     eval(macroExpansion);
                 } else {
@@ -836,7 +796,6 @@ class HissInterp {
         var hfunc = func.toHFunction();
 
         var message = 'calling `$name`: $hfunc with args ${argVals.toPrint()}';
-        if (watched) trace(message);
 
         try {
             switch (hfunc) {
@@ -850,7 +809,6 @@ class HissInterp {
 
                     message += ". Are you sure you are passing the right arguments?";
                     var result: HValue = Reflect.callMethod(container, hxfunc, argList);
-                    if (watched) trace('returning ${result.toPrint()} from ${name}');
 
                     return result;
         
@@ -931,11 +889,6 @@ class HissInterp {
         }
 
         var info =  { name: name, value: value, container: frame }
-
-        var watched = truthy(contains(watchedVariables, Atom(String(name))));
-        if (watched) {
-            trace('var $name resolved with info ${VarInfo(info).toPrint()}');
-        }
 
         return info;
     }
