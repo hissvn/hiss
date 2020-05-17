@@ -513,6 +513,8 @@ class HissInterp {
         
         vars['Type'] = Object("Class", Type);
         vars['Strings'] = Object("Class", Strings);
+        vars['empty-dict'] = Function(Haxe(Fixed, function() { return Dict([]); }, "empty-dict"));
+        
 
 
         vars['return'] = Function(Haxe(Fixed, hissReturn, "return"));
@@ -633,16 +635,6 @@ class HissInterp {
         vars['do-for'] = Function(Macro(false, Haxe(Var, hissDoFor, "do-for")));
 
         vars['while'] = Function(Macro(false, Haxe(Var, hissWhile, "while")));
-
-        vars['dict'] = Function(Macro(false, Haxe(Var, dict, "dict")));
-
-        vars['set-in-dict'] = Function(Haxe(Fixed, setInDict, "set-in-dict"));
-
-        vars['erase-in-dict'] = Function(Haxe(Fixed, eraseInDict, "erase-in-dict"));
-
-        vars['get-in-dict'] = Function(Haxe(Fixed, getInDict, "get-in-dict"));
-
-        vars['keys'] = Function(Haxe(Fixed, keys, "keys"));
         
         watchedFunctions = List([]);
         watchedVariables = List([]);
@@ -840,43 +832,6 @@ class HissInterp {
             }
         }
         return Nil;
-    }
-
-    // *
-    function dict(pairs: HValue) {
-        var dict = new HDict();
-        for (pair in pairs.toList()) {
-            var key = nth(pair, Atom(Int(0))).toString();
-            var value = eval(nth(pair, Atom(Int(1))));
-            dict[key] = value;
-        }
-        return Dict(dict);
-    }
-
-    // *
-    function setInDict(dict: HValue, key: HValue, value: HValue) {
-        var dictObj: HDict = dict.toDict();
-        dictObj[key.toString()] = value;
-        return dict;
-    }
-
-    // *
-    function eraseInDict(dict: HValue, key: HValue, value: HValue) {
-        var dictObj: HDict = dict.toDict();
-        dictObj.remove(key.toString());
-        return dict;
-    }
-
-    // *
-    function getInDict(dict: HValue, key: HValue) {
-        var dictObj: HDict = dict.toDict();
-        return if (dictObj[key.toString()] != null) dictObj[key.toString()] else Nil;
-    }
-
-    // *
-    function keys(dict: HValue) {
-        var dictObj: HDict = dict.toDict();
-        return List([for (key in dictObj.keys()) Atom(String(key))]);
     }
 
     // keep

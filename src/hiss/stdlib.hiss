@@ -18,6 +18,7 @@
             (if ,(first args)
                 (and ,@(rest args))
                 nil))))
+
 (defmacro let (bindings &rest body)
     ;(print bindings)
     `(progn
@@ -67,7 +68,6 @@
 
 (variadic-binop append (lambda (l1 l2) (call-method l1 "concat" (list l2))) (error "cannot append without argument lists"))
 
-
 (defun between-exclusive (a b c)
     (or (< b a c) (> c a b)))
 (defun between-inclusive (a b c)
@@ -78,12 +78,18 @@
 
 (variadic-binop = haxe== (error "can't check equality without an operand") t (if (fun val1 val2) val1 nil))
 
+(defmacro with (scope &rest body)
+    `(progn
+        (scope-in ,scope)
+        (scope-return (progn ,@body))))
+
 ; Haxe interop
-(defmacro register-method (method &optional name)
+(defmacro register-method (method &optional name return-instance)
     (default name
         (intern (call-method Strings "toLowerHyphen" (list (symbol-name method)))))
     `(defun ,name (instance &rest args)
-        (call-method instance (symbol-name ',method) args)))
+        (let (result (call-method instance (symbol-name ',method) args))
+            (if ,return-instance instance result))))
 
 (register-method substr)
 (register-method join)
@@ -94,6 +100,16 @@
 (register-method indexOf)
 (register-method lastIndexOf)
 (register-method charAt)
+
+(defun groups (l size &optional take-remainder)
+    (cond
+        ((< (length l) size)
+            (if take-remainder
+                    (list l)
+                (list)))
+        ((= (length l) size)
+            (list l))
+        (t (cons (take l size) (groups (slice l size) size take-remainder)))))
 
 (defmacro when (cond &rest body)
     `(if ,cond ,(cons 'progn body)))
@@ -176,8 +192,16 @@
 (defmacro call (obj function &rest args)
     `(call-method ,obj (to-lower-camel (symbol-name ',function)) (for arg ',args (eval arg))))
 
+(defun dict (&rest pairs)
+    (let (new-dict (empty-dict))
+        (do-for pair (groups pairs 2) (dict-set new-dict (first pair) (nth pair 1)))
+        new-dict))
+(register-method get dict-get)
+(register-method set dict-set t)
+(register-method remove dict-erase t)
+
 (defmacro unless (cond &rest body)
-`(if (not ,cond) ,(cons 'progn body)))
+    `(if (not ,cond) ,(cons 'progn body)))
 
 ; Useful for AOC 2019 day 2 ;)
 (defun swap-nth (list n1 n2)
