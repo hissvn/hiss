@@ -48,6 +48,8 @@
 (variadic-binop > haxe> (error "cannot evaluate greater-than without operands") t (if (fun val1 val2) val2))
 (variadic-binop >= haxe>= (error "cannot evaluate greater-than-equal without operands") t (if (fun val1 val2) val2))
 
+(variadic-binop append (lambda (l1 l2) (call-method l1 "concat" (list l2))) (error "cannot append without argument lists"))
+
 
 (defun between-exclusive (a b c)
     (or (< b a c) (> c a b)))
@@ -76,6 +78,7 @@
 (register-method toLowerCase)
 (register-method indexOf)
 (register-method lastIndexOf)
+(register-method charAt)
 
 (defmacro when (cond &rest body)
     `(if ,cond ,(cons 'progn body)))
@@ -166,6 +169,12 @@
     (setlocal temp (nth list n1))
     (set-nth list n1 (nth list n2))
     (set-nth list n2 temp))
+
+(defun map (l func)
+    (for val l (funcall func (list val))))
+
+(defun do-list (l func)
+    (do-for val l (funcall func (list val))))
 
 (defun range (arg1 &optional arg2)
     (if arg2
