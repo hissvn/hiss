@@ -29,8 +29,9 @@ import hiss.HTypes;
 
 using hiss.HissInterp;
 import hiss.HissTools;
-
+using hiss.HissTools;
 import hiss.HaxeTools;
+using hiss.HaxeTools;
 
 import uuid.Uuid;
 
@@ -134,10 +135,6 @@ class HissInterp {
         return Function(Hiss(def));
     }
 
-    static function toHFunction(hv: HValue): HFunction {
-        return HaxeTools.extract(hv, Function(f) => f, "function");
-    }
-
     // *
     // TODO optional docstrings lollll
     function defun(args: HValue, isMacro: HValue = Nil) {
@@ -208,7 +205,7 @@ class HissInterp {
         var name = findFunctionName(f);
         //var name = "";
         return macro $interp.variables.toDict()[$v{name}.toLowerHyphen()] = Function(Haxe(Fixed, (v: HValue) -> {
-            return $f(HissInterp.valueOf(v)).toHValue();
+            return toHValue($f(HissInterp.valueOf(v)));
         }, $v{name}));
     }
 
@@ -225,7 +222,7 @@ class HissInterp {
         var name = findFunctionName(f);
         //var name = "";
         return macro $interp.variables.toDict()[$v{name}.toLowerHyphen()] = Function(Haxe(Fixed, (v: HValue, v2: HValue) -> {
-            return $f(HissInterp.valueOf(v), HissInterp.valueOf(v2)).toHValue();
+            return HissTools.toHValue($f(HissInterp.valueOf(v), HissInterp.valueOf(v2)));
         }, $v{name}));
     }
 
@@ -245,10 +242,6 @@ class HissInterp {
             $f(HissInterp.valueOf(v));
             return Nil;
         }));
-    }
-
-    public static function toInt(v: HValue): Int {
-        return HaxeTools.extract(v, Atom(Int(i)) => i, "int");
     }
 
     public static macro function importBinops(prefix: Bool, rest: Array<ExprOf<String>>) {
@@ -281,51 +274,6 @@ class HissInterp {
         }
     }
 
-    static function toHValue(v: Dynamic, hint:String = "HValue"): HValue {
-        if (v == null) return Nil;
-        var t = Type.typeof(v);
-        return switch (t) {
-            case TNull:
-                Nil;
-            case TInt:
-                Atom(Int(v));
-            case TFloat:
-                Atom(Float(v));
-            case TBool:
-                if (v) T else Nil;
-            case TClass(c):
-                var name = Type.getClassName(c);
-                return switch (name) {
-                    case "String":
-                        Atom(String(v));
-                    case "Array":
-                        var va = cast(v, Array<Dynamic>);
-                        List([for (e in va) e.toHValue()]);
-                    default:
-                        Object(name, v);
-                };
-            case TEnum(e):
-                var name = Type.getEnumName(e);
-                //trace(name);
-                switch (name) {
-                    case "haxe.ds.Option":
-                        return switch (cast(v, haxe.ds.Option<Dynamic>)) {
-                            case Some(vInner): toHValue(vInner);
-                            case None: Nil;
-                        }
-                    default:
-                        return Object(name, e);
-                };
-            case TObject:
-                Object("!ANONYMOUS!", v);
-            case TFunction:
-                Function(Haxe(Fixed, v, "[wrapped-function]"));
-            
-            default:
-                throw 'value $v of type $t cannot be wrapped as $hint';
-        }
-    }
-
     // TODO -[int] literals are broken (parsing as symbols)
     public static macro function importBinop(op: String, prefix: Bool) {
         var name = op;
@@ -333,7 +281,7 @@ class HissInterp {
             name = 'haxe$name';
         }
 
-        var code = 'variables.toDict()["$name"] = Function(Haxe(Fixed, (a,b) -> toHValue(valueOf(a) $op valueOf(b)), "$name"))';
+        var code = 'variables.toDict()["$name"] = Function(Haxe(Fixed, (a,b) -> HissTools.toHValue(valueOf(a) $op valueOf(b)), "$name"))';
 
         var expr = Context.parse(code, Context.currentPos());
         return expr;
@@ -607,7 +555,15 @@ class HissInterp {
     }
 
     public function set(varName: String, value: Dynamic) {
-        variables.toDict()[varName] = value.toHValue();
+        variables.toDict()[varName] = toHValue(value);
+    }
+
+    function slice(l: HValue, idx: HValue) {
+        return List(l.toList().slice(idx.toInt()));
+    }
+
+    function take(l: HValue, num: HValue) {
+        return List(l.toList().slice(0, num.toInt()));
     }
 
     public function new() {
@@ -1015,12 +971,12 @@ class HissInterp {
         return v;
     }
 
-    // *
+    // keep
     public static function rest(list: HValue): HValue {
         return List(list.toList().slice(1));
     }
 
-    // *
+    // keep
     public static function nth(list: HValue, idx: HValue):HValue {
         return list.toList()[idx.toInt()];
     }
