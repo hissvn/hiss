@@ -5,6 +5,7 @@ import hiss.StaticFiles;
 class TestAll {
   public static function main() {
     StaticFiles.compileWith("test-std.hiss");
+    StaticFiles.compileWith("module.hiss");
     utest.UTest.run([
       new test.HissTestCase("test-std.hiss"),
       new test.HStreamTestCase(),
