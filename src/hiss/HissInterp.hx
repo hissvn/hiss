@@ -68,9 +68,9 @@ class HissInterp {
         }
     }
 
-    // Keep
+    // *
     function lambda(args: HValue): HValue {
-        var argNames = first(args).toList().map(s -> symbolName(s).toString());
+        var argNames = nth(args, Atom(Int(0))).toList().map(s -> symbolName(s).toString());
         
         var body: HList = rest(args).toList();
 
@@ -520,9 +520,9 @@ class HissInterp {
 
         vars['set-nth'] = Function(Haxe(Fixed, setNth, "set-nth"));
 
-        vars['for'] = Function(Macro(false, Haxe(Var, hissFor, "for")));
+        vars['for'] = Function(Macro(false, Haxe(Var, hissDoFor.bind(T), "for")));
 
-        vars['do-for'] = Function(Macro(false, Haxe(Var, hissDoFor, "do-for")));
+        vars['do-for'] = Function(Macro(false, Haxe(Var, hissDoFor.bind(Nil), "do-for")));
 
         vars['while'] = Function(Macro(false, Haxe(Var, hissWhile, "while")));
         
@@ -614,79 +614,43 @@ class HissInterp {
     }
 
     // *
-    function hissFor(args: HValue): HValue {
+    function hissDoFor(collect: HValue, args: HValue): HValue {
         var argList = args.toList();
         var name = argList[0];
         var coll = eval(argList[1]);
         //var coll = argList[1];
 
-        var body: HValue = List(argList.slice(2));
-        return switch (coll) {
-            case Object("IntIterator", o):
-                var it: IntIterator = cast(eval(argList[1]).toObject(), IntIterator);
-        
-                List([for (v in it) {
-                    setlocal(List([name, Atom(Int(v))]));
-
-                    eval(cons(Atom(Symbol("progn")), body));
-                }]);
-            case List(l):
-                List([for (v in l) {
-                    setlocal(List([name, Quote(v)]));
-
-                    eval(cons(Atom(Symbol("progn")), body));
-                }]);
-            default:
-                Signal(Error('cannot call for loop on ${coll.toPrint()}'));
-        }
-
-        
-        //return Nil;
-    }
-
-    // *
-    function hissDoFor(args: HValue): HValue {
-        var argList = args.toList();
-        var name = argList[0];
-        var coll = eval(argList[1]);
-        //var coll = argList[1];
-
+        var results = [];
 
         var body: HValue = List(argList.slice(2));
-        switch (coll) {
+        var iterator: Iterator<Dynamic> = switch (coll) {
             case Object("IntIterator", o):
-                var it: IntIterator = cast(eval(argList[1]).toObject(), IntIterator);
-        
-                for (v in it) {
-                    setlocal(List([name, Atom(Int(v))]));
-
-                    var value = eval(cons(Atom(Symbol("progn")), body));
-                    switch (value) {
-                        case Signal(Continue):
-                            continue;
-                        case Signal(Break):
-                            return Nil;
-                        default:
-                    }
-                }
+                cast(eval(argList[1]).toObject(), IntIterator);
             case List(l):
-                for (v in l) {
-                    setlocal(List([name, Quote(v)]));
-
-                    var value = eval(cons(Atom(Symbol("progn")), body));
-                    switch (value) {
-                        case Signal(Continue):
-                            continue;
-                        case Signal(Break):
-                            return Nil;
-                        default:
-                    }
-                }
+                l.iterator();
             default:
-                Error('cannot call for loop on ${coll.toPrint()}');
+                throw 'cannot call for loop on ${coll.toPrint()}';
+        }
+        
+        for (v in iterator) {
+            setlocal(List([name, HissTools.toHValue(v)]));
+
+            var value = eval(cons(Atom(Symbol("progn")), body));
+            switch (value) {
+                case Signal(Continue):
+                    continue;
+                case Signal(Break):
+                    return Nil;
+                default:
+                    if (HissTools.truthy(collect)) {
+                        results.push(value);
+                    }
+            }
         }
 
-        
+        if (HissTools.truthy(collect)) {
+            return List(results);
+        }
         return Nil;
     }
 
@@ -938,7 +902,7 @@ class HissInterp {
             case List([]):
                 Nil;
             case List(exps):
-                var funcInfo = eval(first(expr), T);
+                var funcInfo = eval(nth(expr, Atom(Int(0))), T);
                 var value = switch (funcInfo) {
                     case VarInfo(v):
                         v.value;
