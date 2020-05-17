@@ -1,3 +1,23 @@
+(defun length (str-or-list)
+    (get-property str-or-list "length"))
+
+(defmacro or (&rest args)
+    `(if (haxe== ,(length args) 0)
+        nil
+        (if (haxe== ,(length args) 1)
+            ,(first args)
+            (if ,(first args)
+                ,(first args)
+                (or ,@(rest args))))))
+
+(defmacro and (&rest args)
+    `(if (haxe== ,(length args) 0)
+        t
+        (if (haxe== ,(length args) 1)
+            ,(first args)
+            (if ,(first args)
+                (and ,@(rest args))
+                nil))))
 (defmacro let (bindings &rest body)
     ;(print bindings)
     `(progn
@@ -20,9 +40,6 @@
         (if (and (bound? (quote ,var)) ,var)
             ,var
             ,value)))
-
-(defun length (str-or-list)
-    (get-property str-or-list "length"))
 
 (defmacro variadic-binop (symbol base-function &optional zero-case one-case two-case)
     (default zero-case 0)
@@ -60,8 +77,6 @@
 (variadic-binop max > (error "cannot find min of 0 elements") val (if (fun val1 val2) val1 val2))
 
 (variadic-binop = haxe== (error "can't check equality without an operand") t (if (fun val1 val2) val1 nil))
-
-; and/or are not variadic binops because they rely on truthy() for now 
 
 ; Haxe interop
 (defmacro register-method (method &optional name)
@@ -146,8 +161,8 @@
 
 (defun remove (value tree)
     ; TODO because lambdas don't capture values, this safer implementation won't work:
-    /*(let (remove-this (gensym))
-        (filter (subst remove-this value tree) (lambda (v) (not (eq v (print remove-this)))))))*/
+    //(let (remove-this (gensym))
+      //  (filter (subst remove-this value tree) (lambda (v) (not (eq v (print remove-this)))))))
     // This unsafe implementation works well enough:
     (filter (subst '--hiss-remove-this value tree) (lambda (v) (not (eq v '--hiss-remove-this)))))
 

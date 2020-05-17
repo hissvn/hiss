@@ -91,6 +91,7 @@ class HissInterp {
         return eval(HissReader.read(Atom(String(wrappedIn.toString().replace('*', contents))), Nil, Object("HPosition", new HPosition(file.toString(), -ghostLines, 1))));
     }
 
+    // Keep
     /**
      * Behind the scenes, this function evaluates the truthiness of an HValue
      **/
@@ -107,8 +108,7 @@ class HissInterp {
     /**
      * Implementation of the `if` macro. Returns value of `thenExp` if condition is truthy, else * evaluates `elseExp`
      **/
-
-    // *
+    // Keep
     function hissIf(condExp: HValue, thenExp: HValue, elseExp: Null<HValue>) {
         var cond = eval(condExp);
         return if (truthy(cond)) {
@@ -121,7 +121,7 @@ class HissInterp {
         }
     }
 
-    // *
+    // Keep
     function lambda(args: HValue): HValue {
         var argNames = first(args).toList().map(s -> symbolName(s).toString());
         
@@ -271,10 +271,6 @@ class HissInterp {
         var l = hl.toList().copy();
         l.insert(0, hv);
         return List(l);
-    }
-
-    public static function toString(hv: HValue): String {
-        return HaxeTools.extract(hv, Atom(String(s)) => s, "string");
     }
 
     // *
@@ -462,47 +458,6 @@ class HissInterp {
         }
     }
 
-    // Maybe can't be put in Hiss because it uses truthy
-    function or(args: HValue) {
-        if (args.toList().length == 0) {
-            return Nil;
-        } else {
-            var firstValue = eval(first(args));
-            if (truthy(firstValue)) {
-                return firstValue;
-            } else {
-                return or(rest(args));
-            }
-        }
-    }
-
-    // Maybe can't be put in Hiss because it uses truthy
-    function and(args: HValue): HValue {
-        switch (args.toList().length) {
-            case 0:
-                return T;
-            case 1:
-                return eval(first(args));
-            case 2:              
-                return if (truthy(eval(first(args)))) {
-                    eval(first(rest(args)));
-                } else {
-                    Nil;
-                }
-            default:
-                var l = args.toList();
-                var firstTwo = [l[0], l[1]];
-                var newArgs = [];
-                
-                newArgs.push(and(List(firstTwo)));
-                for (idx in 2...l.length) {
-                    newArgs.push(l[idx]);
-                }
-
-                return and(List(newArgs));
-        }
-    }
-
     // *
     function scopeIn(s: HValue = Nil) {
         if (s == Nil) {
@@ -644,9 +599,6 @@ class HissInterp {
         })); */
 
         importFixed(eq);
-
-        vars['or'] = Function(Macro(false, Haxe(Var, or, "or")));
-        vars['and'] = Function(Macro(false, Haxe(Var, and, "and")));
 
         // Some binary operators are Lisp-compatible as-is
         importBinops(false, "%");  

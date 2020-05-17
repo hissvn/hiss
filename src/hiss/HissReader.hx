@@ -168,7 +168,11 @@ class HissReader {
     }
 
     public static function readSymbol(start: HValue, str: HValue, terminators: HValue, position: HValue): HValue {
-        return Atom(Symbol(nextToken(str, terminators)));
+        var symbolName = nextToken(str, terminators);
+        // We mustn't return Atom(Symbol(nil)) because it creates a logical edge case
+        if (symbolName == "nil") return Nil;
+        if (symbolName == "t") return T;
+        return Atom(Symbol(symbolName));
     }
 
     public static function readDelimitedList(terminator: HValue, ?delimiters: HValue, start: HValue, str: HValue, terminators: HValue, position: HValue): HValue {
