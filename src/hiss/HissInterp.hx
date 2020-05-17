@@ -276,7 +276,6 @@ class HissInterp {
     }
 
     // *
-     // TODO allow other sorting algorithms, Reflect.compare, etc.
     function sort(args: HValue) {
         var argList = args.toList();
         var listToSort = argList[0].toList();
@@ -286,16 +285,6 @@ class HissInterp {
         
         sorted.sort((v1:HValue, v2:HValue) -> {
             HissTools.valueOf(funcall(Nil, sortFunction, List([v1, v2])));
-        });
-        return List(sorted);
-    }
-
-    // *
-    function reverseSort(v: HValue) {
-        // TODO implement better
-        var sorted = v.toList().copy();
-        sorted.sort((v1:HValue, v2:HValue) -> {
-            Std.int(HissTools.valueOf(v2) - HissTools.valueOf(v1));
         });
         return List(sorted);
     }
@@ -314,11 +303,6 @@ class HissInterp {
 
     // *
     function getVariables() { return variables; }
-
-    // *
-    function not(v: HValue) {
-        return if (truthy(v)) Nil else T;
-    }
 
     // *
     function progn(exps: HValue) {
@@ -494,14 +478,6 @@ class HissInterp {
         variables.toDict()[varName] = HissTools.toHValue(value);
     }
 
-    function slice(l: HValue, idx: HValue) {
-        return List(l.toList().slice(idx.toInt()));
-    }
-
-    function take(l: HValue, num: HValue) {
-        return List(l.toList().slice(0, num.toInt()));
-    }
-
     public function new() {
         // Load the standard library and test files:
         StaticFiles.compileWith("stdlib.hiss");
@@ -516,8 +492,6 @@ class HissInterp {
         vars['Type'] = Object("Class", Type);
         vars['Strings'] = Object("Class", Strings);
         vars['empty-dict'] = Function(Haxe(Fixed, function() { return Dict([]); }, "empty-dict"));
-        
-
 
         vars['return'] = Function(Haxe(Fixed, hissReturn, "return"));
         vars['break'] = Function(Haxe(Fixed, hissBreak, "break"));
@@ -528,20 +502,14 @@ class HissInterp {
         vars['false'] = Nil;
         vars['t'] = T;
         vars['true'] = T;
-
-        vars['not'] = Function(Haxe(Fixed, not, "not"));
-       
+               
         vars['sort'] = Function(Haxe(Var, sort, "sort"));
 
         //vars['import'] = Function(Haxe(Fixed, resolveClass, "import"));
         importWrapped2(this, Reflect.compare);
         
         //importWrapped(this, toUpperHyphen);
-        importFixed(reverse);
-
         importFixed(intern);
-
-        importFixed(reverseSort);
         
         importFixed(getProperty);
         importFixed(callMethod);
@@ -583,8 +551,6 @@ class HissInterp {
         importFixed(first);
         importFixed(rest);
         importFixed(nth);
-        importFixed(slice);
-        importFixed(take);
 
         importFixed(symbolName);
 
@@ -659,19 +625,24 @@ class HissInterp {
     }
 
     /** Get a field out of a container (object/class) **/
-    function getProperty(container: HValue, field: HValue) {
+    function getProperty(container: HValue, field: HValue, byReference: HValue = Nil) {
         try {
-            return HissTools.toHValue(Reflect.getProperty(HissTools.valueOf(container), field.toString()));
+            return HissTools.toHValue(Reflect.getProperty(HissTools.valueOf(container, truthy(byReference)), field.toString()));
         } catch (s: Dynamic) {
             throw 'Cannot retrieve field `${field.toString()}` from object $container because $s';
         }
     }
 
-    function callMethod(container: HValue, method: HValue, ?args: HValue) {
+    function callMethod(container: HValue, method: HValue, ?args: HValue, ?callOnReference: HValue = Nil, ?keepArgsWrapped: HValue = Nil) {
         if (args == null) args = List([]);
+        if (callOnReference == null) callOnReference = Nil;
+        if (keepArgsWrapped == null) keepArgsWrapped = Nil;
+        var callArgs: Array<Dynamic> = args.toList();
+        if (!truthy(keepArgsWrapped)) {
+            callArgs = HissTools.unwrapList(args);
+        }
         try {
-
-            return HissTools.toHValue(Reflect.callMethod(HissTools.valueOf(container), HissTools.toFunction(getProperty(container, method)), HissTools.unwrapList(args)));
+            return HissTools.toHValue(Reflect.callMethod(HissTools.valueOf(container, truthy(callOnReference)), HissTools.toFunction(getProperty(container, method, callOnReference)), callArgs));
         } catch (s: Dynamic) {
 
             throw 'Cannot call method `${method.toString()}` from object $container because $s';
@@ -689,7 +660,7 @@ class HissInterp {
     // *
     function setq(l: HValue): HValue {
         var list = l.toList();
-        var name = symbolName(list[0]).toString();
+        var name = HissTools.toString(symbolName(list[0]));
         var value = eval(list[1]);
         
         var watched = truthy(contains(watchedVariables, Atom(String(name))));
@@ -836,14 +807,14 @@ class HissInterp {
         return Nil;
     }
 
-    // keep
+    // *
     public static function first(list: HValue): HValue {
         var v = list.toList()[0];
         if (v == null) v = Nil;
         return v;
     }
 
-    // keep
+    // *
     public static function rest(list: HValue): HValue {
         return List(list.toList().slice(1));
     }
@@ -851,13 +822,6 @@ class HissInterp {
     // keep
     public static function nth(list: HValue, idx: HValue):HValue {
         return list.toList()[idx.toInt()];
-    }
-
-    // *
-    public static function reverse(list: HValue): HValue {
-        var copy = list.toList().copy();
-        copy.reverse();
-        return List(copy);
     }
 
     // *
