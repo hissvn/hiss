@@ -121,6 +121,8 @@ class HissTools {
                             case Some(vInner): HissTools.toHValue(vInner);
                             case None: Nil;
                         }
+                    case "hiss.HValue":
+                        return cast (v, HValue);
                     default:
                         return Object(name, e);
                 };
@@ -151,13 +153,15 @@ class HissTools {
                 v;
             case Atom(String(v)):
                 v;
-            case Atom(Symbol(v)):
-                null;
             case Object(_, v):
                 v;
             case List(l):
                 [for (hvv in l) HissTools.valueOf(hvv)];
-            default: throw 'hvalue $hv cannot be unwrapped for a native Haxe operation';
+            case Dict(d):
+                d;
+            default: 
+                hv;
+                /*throw 'hvalue $hv cannot be unwrapped for a native Haxe operation';*/
         }
     }
 }

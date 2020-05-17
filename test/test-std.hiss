@@ -83,13 +83,19 @@ true
 (eq "8" (call String from-char-code 56))
 (eq 1 (call (new String "hey") index-of "e"))
 
-; Scope in on an HDict
+; Stuff with dictionaries
+
 (setq fork (dict))
-(set-in-dict fork "hey" 'babe)
+(dict-set fork "hey" 'babe)
+(dict-set fork "fake" 'something)
+(eq 'something (dict-get fork "fake"))
+(dict-erase fork "fake")
+
+; Scope in on an HDict
 (nil? hey)
-(nil? (scope-in fork))
-(eq 'babe hey)
-(nil? (scope-out))
+(with fork
+    (eq 'babe hey)
+    (not (bound? 'fake)))
 
 ; Test unquoting lists
 (setq inner-list (list 5 6 7))
