@@ -35,6 +35,9 @@ using hiss.HissTools;
 import hiss.HaxeTools;
 using hiss.HaxeTools;
 
+import hiss.HTypes.HAtom;
+import hiss.HTypes.HValue;
+
 import uuid.Uuid;
 import Sys;
 
@@ -111,11 +114,6 @@ class HissInterp {
         return defun(args, T);
     }
     
-    // *
-    function intern(arg: HValue): HValue {
-        return Atom(Symbol(arg.toString()));
-    }
-
     public static macro function importFixed(f: Expr) {
         function findFunctionName(e:Expr) {
 	        switch(e.expr) {
@@ -435,6 +433,8 @@ class HissInterp {
         
         vars['Type'] = Object("Class", Type);
         vars['Strings'] = Object("Class", Strings);
+        vars['H-Value'] = Object("Enum", HValue);
+        vars['H-Atom'] = Object("Enum", HAtom);
         vars['empty-dict'] = Function(Haxe(Fixed, function() { return Dict([]); }, "empty-dict"));
 
         vars['return'] = Function(Haxe(Fixed, hissReturn, "return"));
@@ -449,12 +449,8 @@ class HissInterp {
                
         vars['sort'] = Function(Haxe(Var, sort, "sort"));
 
-        //vars['import'] = Function(Haxe(Fixed, resolveClass, "import"));
         importWrapped2(this, Reflect.compare);
-        
-        //importWrapped(this, toUpperHyphen);
-        importFixed(intern);
-        
+                
         importFixed(getProperty);
         importFixed(callMethod);
 
