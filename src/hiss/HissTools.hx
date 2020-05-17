@@ -19,8 +19,11 @@ class HissTools {
     }
 
     public static function toFunction(f: HValue, hint: String = "function"): Dynamic {
-        trace(f);
         return HaxeTools.extract(f, Function(Haxe(_, v, _)) => v, hint);
+    }
+
+    public static function toString(hv: HValue): String {
+        return HaxeTools.extract(hv, Atom(String(s)) => s, "string");
     }
 
     public static function toInt(v: HValue): Int {
@@ -148,6 +151,8 @@ class HissTools {
                 v;
             case Atom(String(v)):
                 v;
+            case Atom(Symbol(v)):
+                null;
             case Object(_, v):
                 v;
             case List(l):
