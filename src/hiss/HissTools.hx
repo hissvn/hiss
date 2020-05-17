@@ -121,6 +121,8 @@ class HissTools {
                         }
                     case "hiss.HValue":
                         return cast (v, HValue);
+                    case "hiss.HAtom":
+                        return Atom(v);
                     default:
                         return Object(name, e);
                 };
@@ -136,6 +138,19 @@ class HissTools {
 
     public static function unwrapList(hl: HValue): Array<Dynamic> {
         return [for (v in hl.toList()) HissTools.valueOf(v)];
+    }
+
+    /**
+     * Behind the scenes, this function evaluates the truthiness of an HValue
+     **/
+     public static function truthy(cond: HValue): Bool {
+        return switch (cond) {
+            case Nil: false;
+            //case Atom(Int(i)) if (i == 0): false; /* 0 being falsy will be useful for Hank read-counts */
+            case List(l) if (l.length == 0): false;
+            case Signal(Error(m)): false;
+            default: true;
+        }
     }
 
     /**

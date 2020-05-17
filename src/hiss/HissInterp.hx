@@ -52,27 +52,13 @@ class HissInterp {
         return Atom(String(HaxeTools.extract(v, Atom(Symbol(name)) => name, "symbol name")));
     }
 
-    // Keep
-    /**
-     * Behind the scenes, this function evaluates the truthiness of an HValue
-     **/
-    public static function truthy(cond: HValue): Bool {
-        return switch (cond) {
-            case Nil: false;
-            //case Atom(Int(i)) if (i == 0): false; /* 0 being falsy will be useful for Hank read-counts */
-            case List(l) if (l.length == 0): false;
-            case Signal(Error(m)): false;
-            default: true;
-        }
-    }
-
     /**
      * Implementation of the `if` macro. Returns value of `thenExp` if condition is truthy, else * evaluates `elseExp`
      **/
     // Keep
     function hissIf(condExp: HValue, thenExp: HValue, elseExp: Null<HValue>) {
         var cond = eval(condExp);
-        return if (truthy(cond)) {
+        return if (HissTools.truthy(cond)) {
             eval(thenExp);
         } else if (elseExp != null) {
             //trace('else exp is $elseExp');
@@ -102,7 +88,7 @@ class HissInterp {
         var name = symbolName(first(args)).toString();
         functionStats[name] = 0;
         var fun: HValue = lambda(rest(args));
-        if (truthy(isMacro)) {
+        if (HissTools.truthy(isMacro)) {
             fun = Function(Macro(true, fun.toHFunction()));
         }
         variables.toDict()[name] = fun;
@@ -374,7 +360,7 @@ class HissInterp {
                 if (l1.length != l2.length) return Nil;
                 var i = 0;
                 while (i < l1.length) {
-                    if (!truthy(eq(l1[i], l2[i]))) return Nil;
+                    if (!HissTools.truthy(eq(l1[i], l2[i]))) return Nil;
                     i++;
                 }
                 return T;
@@ -559,7 +545,7 @@ class HissInterp {
     /** Get a field out of a container (object/class) **/
     function getProperty(container: HValue, field: HValue, byReference: HValue = Nil) {
         try {
-            return HissTools.toHValue(Reflect.getProperty(HissTools.valueOf(container, truthy(byReference)), field.toString()));
+            return HissTools.toHValue(Reflect.getProperty(HissTools.valueOf(container, HissTools.truthy(byReference)), field.toString()));
         } catch (s: Dynamic) {
             throw 'Cannot retrieve field `${field.toString()}` from object $container because $s';
         }
@@ -570,11 +556,11 @@ class HissInterp {
         if (callOnReference == null) callOnReference = Nil;
         if (keepArgsWrapped == null) keepArgsWrapped = Nil;
         var callArgs: Array<Dynamic> = args.toList();
-        if (!truthy(keepArgsWrapped)) {
+        if (!HissTools.truthy(keepArgsWrapped)) {
             callArgs = HissTools.unwrapList(args);
         }
         try {
-            return HissTools.toHValue(Reflect.callMethod(HissTools.valueOf(container, truthy(callOnReference)), HissTools.toFunction(getProperty(container, method, callOnReference)), callArgs));
+            return HissTools.toHValue(Reflect.callMethod(HissTools.valueOf(container, HissTools.truthy(callOnReference)), HissTools.toFunction(getProperty(container, method, callOnReference)), callArgs));
         } catch (s: Dynamic) {
             return Signal(Error('Cannot call method `${method.toString()}` from object $container because $s'));
         }
@@ -710,7 +696,7 @@ class HissInterp {
         var cond = argList[0];
         var body: HValue = List(argList.slice(1));
         
-        while (truthy(eval(cond))) {
+        while (HissTools.truthy(eval(cond))) {
             var value = eval(cons(Atom(Symbol("progn")), body));
             switch (value) {
                 case Signal(Break):
@@ -781,7 +767,7 @@ class HissInterp {
 
         
         var argVals = args;
-        if (truthy(evalArgs)) {
+        if (HissTools.truthy(evalArgs)) {
             argVals = evalAll(args);
         }
 
@@ -834,7 +820,7 @@ class HissInterp {
                     }
 
                     // Functions bodies should be executed in their own cut-off stack frame without access to locals at the callsite
-                    if (truthy(evalArgs)) {
+                    if (HissTools.truthy(evalArgs)) {
                         while (!stackFrames.toList().empty()) stackFrames.toList().pop();
                         stackFrames.toList().push(Dict(argStackFrame));
                     } 
@@ -943,7 +929,7 @@ class HissInterp {
                             // trace('Tried to access undefined variable $name with stackFrames ${stackFrames.toPrint()}');
                             return Nil;
                         }
-                        if (truthy(returnScope)) {
+                        if (HissTools.truthy(returnScope)) {
                             VarInfo(varInfo);
                         } else {
                             varInfo.value;
