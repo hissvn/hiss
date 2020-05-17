@@ -104,6 +104,11 @@ true
 (defun adhoc-list (l) `(1 2 3 4 ,@l))
 (eq `(,@(adhoc-list inner-list)) '(1 2 3 4 5 6 7))
 
+(eq '((1 4 7) (2 5 8) (3 6 9)) (zip '(1 2 3) '(4 5 6) '(7 8 9)))
+
+; Funcall is weird
+(eq 3 (funcall length '((5 6 7))))
+
 ; Test custom reader macros
 (set-macro-string "#" (lambda (a b c) (list 'sharp (read-string a b))))
 (eq '(sharp "fork") (read "#fork\""))

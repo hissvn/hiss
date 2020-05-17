@@ -283,7 +283,7 @@ class HissInterp {
         var sorted = listToSort.copy();
         
         sorted.sort((v1:HValue, v2:HValue) -> {
-            HissTools.valueOf(funcall(sortFunction, List([v1, v2]), Nil));
+            HissTools.valueOf(funcall(Nil, sortFunction, List([v1, v2])));
         });
         return List(sorted);
     }
@@ -612,7 +612,7 @@ class HissInterp {
         importFixed(cons);
 
         importFixed(resolve);
-        importFixed(funcall);
+        vars['funcall'] = Function(Haxe(Fixed, funcall.bind(Nil), "funcall"));
         importFixed(load);
         importFixed(getContent);
         
@@ -863,7 +863,7 @@ class HissInterp {
         return List([for (exp in hl.toList()) eval(exp)]);
     }
 
-    public function funcall(funcOrPointer: HValue, args: HValue, evalArgs: HValue = T): HValue {
+    public function funcall(evalArgs: HValue, funcOrPointer: HValue, args: HValue): HValue {
         var container = null;
         var name = "anonymous";
         var func = funcOrPointer;
@@ -889,7 +889,7 @@ class HissInterp {
 
         switch (func) {
             case Function(Macro(e, m)):
-                var macroExpansion = funcall(Function(m), args, Nil);
+                var macroExpansion = funcall(Nil, Function(m), args);
                 if (watched)
                      trace('macroexpansion $name ${func.toPrint()} -> ${macroExpansion.toPrint()}');
                 return if (e) {
@@ -980,7 +980,7 @@ class HissInterp {
                     while (!stackFrames.toList().empty()) stackFrames.toList().pop();
                     while (!oldStackFrames.toList().empty()) stackFrames.toList().push(oldStackFrames.toList().pop());
                     stackFrames.toList().reverse();
-
+                    
                     return lastResult;
                 default: throw 'cannot call $funcOrPointer as a function';
             }
@@ -1092,7 +1092,7 @@ class HissInterp {
                 var args = rest(expr);
 
                 // trace('calling funcall $funcInfo with args (before evaluation): $args');
-                funcall(funcInfo, List(args.toList().copy()));
+                funcall(T, funcInfo, List(args.toList().copy()));
             case Quote(exp):
                 exp;
             case Quasiquote(exp):
