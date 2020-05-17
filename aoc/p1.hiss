@@ -1,7 +1,11 @@
-(setq modules (map (split-lines (get-content "aoc/input1-1.txt")) parse-int))
+(setq modules (map (split (get-content "aoc/input1-1.txt") "\n") parse-int))
 (defun fuel (module)
     (setlocal number (haxe- (floor (haxe/ module 3)) 2))
     (if (haxe< number 0) 
         0
         (+ number (fuel number))))
+(defun sum (vals)
+    (let (s 0)
+        (do-for v vals (setlocal s (+ s v)))
+        s))
 (print (sum (map modules fuel)))
