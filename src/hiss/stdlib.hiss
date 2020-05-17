@@ -205,8 +205,12 @@
 
 (defun unique (list)
     (let (result '())
-        (for v (sort list) (if (not (contains result v)) (push result v)))
+        (do-for v (sort list) (if (not (contains result v)) (push result v)))
         result))
+
+(defun contains (list value)
+    (do-for val list (when (eq val value) (return t)))
+    nil)
 
 (defun reverse-sort (list &optional compare-function)
     (reverse (sort list compare-function)))

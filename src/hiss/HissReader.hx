@@ -76,7 +76,7 @@ class HissReader {
     }
     
     static function toStream(stringOrStream: HValue, ?pos: HValue) {
-        var position = if (pos != null) HissInterp.valueOf(pos) else null;
+        var position = if (pos != null) HissTools.valueOf(pos) else null;
 
         return switch (stringOrStream) {
             case Atom(String(s)):

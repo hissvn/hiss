@@ -205,7 +205,7 @@ class HissInterp {
         var name = findFunctionName(f);
         //var name = "";
         return macro $interp.variables.toDict()[$v{name}.toLowerHyphen()] = Function(Haxe(Fixed, (v: HValue) -> {
-            return toHValue($f(HissInterp.valueOf(v)));
+            return HissTools.toHValue($f(HissTools.valueOf(v)));
         }, $v{name}));
     }
 
@@ -222,7 +222,7 @@ class HissInterp {
         var name = findFunctionName(f);
         //var name = "";
         return macro $interp.variables.toDict()[$v{name}.toLowerHyphen()] = Function(Haxe(Fixed, (v: HValue, v2: HValue) -> {
-            return HissTools.toHValue($f(HissInterp.valueOf(v), HissInterp.valueOf(v2)));
+            return HissTools.toHValue($f(HissTools.valueOf(v), HissTools.valueOf(v2)));
         }, $v{name}));
     }
 
@@ -239,7 +239,7 @@ class HissInterp {
         var name = findFunctionName(f);
         //var name = "";
         return macro $interp.variables.toDict()[$v{name}.toLowerHyphen()] = Function(Haxe(Fixed, (v: HValue) -> {
-            $f(HissInterp.valueOf(v));
+            $f(HissTools.valueOf(v));
             return Nil;
         }));
     }
@@ -253,27 +253,6 @@ class HissInterp {
         return macro $b{block};
     }
 
-    /**
-     * Behind the scenes function to HaxeTools.extract a haxe-compatible value from an HValue
-     **/
-    public static function valueOf(hv: HValue): Dynamic {
-        return switch (hv) {
-            case Nil: false;
-            case T: true;
-            case Atom(Int(v)):
-                v;
-            case Atom(Float(v)):
-                v;
-            case Atom(String(v)):
-                v;
-            case Object(_, v):
-                v;
-            case List(l):
-                [for (hvv in l) valueOf(hvv)];
-            default: throw 'hvalue $hv cannot be unwrapped for a native Haxe operation';
-        }
-    }
-
     // TODO -[int] literals are broken (parsing as symbols)
     public static macro function importBinop(op: String, prefix: Bool) {
         var name = op;
@@ -281,7 +260,7 @@ class HissInterp {
             name = 'haxe$name';
         }
 
-        var code = 'variables.toDict()["$name"] = Function(Haxe(Fixed, (a,b) -> HissTools.toHValue(valueOf(a) $op valueOf(b)), "$name"))';
+        var code = 'variables.toDict()["$name"] = Function(Haxe(Fixed, (a,b) -> HissTools.toHValue(HissTools.valueOf(a) $op HissTools.valueOf(b)), "$name"))';
 
         var expr = Context.parse(code, Context.currentPos());
         return expr;
@@ -308,7 +287,7 @@ class HissInterp {
         var sorted = listToSort.copy();
         
         sorted.sort((v1:HValue, v2:HValue) -> {
-            valueOf(funcall(sortFunction, List([v1, v2]), Nil));
+            HissTools.valueOf(funcall(sortFunction, List([v1, v2]), Nil));
         });
         return List(sorted);
     }
@@ -318,7 +297,7 @@ class HissInterp {
         // TODO implement better
         var sorted = v.toList().copy();
         sorted.sort((v1:HValue, v2:HValue) -> {
-            Std.int(valueOf(v2) - valueOf(v1));
+            Std.int(HissTools.valueOf(v2) - HissTools.valueOf(v1));
         });
         return List(sorted);
     }
@@ -555,7 +534,7 @@ class HissInterp {
     }
 
     public function set(varName: String, value: Dynamic) {
-        variables.toDict()[varName] = toHValue(value);
+        variables.toDict()[varName] = HissTools.toHValue(value);
     }
 
     function slice(l: HValue, idx: HValue) {
@@ -599,17 +578,12 @@ class HissInterp {
         importWrapped2(this, Reflect.compare);
         
         //importWrapped(this, toUpperHyphen);
-
-        importFixed(args);
-        importFixed(body);
         importFixed(reverse);
 
         importFixed(intern);
 
         importFixed(reverseSort);
         
-        importFixed(contains);
-
         importFixed(getProperty);
         importFixed(callMethod);
 
@@ -741,7 +715,7 @@ class HissInterp {
     /** Get a field out of a container (object/class) **/
     function getProperty(container: HValue, field: HValue) {
         try {
-            return Reflect.getProperty(valueOf(container), field.toString()).toHValue();
+            return HissTools.toHValue(Reflect.getProperty(HissTools.valueOf(container), field.toString()));
         } catch (s: Dynamic) {
             throw 'Cannot retrieve field `${field.toString()}` from object $container because $s';
         }
@@ -750,11 +724,20 @@ class HissInterp {
     function callMethod(container: HValue, method: HValue, ?args: HValue) {
         if (args == null) args = List([]);
         try {
-            return Reflect.callMethod(valueOf(container), getProperty(container, method).toFunction("haxe method"), unwrapList(args)).toHValue("hiss result");
+
+            return HissTools.toHValue(Reflect.callMethod(HissTools.valueOf(container), HissTools.toFunction(getProperty(container, method)), HissTools.unwrapList(args)));
         } catch (s: Dynamic) {
 
             throw 'Cannot call method `${method.toString()}` from object $container because $s';
         }
+    }
+
+    function contains(list: HValue, v: HValue): HValue {
+        for (val in list.toList()) {
+            if (eq(v, val) != Nil) return T;
+        }
+
+        return Nil;
     }
 
     // *
@@ -944,27 +927,7 @@ class HissInterp {
         return List([for (key in dictObj.keys()) Atom(String(key))]);
     }
 
-    // *
-    function indexOf(l: HValue, v: HValue): HValue {
-        var list = l.toList();
-        var idx = 0;
-        for (lv in list) {
-            if (eq(v, lv) != Nil) return Atom(Int(idx));
-            idx++;
-        }
-        return Nil;
-    }
-
-    // *
-    function contains(l: HValue, v: HValue):HValue {
-        return if (truthy(indexOf(l, v))) T else Nil;
-    }
-
-    public static function toDict(dict: HValue): HDict {
-        return HaxeTools.extract(dict, Dict(h) => h, "dict");
-    }
-
-    // *
+    // keep
     public static function first(list: HValue): HValue {
         var v = list.toList()[0];
         if (v == null) v = Nil;
@@ -982,28 +945,6 @@ class HissInterp {
     }
 
     // *
-    public static function slice(list: HValue, idx: HValue):HValue {
-        return List(list.toList().slice(idx.toInt()));
-    }
-
-    // *
-    public static function take(list: HValue, n: HValue):HValue {
-        return List(list.toList().slice(0, n.toInt()));
-    }
-
-    public static function toList(list: HValue, hint: String = "list"): HList {
-        return HaxeTools.extract(list, List(l) => l, "list");
-    }
-
-    public static function toObject(obj: HValue, ?hint: String = "object"): Dynamic {
-        return HaxeTools.extract(obj, Object(_, o) => o, "object");
-    }
-
-    public static function toFunction(f: HValue, hint: String = "function"): Dynamic {
-        return HaxeTools.extract(f, Function(Haxe(_, v, _)) => v, hint);
-    }
-
-    // *
     public static function reverse(list: HValue): HValue {
         var copy = list.toList().copy();
         copy.reverse();
@@ -1013,39 +954,6 @@ class HissInterp {
     // *
     function evalAll(hl: HValue): HValue {
         return List([for (exp in hl.toList()) eval(exp)]);
-    }
-
-    function unwrapList(hl: HValue): Array<Dynamic> {
-        return [for (v in hl.toList()) valueOf(v)];
-    }
-
-    function args (funcOrList: HValue): HValue {
-        switch (funcOrList) {
-            case List(l):
-                if (eq(first(funcOrList), Atom(Symbol("lambda"))) != Nil) {
-                    return nth(funcOrList, Atom(Int(1)));
-                }
-            case Function(Hiss(def)) | Function(Macro(_, Hiss(def))):
-                return def.argNames.toHValue();
-            default:
-        }
-        return Nil;
-    }
-
-    function body(funcOrList: HValue): HValue {
-        switch (funcOrList) {
-            case List(l):
-                trace(l);
-                if (eq(first(funcOrList), Atom(Symbol("lambda"))) != Nil) {
-                    trace(slice(funcOrList, Atom(Int(2))));
-                    return slice(funcOrList, Atom(Int(2)));
-                }
-            case Function(Hiss(def)) | Function(Macro(_, Hiss(def))):
-                return List(def.body);
-            default:
-        }
-
-        return Signal(Error('Cannot get function body from ${funcOrList.toPrint()}'));
     }
 
     public function funcall(funcOrPointer: HValue, args: HValue, evalArgs: HValue = T): HValue {
