@@ -606,46 +606,6 @@ class HissInterp {
         variables.toDict()[name] = Object(Type.getClassName(Type.getClass(obj)), obj);
     }
 
-    public function importEnum(e: Enum<Dynamic>, fullyQualifiedName = false) {
-        var name = e.getEnumName();
-        if (!fullyQualifiedName && name.indexOf(".") != -1) {
-            name = name.substr(name.lastIndexOf(".")+1);
-        }
-        name = name.toLowerHyphen();
-        variables.toDict()[name] = Object("Enum", e);
-
-        // TODO import the constructors or write a function that invokes them
-        // TODO make a lisp switch
-    }
-
-    public static function toUpperHyphen(s: String) {
-        var n = s.toLowerHyphen();
-        n = n.charAt(0).toUpperCase() + n.substr(1); // For some reason I like it Like-this for class names
-        return n;
-    }
-
-    public function resolveClass(nameV: HValue, ?fullyQualifiedName: HValue) {
-        var c = Type.resolveClass(nameV.toString());
-        if (c == null) {
-            throw 'Cannot resolve class $nameV';
-        }
-        var name = c.getClassName();
-        if (fullyQualifiedName == null || (!truthy(fullyQualifiedName) && name.indexOf(".") != -1)) {
-            name = name.substr(name.lastIndexOf(".")+1);
-        }
-        var val = Object("Class", c);
-        variables.toDict()[name.toUpperHyphen()] = val;
-        return val;
-    }
-
-    public function importClass(c: Class<Dynamic>, fullyQualifiedName = false) {
-        var name = c.getClassName();
-        if (!fullyQualifiedName && name.indexOf(".") != -1) {
-            name = name.substr(name.lastIndexOf(".")+1);
-        }
-        variables.toDict()[name.toUpperHyphen()] = Object("Class", c);
-    }
-
     public function set(varName: String, value: Dynamic) {
         variables.toDict()[varName] = value.toHValue();
     }
@@ -682,7 +642,7 @@ class HissInterp {
         //vars['import'] = Function(Haxe(Fixed, resolveClass, "import"));
         importWrapped2(this, Reflect.compare);
         
-        importWrapped(this, toUpperHyphen);
+        //importWrapped(this, toUpperHyphen);
 
         importFixed(args);
         importFixed(body);
@@ -781,9 +741,6 @@ class HissInterp {
         // TODO strings with interpolation
 
         //importFixed(string);        
-
-        vars['append'] = Function(Haxe(Var, append, "append"));
-
         vars['setq'] = Function(Macro(false, Haxe(Var, setq, "setq")));
         vars['setlocal'] = Function(Macro(false, Haxe(Var, setlocal, "setlocal")));
 
@@ -795,9 +752,6 @@ class HissInterp {
 
         vars['while'] = Function(Macro(false, Haxe(Var, hissWhile, "while")));
 
-        vars['dolist'] = Function(Haxe(Fixed, doList, "dolist"));
-        vars['map'] = Function(Haxe(Fixed, map, "map"));
-
         vars['dict'] = Function(Macro(false, Haxe(Var, dict, "dict")));
 
         vars['set-in-dict'] = Function(Haxe(Fixed, setInDict, "set-in-dict"));
@@ -807,12 +761,7 @@ class HissInterp {
         vars['get-in-dict'] = Function(Haxe(Fixed, getInDict, "get-in-dict"));
 
         vars['keys'] = Function(Haxe(Fixed, keys, "keys"));
-
-
-        importFixed(charAt);
         
-        vars['substr'] = Function(Haxe(Var, substr, "substr"));
-
         watchedFunctions = List([]);
         watchedVariables = List([]);
         stackFrames = List([]);
@@ -823,7 +772,7 @@ class HissInterp {
         vars['*stack-frames*'] = stackFrames;
 
         // Import enums and stuff
-        importEnum(haxe.ds.Option);
+        //importEnum(haxe.ds.Option);
 
         //try {
             // TODO obviously this needs to happen
@@ -1003,20 +952,6 @@ class HissInterp {
     }
 
     // *
-    function doList(list: HValue, func: HValue) {
-        for (v in list.toList()) {
-            
-            funcall(func, List([v]), Nil);
-        }
-        return Nil;
-    }
-
-    // *
-    function map(arr: HValue, func: HValue) {
-        return List([for (v in arr.toList()) funcall(func, List([v]), Nil)]);
-    }
-
-    // *
     function dict(pairs: HValue) {
         var dict = new HDict();
         for (pair in pairs.toList()) {
@@ -1052,37 +987,6 @@ class HissInterp {
         var dictObj: HDict = dict.toDict();
         return List([for (key in dictObj.keys()) Atom(String(key))]);
     }
-
-    // *
-    function charAt (str: HValue, idx: HValue) {
-        return Atom(String(str.toString().charAt(idx.toInt())));
-    }
-
-    // *
-    function substr(args: HValue){
-        var l = args.toList();
-        var str = l[0].toString();
-        var start = l[1].toInt();
-        var len: Null<Int> = null;
-        if (l.length > 2) len = l[2].toInt();
-        return Atom(String(str.substr(start, len)));
-    }
-
-
-    // *
-    function append(args: HValue) {
-        var firstList: HList = first(args).toList();
-
-        return if (truthy(rest(args))) {
-            var nextList = first(rest(args)).toList();
-            var newFirst = firstList.concat(nextList);
-            var newArgs = rest(rest(args)).toList();
-            newArgs.insert(0, List(newFirst));
-            append(List(newArgs));
-        } else {
-            List(firstList);
-        }
-    };
 
     // *
     function indexOf(l: HValue, v: HValue): HValue {
