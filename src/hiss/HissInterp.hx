@@ -52,27 +52,6 @@ class HissInterp {
         return Atom(String(HaxeTools.extract(v, Atom(Symbol(name)) => name, "symbol name")));
     }
 
-    // *
-    public function load(file: HValue, ?wrappedIn: HValue) {
-        var contents = eval(List([Atom(String("get-content")), file])).toString();
-
-        if (wrappedIn == null || wrappedIn.match(Nil)) {
-            var whatIRead = HissReader.readAll(Atom(String(contents)), Nil, Object("HPosition", new HPosition(file.toString(), 1, 0)));
-            //trace(whatIRead.toPrint());
-            return progn(whatIRead);
-        }
-
-        var ghostCode = wrappedIn.toString();
-        if (ghostCode.charAt(ghostCode.indexOf("*") -1) != '\n') {
-            var builder = new StringBuilder(ghostCode);
-            builder.insert(ghostCode.indexOf("*"), "\n");
-            ghostCode = builder.toString();
-        }
-        var ghostLines = ghostCode.substr(0, ghostCode.indexOf("*")).split('\n').length - 1;
-
-        return eval(HissReader.read(Atom(String(wrappedIn.toString().replace('*', contents))), Nil, Object("HPosition", new HPosition(file.toString(), -ghostLines, 1))));
-    }
-
     // Keep
     /**
      * Behind the scenes, this function evaluates the truthiness of an HValue
@@ -561,7 +540,6 @@ class HissInterp {
 
         importFixed(resolve);
         vars['funcall'] = Function(Haxe(Fixed, funcall.bind(Nil), "funcall"));
-        importFixed(load);
         
         vars['scope-in'] = Function(Haxe(Fixed, scopeIn, "scope-in"));
         vars['scope-out'] = Function(Haxe(Fixed, scopeOut, "scope-out"));

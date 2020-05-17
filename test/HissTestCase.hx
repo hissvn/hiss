@@ -6,7 +6,9 @@ import utest.Assert;
 import hiss.HTypes;
 import hiss.HissRepl;
 import hiss.HissInterp;
+import hiss.HissReader;
 import hiss.HissTools;
+import hiss.StaticFiles;
 
 class HissTestCase extends utest.Test {
 
@@ -21,11 +23,10 @@ class HissTestCase extends utest.Test {
     function testFile() {
         repl = new HissRepl();
         
-        var results = repl.load(file, "(for statement '(*) (list statement (eval statement)))");
-        for (v in results.toList()) {
-            var expression = HissInterp.first(v);
-            var value = HissInterp.nth(v, Atom(Int(1)));
-            Assert.isTrue(HissInterp.truthy(value), 'Failure: ${HissTools.toPrint(expression)} evaluated to ${HissTools.toPrint(value)}');
+        var expressions = HissReader.readAll(Atom(String(StaticFiles.getContent(file))));
+        for (e in expressions.toList()) {
+            var v = repl.interp.eval(e);
+            Assert.isTrue(HissInterp.truthy(v), 'Failure: ${HissTools.toPrint(e)} evaluated to ${HissTools.toPrint(v)}');
         }
 
         for (fun => callCount in repl.interp.functionStats) {

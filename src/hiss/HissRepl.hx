@@ -15,9 +15,7 @@ class HissRepl {
 		// TODO it's weird that all of these parts are necessary in this order to get a working hiss environment, and once we have it, it's actually static.
 		interp = new HissInterp();
 		var reader = new HissReader(interp);
-		var list = [Atom(Symbol("progn"))];
-		list = list.concat(HissReader.readAll(Atom(String(StaticFiles.getContent('stdlib.hiss')))).toList());
-		interp.eval(List(list));
+		load("stdlib.hiss");
 	}
 
 	public function read(hiss: String): HValue {
@@ -34,9 +32,10 @@ class HissRepl {
 		return hval;
 	}
 
-	public function load(file: String, ?wrappedIn: String) {
-		var wrapp = if (wrappedIn != null) Atom(String(wrappedIn)) else Nil;
-		return interp.load(Atom(String(file)), wrapp);
+	public function load(file: String) {
+		var list = [Atom(Symbol("progn"))];
+		list = list.concat(HissReader.readAll(Atom(String(StaticFiles.getContent(file)))).toList());
+		interp.eval(List(list));
 	}
 
 	public function repl(hiss: String) {
