@@ -37,6 +37,19 @@ class HissTools {
     public static function toDict(dict: HValue): HDict {
         return HaxeTools.extract(dict, Dict(h) => h, "dict");
     }
+
+    public static function first(list: HValue): HValue {
+        return list.toList()[0];
+    }
+
+    public static function rest(list: HValue): HValue {
+        return List(list.toList().slice(1));
+    }
+
+    public static function nth(list: HValue, idx: HValue):HValue {
+        return list.toList()[idx.toInt()];
+    }
+
     static var recursivePrintDepth = 3;
     public static function toPrint(v: HValue, recursiveCall: Int = 0): String {
         return switch (v) {
