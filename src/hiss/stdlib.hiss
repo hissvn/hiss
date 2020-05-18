@@ -314,7 +314,6 @@
 (defun zip (&rest lists)
     "Create a list of tuples by grouping all same-nth elements in the given lists. Discards elements with no corresponding element in all other lists"
     (let (final-length (funcall min (map lists length)))
-        (print final-length)
         (for i (range final-length)
             (for l lists (nth l i)))))
 
