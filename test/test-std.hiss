@@ -193,7 +193,8 @@ true
 
 (eq 'working (load "module.hiss"))
 
-(eq '((6 5) (3)) (groups '(6 5 3) 2))
+(eq '((6 5)) (groups '(6 5 3) 2))
+(eq '((6 5) (3)) (groups '(6 5 3) 2 t))
 
 ; Test custom reader macros
 (set-macro-string "#" (lambda (a b c) (list 'sharp (read-string a b))))
