@@ -85,7 +85,7 @@ class HissInterp {
     // *
     // TODO optional docstrings lollll
     function defun(args: HValue, isMacro: HValue = Nil) {
-        var name = symbolName(first(args)).toString();
+        var name = symbolName(nth(args, Atom(Int(0)))).toString();
         functionStats[name] = 0;
         var fun: HValue = lambda(rest(args));
         if (HissTools.truthy(isMacro)) {
@@ -514,14 +514,11 @@ class HissInterp {
 
         // TODO strings with interpolation
 
-        //importFixed(string);        
-        vars['setq'] = Function(Macro(false, Haxe(Var, setq, "setq")));
         vars['setlocal'] = Function(Macro(false, Haxe(Var, setlocal, "setlocal")));
 
         vars['set-nth'] = Function(Haxe(Fixed, setNth, "set-nth"));
 
         vars['for'] = Function(Macro(false, Haxe(Var, hissDoFor.bind(T), "for")));
-
         vars['do-for'] = Function(Macro(false, Haxe(Var, hissDoFor.bind(Nil), "do-for")));
 
         vars['while'] = Function(Macro(false, Haxe(Var, hissWhile, "while")));
@@ -553,38 +550,11 @@ class HissInterp {
 
     function callMethod(container: HValue, method: HValue, ?args: HValue, ?callOnReference: HValue = Nil, ?keepArgsWrapped: HValue = Nil) {
         if (args == null) args = List([]);
-        if (callOnReference == null) callOnReference = Nil;
-        if (keepArgsWrapped == null) keepArgsWrapped = Nil;
-        var callArgs: Array<Dynamic> = args.toList();
-        if (!HissTools.truthy(keepArgsWrapped)) {
-            callArgs = HissTools.unwrapList(args);
-        }
+        var callArgs: Array<Dynamic> = HissTools.unwrapList(args, keepArgsWrapped);
         try {
             return HissTools.toHValue(Reflect.callMethod(HissTools.valueOf(container, HissTools.truthy(callOnReference)), HissTools.toFunction(getProperty(container, method, callOnReference)), callArgs));
         } catch (s: Dynamic) {
             return Signal(Error('Cannot call method `${method.toString()}` from object $container because $s'));
-        }
-    }
-
-    // *
-    function setq(l: HValue): HValue {
-        var list = l.toList();
-        var name = HissTools.toString(symbolName(list[0]));
-        var value = eval(list[1]);
-        
-        try {
-            if (value.toList().length == 0 && variables.toDict()[name].toList().length != 0) {
-                while (!variables.toDict()[name].toList().empty()) variables.toDict()[name].toList().pop();
-            } else {
-                throw 'incorrect call to setq';
-            }
-        } catch (s: Dynamic) {
-            variables.toDict()[name] = value;
-        }
-        if (list.length > 2) {
-            return setq(List(list.slice(2)));
-        } else {
-            return value;
         }
     }
 
@@ -613,7 +583,7 @@ class HissInterp {
         arr.toList()[idx.toInt()] = val; return arr;
     }
 
-    // *
+    // Keep
     function hissDoFor(collect: HValue, args: HValue): HValue {
         var argList = args.toList();
         var name = argList[0];
@@ -654,7 +624,7 @@ class HissInterp {
         return Nil;
     }
 
-    // *
+    // Keep
     function hissWhile(args: HValue){
         var argList = args.toList();
         var cond = argList[0];
@@ -699,7 +669,6 @@ class HissInterp {
         var container = null;
         var name = "anonymous";
         var func = funcOrPointer;
-        //trace(func);
         switch (funcOrPointer) {    
             case VarInfo(v):
                 name = v.name;
@@ -741,7 +710,12 @@ class HissInterp {
 
         var hfunc = func.toHFunction();
 
-        var message = 'calling `$name`: $hfunc with args ${argVals.toPrint()}';
+        var argRep = if (argVals.toList().length > 10) {
+            "an unreasonable number of arguments";
+        } else {
+            argVals.toPrint();
+        }
+        var message = 'calling `$name`: $hfunc with args ${argRep}';
 
         try {
             switch (hfunc) {
@@ -797,10 +771,13 @@ class HissInterp {
                     for (expression in funDef.body) {
                         try {
                             lastResult = eval(expression);
-                        } catch (e: Dynamic) {
+                        } 
+                        #if !throwErrors
+                        catch (e: Dynamic) {
                             stackFrames = oldStackFrames;
                             throw e;
                         }
+                        #end
                     }
 
                     while (!stackFrames.toList().empty()) stackFrames.toList().pop();
@@ -810,11 +787,14 @@ class HissInterp {
                     return lastResult;
                 default: throw 'cannot call $funcOrPointer as a function';
             }
-        } catch (s: Dynamic) {
+        } 
+        #if !throwErrors
+        catch (s: Dynamic) {
             trace('error $s while $message');
             stackFrames = oldStackFrames;
             throw s;
         }
+        #end
     }
 
     /**

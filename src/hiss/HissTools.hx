@@ -37,8 +37,8 @@ class HissTools {
     public static function toDict(dict: HValue): HDict {
         return HaxeTools.extract(dict, Dict(h) => h, "dict");
     }
-
-    public static function toPrint(v: HValue): String {
+    static var recursivePrintDepth = 3;
+    public static function toPrint(v: HValue, recursiveCall: Int = 0): String {
         return switch (v) {
             case Atom(Int(i)):
                 Std.string(i);
@@ -49,12 +49,16 @@ class HissTools {
             case Atom(String(str)):
                 '"$str"';
             case List(l):
-                var valueStr = "";
-                for (v in l) {
-                    valueStr += v.toPrint() + ' ';
-                }
-                valueStr = valueStr.substr(0, valueStr.length - 1); // no trailing space
-                '(${valueStr})';
+                if (recursiveCall > recursivePrintDepth) {
+                    "STACK OVERFLOW DANGER";
+                } else {
+                    var valueStr = "";
+                    for (v in l) {
+                        valueStr += v.toPrint(recursiveCall+1) + ' ';
+                    }
+                    valueStr = valueStr.substr(0, valueStr.length - 1); // no trailing space
+                    '(${valueStr})';
+                };
             case Quote(e):
                 "'" + e.toPrint();
             case Object(t, o):
@@ -72,7 +76,11 @@ class HissTools {
             case T:
                 't';
             case Dict(hdict):
-                '${[for (k => v in hdict) '$k => ${v.toPrint()}, ']}';
+                if (recursiveCall > recursivePrintDepth) {
+                    "STACK OVERFLOW DANGER";
+                } else {
+                    '${[for (k => v in hdict) '$k => ${v.toPrint(recursiveCall+1)}, ']}';
+                }
             case VarInfo(hvi):
                 var container = if (hvi.container != null) Std.string(hvi.container) else "null";
                 '{name: ${hvi.name}, value: ${hvi.value.toPrint()}, container: $container}';
@@ -136,8 +144,26 @@ class HissTools {
         }
     }
 
-    public static function unwrapList(hl: HValue): Array<Dynamic> {
-        return [for (v in hl.toList()) HissTools.valueOf(v)];
+    /**
+        Unwrap hvalues in a hiss list to their underlying types. Don't unwrap values whose indices
+        are contained in keepWrapped, an optional list.
+    **/
+    public static function unwrapList(hl: HValue, keepWrapped: HValue = Nil): Array<Dynamic> {
+        var indices: Array<Dynamic> = if (keepWrapped == Nil) {
+            [];
+        } else if (keepWrapped == T) {
+            [for (i in 0... hl.toList().length) i];
+        } else {
+            unwrapList(keepWrapped);
+        }
+        var idx = 0;
+        return [for (v in hl.toList()) {
+            if (indices.indexOf(idx++) != -1) {
+                v;
+            } else {
+                HissTools.valueOf(v);
+            }
+        }];
     }
 
     /**

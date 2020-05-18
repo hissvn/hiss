@@ -67,10 +67,13 @@ class HissRepl {
 				var hval = interp.eval(parsed);
 				
 				HaxeTools.println(hval.toPrint());
-			} catch (e: Dynamic) {
-				HaxeTools.println('error $e');
-				// Sys.println(CallStack.exceptionStack());
 			}
+			#if !throwErrors
+			catch (e: Dynamic) {
+				HaxeTools.println('error $e');
+				//Sys.println(CallStack.exceptionStack());
+			}
+			#end
 		}
  	}
 }
