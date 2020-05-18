@@ -2,7 +2,7 @@
     (eval `(progn ,@(read-all (get-content file)))))
 
 (defun length (str-or-list)
-    (get-property str-or-list "length" t))
+    (get-property str-or-list "length"))
 
 (defun not (b)
     (if b nil t))
@@ -146,7 +146,7 @@
         new-dict))
 (register-method get dict-get)
 (register-method set dict-set t '(1) t)
-(register-method remove dict-erase t t t)
+(register-method remove dict-erase t '(1) t)
 
 (defmacro setq (&rest args)
     (let (s (first args)
@@ -314,6 +314,7 @@
 (defun zip (&rest lists)
     "Create a list of tuples by grouping all same-nth elements in the given lists. Discards elements with no corresponding element in all other lists"
     (let (final-length (funcall min (map lists length)))
+        (print final-length)
         (for i (range final-length)
             (for l lists (nth l i)))))
 
