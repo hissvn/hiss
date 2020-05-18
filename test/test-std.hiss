@@ -163,6 +163,9 @@ true
 
 (eq '(hey hey hey) (list-of 3 'hey))
 
+(eq '(2 3 5) (for l '((1 2) (3 4 5) (6 7 8 9 10)) (length l)))
+(eq '(5 6 7) (for i (range 3) (+ i 5)))
+
 (eq 3 (min 5 3 9 10 5))
 (eq 10 (max 5 3 9 10 5))
 (eq 5 (round 4.5))

@@ -603,7 +603,7 @@ class HissInterp {
         }
         
         for (v in iterator) {
-            setlocal(List([name, HissTools.toHValue(v)]));
+            setlocal(List([name, Quote(HissTools.toHValue(v))]));
 
             var value = eval(cons(Atom(Symbol("progn")), body));
             switch (value) {
