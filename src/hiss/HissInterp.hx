@@ -70,9 +70,9 @@ class HissInterp {
 
     // *
     function lambda(args: HValue): HValue {
-        var argNames = nth(args, Atom(Int(0))).toList().map(s -> symbolName(s).toString());
+        var argNames = HissTools.first(args).toList().map(s -> symbolName(s).toString());
         
-        var body: HList = rest(args).toList();
+        var body: HList = HissTools.rest(args).toList();
 
         var def: HFunDef = {
             argNames: argNames,
@@ -85,9 +85,9 @@ class HissInterp {
     // *
     // TODO optional docstrings lollll
     function defun(args: HValue, isMacro: HValue = Nil) {
-        var name = symbolName(nth(args, Atom(Int(0)))).toString();
+        var name = symbolName(HissTools.first(args)).toString();
         functionStats[name] = 0;
-        var fun: HValue = lambda(rest(args));
+        var fun: HValue = lambda(HissTools.rest(args));
         if (HissTools.truthy(isMacro)) {
             fun = Function(Macro(true, fun.toHFunction()));
         }
@@ -472,9 +472,9 @@ class HissInterp {
 
         importFixed(eval);
 
-        importFixed(first);
-        importFixed(rest);
-        importFixed(nth);
+        importFixed(HissTools.first);
+        importFixed(HissTools.rest);
+        importFixed(HissTools.nth);
 
         importFixed(symbolName);
 
@@ -643,28 +643,6 @@ class HissInterp {
         return Nil;
     }
 
-    // *
-    public static function first(list: HValue): HValue {
-        var v = list.toList()[0];
-        if (v == null) v = Nil;
-        return v;
-    }
-
-    // *
-    public static function rest(list: HValue): HValue {
-        return List(list.toList().slice(1));
-    }
-
-    // keep
-    public static function nth(list: HValue, idx: HValue):HValue {
-        return list.toList()[idx.toInt()];
-    }
-
-    // *
-    function evalAll(hl: HValue): HValue {
-        return List([for (exp in hl.toList()) eval(exp)]);
-    }
-
     public function funcall(evalArgs: HValue, funcOrPointer: HValue, args: HValue): HValue {
         var container = null;
         var name = "anonymous";
@@ -701,7 +679,7 @@ class HissInterp {
         
         var argVals = args;
         if (HissTools.truthy(evalArgs)) {
-            argVals = evalAll(args);
+            argVals = List([for (exp in argVals.toList()) eval(exp)]);
         }
 
         var argList: HList = argVals.toList().copy();
@@ -882,7 +860,7 @@ class HissInterp {
             case List([]):
                 Nil;
             case List(exps):
-                var funcInfo = eval(nth(expr, Atom(Int(0))), T);
+                var funcInfo = eval(HissTools.first(expr), T);
                 var value = switch (funcInfo) {
                     case VarInfo(v):
                         v.value;
@@ -890,7 +868,7 @@ class HissInterp {
                         return Signal(Error('${expr.toPrint()}: ${funcInfo.toPrint()} is not a function pointer'));
                 }
                 if (funcInfo == null || value == null) { trace(funcInfo); }
-                var args = rest(expr);
+                var args = HissTools.rest(expr);
 
                 // trace('calling funcall $funcInfo with args (before evaluation): $args');
                 funcall(T, funcInfo, List(args.toList().copy()));
