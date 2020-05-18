@@ -2,7 +2,7 @@
     (eval `(progn ,@(read-all (get-content file)))))
 
 (defun length (str-or-list)
-    (get-property str-or-list "length"))
+    (get-property str-or-list "length" t))
 
 (defun not (b)
     (if b nil t))
@@ -95,11 +95,11 @@
     (call-method Type "createEnum" (list H-Atom "Symbol" (list name))))
 
 ; Haxe interop
-(defmacro register-method (method &optional name call-on-reference return-instance)
+(defmacro register-method (method &optional name call-on-reference keep-args-wrapped return-instance)
     (default name
         (intern (call-method Strings "toLowerHyphen" (list (symbol-name method)))))
     `(defun ,name (instance &rest args)
-        (let (result (call-method instance (symbol-name ',method) args call-on-reference))
+        (let (result (call-method instance (symbol-name ',method) args ,call-on-reference ,keep-args-wrapped))
             (if ,return-instance instance result))))
 
 (register-method substr)
@@ -125,6 +125,11 @@
 (defun reverse-sort (l &optional fun)
     (reverse (sort l fun)))
 
+(defmacro cond (&rest forms)
+    `(and ',forms (if (eval (first (first ',forms)))
+            (eval (cons 'progn (rest (first ',forms))))
+        (eval (cons 'cond (rest ',forms))))))
+
 (defun groups (l size &optional take-remainder)
     (cond
         ((< (length l) size)
@@ -134,6 +139,24 @@
         ((= (length l) size)
             (list l))
         (t (cons (take l size) (groups (slice l size) size take-remainder)))))
+
+(defun dict (&rest pairs)
+    (let (new-dict (empty-dict))
+        (do-for pair (groups pairs 2) (dict-set new-dict (first pair) (nth pair 1)))
+        new-dict))
+(register-method get dict-get)
+(register-method set dict-set t '(1) t)
+(register-method remove dict-erase t t t)
+
+(defmacro setq (&rest args)
+    (let (s (first args)
+            value (nth args 1)
+            num (length args))
+        `(progn 
+            (dict-set (variables) (symbol-name ',s) ,value)
+            (case ,num
+                (2 ,value)
+                (t (eval (cons 'setq ',(slice args 2))))))))
 
 (defmacro when (cond &rest body)
     `(if ,cond ,(cons 'progn body)))
@@ -235,14 +258,6 @@
         (try (call File getContent file))
         (call Static-Files getContent file)))
 
-(defun dict (&rest pairs)
-    (let (new-dict (empty-dict))
-        (do-for pair (groups pairs 2) (dict-set new-dict (first pair) (nth pair 1)))
-        new-dict))
-(register-method get dict-get)
-(register-method set dict-set t t)
-(register-method remove dict-erase t t)
-
 (defmacro unless (cond &rest body)
     `(if (not ,cond) ,(cons 'progn body)))
 
@@ -263,9 +278,7 @@
         (haxe... arg1 arg2)
         (haxe... 0 arg1)))
 
-(defun push (l elt)
-    (call-method l "push" (list elt) t t)
-    l)
+(register-method push push t t t)
 
 (defun filter (l &optional criterion)
     (default criterion (lambda (val) val))
@@ -309,11 +322,6 @@
 
 (defun run-hook (hook &rest args)
     (do-for fun hook (funcall fun args)))
-
-(defmacro cond (&rest forms)
-    `(and ',forms (if (eval (first (first ',forms)))
-            (eval (cons 'progn (rest (first ',forms))))
-        (eval (cons 'cond (rest ',forms))))))
 
 (import "Sys")
 (import "hiss.HaxeTools")

@@ -26,7 +26,7 @@ class HissTestCase extends utest.Test {
         var expressions = HissReader.readAll(Atom(String(StaticFiles.getContent(file))));
         for (e in expressions.toList()) {
             var v = repl.interp.eval(e);
-            Assert.isTrue(HissInterp.truthy(v), 'Failure: ${HissTools.toPrint(e)} evaluated to ${HissTools.toPrint(v)}');
+            Assert.isTrue(HissTools.truthy(v), 'Failure: ${HissTools.toPrint(e)} evaluated to ${HissTools.toPrint(v)}');
         }
 
         for (fun => callCount in repl.interp.functionStats) {
