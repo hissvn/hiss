@@ -157,7 +157,7 @@
             value (nth args 1)
             num (length args))
         `(progn 
-            (dict-set (variables) (symbol-name ',s) ,value)
+            (dict-set *variables* (symbol-name ',s) ,value)
             (case ,num
                 (2 ,value)
                 (t (eval (cons 'setq ',(slice args 2))))))))

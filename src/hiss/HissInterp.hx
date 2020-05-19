@@ -333,7 +333,7 @@ class HissInterp {
         vars['*stack-frames*'] = stackFrames;
 
         // Access to the variable dictionary allows setq to be a Hiss macro
-        vars['variables'] = Function(Haxe(Fixed, getVariables, "variables"));
+        vars['*variables*'] = variables;
 
         // Variables (Can keep all of these statements with no maintenance overhead)
         vars['Type'] = Object("Class", Type);
