@@ -200,6 +200,9 @@
                     (call-method Type "resolveEnum" (list class-or-enum-path))))
         `(setq ,(intern type-name) ,type)))
 
+(import "Reflect")
+(register-function Reflect compare)
+
 (import "Std")
 (register-function Std string)
 (register-function Std parseInt)

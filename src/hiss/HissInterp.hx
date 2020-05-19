@@ -68,7 +68,7 @@ class HissInterp {
         }
     }
 
-    // *
+    // Keep
     function lambda(args: HValue): HValue {
         var argNames = HissTools.first(args).toList().map(s -> symbolName(s).toString());
         
@@ -82,7 +82,7 @@ class HissInterp {
         return Function(Hiss(def));
     }
 
-    // *
+    // Keep
     // TODO optional docstrings lollll
     function defun(args: HValue, isMacro: HValue = Nil) {
         var name = symbolName(HissTools.first(args)).toString();
@@ -95,7 +95,7 @@ class HissInterp {
         return fun;
     }
 
-    // *
+    // Keep
     function defmacro(args: HValue): HValue {
         return defun(args, T);
     }
@@ -113,7 +113,9 @@ class HissInterp {
         var name = findFunctionName(f);
         //var name = "";
         return macro {
-            variables.toDict()[$v{name}.toLowerHyphen()] = Function(Haxe(Fixed, $f, $v{name}.toLowerHyphen()));            
+            var tlh = $v{name}.toLowerHyphen();
+            functionStats[tlh] = 0;
+            variables.toDict()[tlh] = Function(Haxe(Fixed, $f, tlh));            
         };
     }
 
@@ -130,60 +132,10 @@ class HissInterp {
         var name = findFunctionName(f);
         //var name = "";
         return macro {
-            variables.toDict()[$v{name}.toLowerHyphen() + "?"] = Function(Haxe(Fixed, $f, $v{name}));            
+            var tlh = $v{name}.toLowerHyphen() + "?";
+            functionStats[tlh] = 0;
+            variables.toDict()[tlh] = Function(Haxe(Fixed, $f, tlh));     
         };
-    }
-
-    public static macro function importWrapped(interp: Expr, f: Expr) {
-        function findFunctionName(e:Expr) {
-	        switch(e.expr) {
-		        case EConst(CIdent(s)) | EField(_, s):
-			        // handle s
-                    return s;
-		        case _:
-			        throw 'improper expression for importing haxe function to interpreter';
-            }
-	    }
-        var name = findFunctionName(f);
-        //var name = "";
-        return macro $interp.variables.toDict()[$v{name}.toLowerHyphen()] = Function(Haxe(Fixed, (v: HValue) -> {
-            return HissTools.toHValue($f(HissTools.valueOf(v)));
-        }, $v{name}));
-    }
-
-    public static macro function importWrapped2(interp: Expr, f: Expr) {
-        function findFunctionName(e:Expr) {
-	        switch(e.expr) {
-		        case EConst(CIdent(s)) | EField(_, s):
-			        // handle s
-                    return s;
-		        case _:
-			        throw 'improper expression for importing haxe function to interpreter';
-            }
-	    }
-        var name = findFunctionName(f);
-        //var name = "";
-        return macro $interp.variables.toDict()[$v{name}.toLowerHyphen()] = Function(Haxe(Fixed, (v: HValue, v2: HValue) -> {
-            return HissTools.toHValue($f(HissTools.valueOf(v), HissTools.valueOf(v2)));
-        }, $v{name}));
-    }
-
-    public static macro function importWrappedVoid(interp: Expr, f: Expr) {
-        function findFunctionName(e:Expr) {
-	        switch(e.expr) {
-		        case EConst(CIdent(s)) | EField(_, s):
-			        // handle s
-                    return s;
-		        case _:
-			        throw 'improper expression for importing haxe function to interpreter';
-            }
-	    }
-        var name = findFunctionName(f);
-        //var name = "";
-        return macro $interp.variables.toDict()[$v{name}.toLowerHyphen()] = Function(Haxe(Fixed, (v: HValue) -> {
-            $f(HissTools.valueOf(v));
-            return Nil;
-        }));
     }
 
     public static macro function importBinops(prefix: Bool, rest: Array<ExprOf<String>>) {
@@ -230,6 +182,7 @@ class HissInterp {
     }
 
     // *
+    // TODO maybe this doesn't need to be a getter?
     function getVariables() { return variables; }
 
     // *
@@ -437,7 +390,6 @@ class HissInterp {
             vars['continue'] = Function(Haxe(Fixed, hissContinue, "continue"));        
             vars['sort'] = Function(Haxe(Var, sort, "sort"));
             vars['list'] = Function(Haxe(Var, makeList, "list"));
-            importWrapped2(this, Reflect.compare);
             
             importPredicate(int);
             importPredicate(list);
