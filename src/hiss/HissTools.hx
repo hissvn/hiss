@@ -159,7 +159,7 @@ class HissTools {
 
     /**
         Unwrap hvalues in a hiss list to their underlying types. Don't unwrap values whose indices
-        are contained in keepWrapped, an optional list.
+        are contained in keepWrapped, an optional list or T/Nil value.
     **/
     public static function unwrapList(hl: HValue, keepWrapped: HValue = Nil): Array<Dynamic> {
         var indices: Array<Dynamic> = if (keepWrapped == Nil) {
@@ -167,14 +167,17 @@ class HissTools {
         } else if (keepWrapped == T) {
             [for (i in 0... hl.toList().length) i];
         } else {
-            unwrapList(keepWrapped);
+            unwrapList(keepWrapped); // This looks like a recursive call but it's not. It's unwrapping the list of indices!
         }
         var idx = 0;
         return [for (v in hl.toList()) {
             if (indices.indexOf(idx++) != -1) {
                 v;
             } else {
-                HissTools.valueOf(v);
+                // Counter-intuitively, it seems we never want to unwrap lists inside argument lists for reflective calls. Maybe someday keepWrapped may need to be a nested list.
+                var vv = HissTools.valueOf(v);
+                trace (vv);
+                vv;
             }
         }];
     }

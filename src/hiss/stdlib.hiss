@@ -169,13 +169,14 @@
                 ,catch-expression
             val)))
 
-(defmacro register-function (class function &optional name)
+(defmacro register-function (class function &optional name keep-args-wrapped)
     (default name 
         (intern (call-method Strings "toLowerHyphen" (list (symbol-name function)))))
     `(defun ,name (&rest args)
-        (call-method ,class (symbol-name ',function) args)))
+        (call-method ,class (symbol-name ',function) args nil ,keep-args-wrapped)))
 
 (register-function Type createInstance)
+(register-function Type createEnum)
 
 (register-function Strings toLowerHyphen)
 (register-function Strings toUpperCamel)

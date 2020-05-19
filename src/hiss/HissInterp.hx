@@ -439,7 +439,6 @@ class HissInterp {
             vars['list'] = Function(Haxe(Var, makeList, "list"));
             importWrapped2(this, Reflect.compare);
             
-            
             importPredicate(int);
             importPredicate(list);
             importPredicate(symbol);
@@ -458,12 +457,9 @@ class HissInterp {
             vars['scope-out'] = Function(Haxe(Fixed, scopeOut, "scope-out"));
             vars['scope-return'] = Function(Haxe(Fixed, scopeReturn, "scope-return"));
             
-            
             vars['error'] = Function(Haxe(Fixed, error, "error"));
 
             vars['setlocal'] = Function(Macro(false, Haxe(Var, setlocal, "setlocal")));
-
-            vars['set-nth'] = Function(Haxe(Fixed, setNth, "set-nth"));
         }
 
         /**
@@ -479,6 +475,7 @@ class HissInterp {
 
             // This one is probably necessary:
             importFixed(HissTools.nth); // Because I don't think the Haxe reflection API allows array indexing
+            vars['set-nth'] = Function(Haxe(Fixed, setNth, "set-nth"));
 
             // Control flow 
             vars['if'] = Function(Macro(false, Haxe(Fixed, hissIf, "if")));
@@ -538,6 +535,7 @@ class HissInterp {
     function callMethod(container: HValue, method: HValue, ?args: HValue, ?callOnReference: HValue = Nil, ?keepArgsWrapped: HValue = Nil) {
         if (args == null) args = List([]);
         var callArgs: Array<Dynamic> = HissTools.unwrapList(args, keepArgsWrapped);
+        trace(callArgs);
         try {
             return HissTools.toHValue(Reflect.callMethod(HissTools.valueOf(container, HissTools.truthy(callOnReference)), HissTools.toFunction(getProperty(container, method, callOnReference)), callArgs));
         } catch (s: Dynamic) {
