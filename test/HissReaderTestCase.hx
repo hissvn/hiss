@@ -26,66 +26,66 @@ class HissReaderTestCase extends utest.Test {
     }
 
     public function testReadSymbol() {
-        assertRead(Atom(Symbol("hello-world")), "hello-world");
-        assertRead(Atom(Symbol("hello-world!")), "hello-world!");
+        assertRead(Symbol("hello-world"), "hello-world");
+        assertRead(Symbol("hello-world!"), "hello-world!");
     }
 
     public function testReadBlockComment() {
-        assertRead(Atom(Symbol("fork")), "/* foo */ fork");
-        assertRead(Atom(Symbol("fork")), "/* foo */fork");
+        assertRead(Symbol("fork"), "/* foo */ fork");
+        assertRead(Symbol("fork"), "/* foo */fork");
 
-        assertRead(Atom(Symbol("fork")), "fork /* fu\nk */");
-        assertRead(Atom(Symbol("fork")), "fork/* fu\nk */");
+        assertRead(Symbol("fork"), "fork /* fu\nk */");
+        assertRead(Symbol("fork"), "fork/* fu\nk */");
 
-        assertRead(List([Atom(Symbol("fo")), Atom(Symbol("rk"))]), "(fo /*fuuuuu*/ rk)");
-        assertRead(List([Atom(Symbol("fo")), Atom(Symbol("rk"))]), "(fo/*fuuuuu*/rk)");
+        assertRead(List([Symbol("fo"), Symbol("rk")]), "(fo /*fuuuuu*/ rk)");
+        assertRead(List([Symbol("fo"), Symbol("rk")]), "(fo/*fuuuuu*/rk)");
 
     }
 
     public function testReadLineComment() {
-        assertRead(Atom(Symbol("fork")), "fork // foo\n");
-        assertRead(Atom(Symbol("fork")), "fork// foo\n");
-        assertRead(Atom(Symbol("fork")), "// foo \nfork");
+        assertRead(Symbol("fork"), "fork // foo\n");
+        assertRead(Symbol("fork"), "fork// foo\n");
+        assertRead(Symbol("fork"), "// foo \nfork");
     }
 
     public function testReadString() {
-        assertRead(Atom(String("foo")), '"foo"');
-        assertRead(Atom(String("foo  ")), '"foo  "');
+        assertRead(String("foo"), '"foo"');
+        assertRead(String("foo  "), '"foo  "');
     }
 
     public function testReadSymbolOrSign() {
-        assertRead(Atom(Symbol("-")), "-");
-        assertRead(Atom(Symbol("+")), "+");
+        assertRead(Symbol("-"), "-");
+        assertRead(Symbol("+"), "+");
     }
 
     public function testReadNumbers() {
-        assertRead(Atom(Int(5)), "+5");
-        assertRead(Atom(Int(-5)), "-5");
-        assertRead(Atom(Float(0)), "0.");
-        assertRead(Atom(Float(-5)), "-5.");
-        assertRead(Atom(Int(5)), "5");
+        assertRead(Int(5), "+5");
+        assertRead(Int(-5), "-5");
+        assertRead(Float(0), "0.");
+        assertRead(Float(-5), "-5.");
+        assertRead(Int(5), "5");
     }
 
     public function testReadList() {
         // Single-element lists
-        assertRead(List([Atom(Symbol("-"))]), "(-)");
-        assertRead(List([Atom(Symbol("fork"))]), "(fork)");
+        assertRead(List([Symbol("-")]), "(-)");
+        assertRead(List([Symbol("fork")]), "(fork)");
 
 
         var list = List([
-            Atom(String("foo")),
-            Atom(Int(5)),
-            Atom(Symbol("fork")),
+            String("foo"),
+            Int(5),
+            Symbol("fork"),
         ]);
         
         assertRead(list, '("foo" 5 fork)');
         assertRead(list, '  ( "foo" 5 fork )');
 
         var nestedList = List([
-            Atom(String("foo")),
-            Atom(Int(5)),
+            String("foo"),
+            Int(5),
             list,
-            Atom(Symbol("fork")),
+            Symbol("fork"),
         ]);
         
         assertReadList(nestedList, '("foo" 5 ("foo" 5 fork) fork)');
@@ -94,19 +94,19 @@ class HissReaderTestCase extends utest.Test {
 
     public function testReadQuotes() {
         //trace("TESTING QUOTES");
-        assertRead(Quote(Atom(Symbol("fork"))), "'fork");
-        assertRead(Quasiquote(Atom(Symbol("fork"))), "`fork");
-        assertRead(Unquote(Atom(Symbol("fork"))), ",fork");
-        assertRead(Quote(List([Atom(Symbol("fork")), Atom(String("hello"))])), "'(fork \"hello\")");
-        assertRead(Quasiquote(List([Unquote(Atom(Symbol("fork"))), Atom(String("hello"))])), "`(,fork \"hello\")");
-        assertRead(Quasiquote(List([Unquote(List([Atom(Symbol("fork")), Atom(Symbol("you"))])), Atom(String("hello"))])), "`(,(fork you) \"hello\")");
-        assertRead(Quasiquote(List([UnquoteList(Atom(Symbol("fork"))), Atom(String("hello"))])), "`(,@fork \"hello\")");
-        assertRead(Quasiquote(List([UnquoteList(List([Atom(Symbol("fork")), Atom(Symbol("you"))])), Atom(String("hello"))])), "`(,@(fork you) \"hello\")");
+        assertRead(Quote(Symbol("fork")), "'fork");
+        assertRead(Quasiquote(Symbol("fork")), "`fork");
+        assertRead(Unquote(Symbol("fork")), ",fork");
+        assertRead(Quote(List([Symbol("fork"), String("hello")])), "'(fork \"hello\")");
+        assertRead(Quasiquote(List([Unquote(Symbol("fork")), String("hello")])), "`(,fork \"hello\")");
+        assertRead(Quasiquote(List([Unquote(List([Symbol("fork"), Symbol("you")])), String("hello")])), "`(,(fork you) \"hello\")");
+        assertRead(Quasiquote(List([UnquoteList(Symbol("fork")), String("hello")])), "`(,@fork \"hello\")");
+        assertRead(Quasiquote(List([UnquoteList(List([Symbol("fork"), Symbol("you")])), String("hello")])), "`(,@(fork you) \"hello\")");
         //trace("DONE TESTING QUOTES");
 
     }
 
     public function testStringEscapeSequences() {
-        assertRead(Atom(String("\n")), '"\n"');
+        assertRead(String("\n"), '"\n"');
     }
 }

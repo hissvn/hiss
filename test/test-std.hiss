@@ -205,7 +205,7 @@ true
 (eq 3 (switch 'Fork 
     (List (l) 1)
     (Signal (s) 2)
-    (Atom (a) 3)
+    (Symbol (s) 3)
     (default 'default)))
 
 (eq 'default (switch 'Fork
@@ -213,13 +213,13 @@ true
     (default 'default)))
 
 (eq 4 (switch '(4 5 6)
-    (Atom (a) a)
+    (Symbol (s) s)
     (List (l) (first l))
     (Signal (s) s)
     (default 'default)))
 
 (print "You should see this helpful message when switch is used without a default:")
-(error? (switch 'fork (Atom (a) a)))
+(error? (switch 'fork (Symbol (s) s)))
 
 ; Test custom reader macros
 (set-macro-string "#" (lambda (a b c) (list 'sharp (read-string a b))))

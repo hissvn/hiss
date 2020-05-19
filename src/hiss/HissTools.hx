@@ -23,11 +23,11 @@ class HissTools {
     }
 
     public static function toString(hv: HValue): String {
-        return HaxeTools.extract(hv, Atom(String(s)) => s, "string");
+        return HaxeTools.extract(hv, String(s) => s, "string");
     }
 
     public static function toInt(v: HValue): Int {
-        return HaxeTools.extract(v, Atom(Int(i)) => i, "int");
+        return HaxeTools.extract(v, Int(i) => i, "int");
     }
 
     public static function toHFunction(hv: HValue): HFunction {
@@ -53,13 +53,13 @@ class HissTools {
     static var recursivePrintDepth = 5;
     public static function toPrint(v: HValue, recursiveCall: Int = 0): String {
         return switch (v) {
-            case Atom(Int(i)):
+            case Int(i):
                 Std.string(i);
-            case Atom(Float(f)):
+            case Float(f):
                 Std.string(f);
-            case Atom(Symbol(name)):
+            case Symbol(name):
                 name;
-            case Atom(String(str)):
+            case String(str):
                 '"$str"';
             case List(l):
                 if (recursiveCall > recursivePrintDepth) {
@@ -116,16 +116,16 @@ class HissTools {
             case TNull:
                 Nil;
             case TInt:
-                Atom(Int(v));
+                Int(v);
             case TFloat:
-                Atom(Float(v));
+                Float(v);
             case TBool:
                 if (v) T else Nil;
             case TClass(c):
                 var name = Type.getClassName(c);
                 return switch (name) {
                     case "String":
-                        Atom(String(v));
+                        String(v);
                     case "Array":
                         var va = cast(v, Array<Dynamic>);
                         List([for (e in va) HissTools.toHValue(e)]);
@@ -142,8 +142,6 @@ class HissTools {
                         }
                     case "hiss.HValue":
                         return cast (v, HValue);
-                    case "hiss.HAtom":
-                        return Atom(v);
                     default:
                         return Object(name, e);
                 };
@@ -185,7 +183,7 @@ class HissTools {
      public static function truthy(cond: HValue): Bool {
         return switch (cond) {
             case Nil: false;
-            //case Atom(Int(i)) if (i == 0): false; /* 0 being falsy will be useful for Hank read-counts */
+            //case Int(i) if (i == 0): false; /* 0 being falsy will be useful for Hank read-counts */
             case List(l) if (l.length == 0): false;
             case Signal(Error(m)): false;
             default: true;
@@ -199,11 +197,11 @@ class HissTools {
         return switch (hv) {
             case Nil: false;
             case T: true;
-            case Atom(Int(v)):
+            case Int(v):
                 v;
-            case Atom(Float(v)):
+            case Float(v):
                 v;
-            case Atom(String(v)):
+            case String(v):
                 v;
             case Object(_, v):
                 v;

@@ -51,7 +51,7 @@ class NativeObjectTestCase extends utest.Test {
 
         var val = repl.eval('(get-property Sample-native-object "staticMessage")');
         //trace(val);
-        HAssert.hvalEquals(Atom(String("Hello, Haxe world! Meet Hiss world!")), val);
+        HAssert.hvalEquals(String("Hello, Haxe world! Meet Hiss world!"), val);
     }
 
     public function testGetInstanceField() {
@@ -59,21 +59,21 @@ class NativeObjectTestCase extends utest.Test {
 
         var val = repl.eval('(get-property object "instanceMessage")');
         //trace(val);
-        HAssert.hvalEquals(Atom(String("Easier to implement.")), val);
+        HAssert.hvalEquals(String("Easier to implement."), val);
     }
 
     public function testCallStaticFunction() {
         repl.interp.importClass(SampleNativeObject);
         var val = repl.eval('(call-method Sample-native-object "staticMessage2" \'("work"))');
         //trace(val);
-        HAssert.hvalEquals(Atom(String("I wonder if this will work")), val);
+        HAssert.hvalEquals(String("I wonder if this will work"), val);
     }
 
     public function testCallInstanceFunction() {
         repl.interp.importObject("object", new SampleNativeObject());
         var val = repl.eval('(call-method object "instanceMessage2" \'())');
         //trace(val);
-        HAssert.hvalEquals(Atom(String("I bet this will not work")), val);
+        HAssert.hvalEquals(String("I bet this will not work"), val);
     }
 
     public function testConstructObject() {
@@ -84,7 +84,7 @@ class NativeObjectTestCase extends utest.Test {
         //trace(val);
         val = repl.eval('(call-method fork "instanceMessage2" \'())');
         //trace(val);
-        HAssert.hvalEquals(Atom(String("I bet this will not work")), val);
+        HAssert.hvalEquals(String("I bet this will not work"), val);
     }
 
     public function testConstructObject2() {
@@ -94,6 +94,6 @@ class NativeObjectTestCase extends utest.Test {
         //trace(val);
         val = repl.eval('(call-method fork "canoodle" \'())');
         //trace(val);
-        HAssert.hvalEquals(Atom(String("nat is not old enough to canoodle")), val);
+        HAssert.hvalEquals(String("nat is not old enough to canoodle"), val);
     }
 }

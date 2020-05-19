@@ -96,7 +96,7 @@
         (scope-return (progn ,@body))))
 
 (defun intern (name)
-    (call-method Type "createEnum" (list H-Atom "Symbol" (list name))))
+    (call-method Type "createEnum" (list H-Value "Symbol" (list name))))
 
 ; Haxe interop
 (defmacro register-method (method &optional name call-on-reference keep-args-wrapped return-instance)

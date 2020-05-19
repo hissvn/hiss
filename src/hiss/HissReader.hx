@@ -61,7 +61,7 @@ class HissReader {
         internalSetMacroString(".", readSymbolOrSign);
 
         // Lists
-        internalSetMacroString("(", readDelimitedList.bind(Atom(String(")")), null));
+        internalSetMacroString("(", readDelimitedList.bind(String(")"), null));
 
         // Quotes
         for (symbol in ["`", "'", ",", ",@"]) {
@@ -79,7 +79,7 @@ class HissReader {
         var position = if (pos != null) HissTools.valueOf(pos) else null;
 
         return switch (stringOrStream) {
-            case Atom(String(s)):
+            case String(s):
                 HStream.FromString(s, position);
             case Object("HStream", v):
                 v;
@@ -110,16 +110,16 @@ class HissReader {
 
         var token = nextToken(str, terminators);
         return if (token.indexOf('.') != -1) {
-            Atom(Float(Std.parseFloat(token)));
+            Float(Std.parseFloat(token));
         } else {
-            Atom(Int(Std.parseInt(token)));
+            Int(Std.parseInt(token));
         };
     }
 
     public static function readSymbolOrSign(start: HValue, str: HValue, terminators: HValue, position: HValue): HValue {
         // Hyphen could either be a symbol, or the start of a negative numeral
         return if (toStream(str).nextIsWhitespace() || toStream(str).nextIsOneOf([for (term in terminators.toList()) term.toString()])) {
-            readSymbol(Atom(String("")), start, terminators, position);
+            readSymbol(String(""), start, terminators, position);
         } else {
             readNumber(start, str, terminators, position);
         }
@@ -150,7 +150,7 @@ class HissReader {
                 escaped = escaped.replaceAll('\\"', '"');
                 // Single quotes are not a thing in Hiss
 
-                return Atom(String(escaped));
+                return String(escaped);
             case None:
                 throw 'Expected close quote for read-string of $str';
         }
@@ -169,10 +169,10 @@ class HissReader {
 
     public static function readSymbol(start: HValue, str: HValue, terminators: HValue, position: HValue): HValue {
         var symbolName = nextToken(str, terminators);
-        // We mustn't return Atom(Symbol(nil)) because it creates a logical edge case
+        // We mustn't return Symbol(nil) because it creates a logical edge case
         if (symbolName == "nil") return Nil;
         if (symbolName == "t") return T;
-        return Atom(Symbol(symbolName));
+        return Symbol(symbolName);
     }
 
     public static function readDelimitedList(terminator: HValue, ?delimiters: HValue, start: HValue, str: HValue, terminators: HValue, position: HValue): HValue {
@@ -189,10 +189,10 @@ class HissReader {
             delims = [for (s in delimiters.toList()) s.toString()];
         }
 
-        var delimsOrTerminator = [for (delim in delims) Atom(String(delim))];
+        var delimsOrTerminator = [for (delim in delims) String(delim)];
         delimsOrTerminator.push(terminator);
-        delimsOrTerminator.push(Atom(String("//")));
-        delimsOrTerminator.push(Atom(String("/*")));
+        delimsOrTerminator.push(String("//"));
+        delimsOrTerminator.push(String("/*"));
 
 
         var term = terminator.toString();
@@ -217,7 +217,7 @@ class HissReader {
     static function callReadFunction(func: HValue, start: String, stream: HStream, terminators: HValue): HValue {
         var pos = stream.position();
         try {
-            return interp.funcall(T, func, List([Atom(String(start)), Object("HStream", stream), Quote(terminators), Object("HPosition", pos)]));
+            return interp.funcall(T, func, List([String(start), Object("HStream", stream), Quote(terminators), Object("HPosition", pos)]));
         } 
         #if !throwErrors
         catch (s: Dynamic) {
@@ -232,7 +232,7 @@ class HissReader {
         stream.dropWhitespace();
 
         if (terminators == null || terminators == Nil) {
-            terminators = List([Atom(String(")")), Atom(String('/*')), Atom(String('//'))]);
+            terminators = List([String(")"), String('/*'), String('//')]);
         }
 
         for (length in macroLengths) {

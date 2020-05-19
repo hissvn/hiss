@@ -1,16 +1,13 @@
 package hiss;
 
-@:using(hiss.HissTools.HissTools)
-enum HAtom {
+@:using(hiss.HissTools.HissTools, hiss.HissInterp.HissInterp)
+enum HValue {
+    // Atoms used to be their own nested enum, but this way is better.
     Int(value: Int);
     Float(value: Float);
     Symbol(name: String);
     String(value: String);
-}
-
-@:using(hiss.HissTools.HissTools, hiss.HissInterp.HissInterp)
-enum HValue {
-    Atom(a: HAtom);
+    // Non-atomic/backend-only types:
     List(l: HList);
     Quote(exp: HValue);
     Quasiquote(exp: HValue);

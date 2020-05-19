@@ -35,7 +35,6 @@ using hiss.HissTools;
 import hiss.HaxeTools;
 using hiss.HaxeTools;
 
-import hiss.HTypes.HAtom;
 import hiss.HTypes.HValue;
 
 import uuid.Uuid;
@@ -49,7 +48,7 @@ class HissInterp {
 
     // *
     static function symbolName(v: HValue): HValue {
-        return Atom(String(HaxeTools.extract(v, Atom(Symbol(name)) => name, "symbol name")));
+        return String(HaxeTools.extract(v, Symbol(name) => name, "symbol name"));
     }
 
     /**
@@ -273,7 +272,7 @@ class HissInterp {
             return Nil;
         }
         switch (a) {
-            case Atom(_) | T | Nil:
+            case Int(_) | String(_) | Symbol(_) | Float(_)  | T | Nil:
                 return if (Type.enumEq(a, b)) T else Nil;
             case List(_):
                 var l1 = a.toList();
@@ -346,7 +345,6 @@ class HissInterp {
         vars['Type'] = Object("Class", Type);
         vars['Strings'] = Object("Class", Strings);
         vars['H-Value'] = Object("Enum", HValue);
-        vars['H-Atom'] = Object("Enum", HAtom);
         vars['nil'] = Nil;
         vars['null'] = Nil;
         vars['false'] = Nil;
@@ -518,7 +516,7 @@ class HissInterp {
         for (v in iterator) {
             setlocal(List([name, Quote(HissTools.toHValue(v))]));
 
-            var value = eval(cons(Atom(Symbol("progn")), body));
+            var value = eval(cons(Symbol("progn"), body));
             switch (value) {
                 case Signal(Continue):
                     continue;
@@ -544,7 +542,7 @@ class HissInterp {
         var body: HValue = List(argList.slice(1));
         
         while (HissTools.truthy(eval(cond))) {
-            var value = eval(cons(Atom(Symbol("progn")), body));
+            var value = eval(cons(Symbol("progn"), body));
             switch (value) {
                 case Signal(Break):
                     break;
@@ -754,26 +752,23 @@ class HissInterp {
     // Keep
     public function eval(expr: HValue, returnScope: HValue = Nil): HValue {
         var value = switch (expr) {
-            case Atom(a):
-                switch (a) {
-                    case Int(v):
-                        expr;
-                    case Float(v):
-                        expr;
-                    case String(v):
-                        expr;
-                    case Symbol(name):
-                        var varInfo = resolve(name);
-                        if (varInfo.value == null) {
-                            // TODO make this error message come back!
-                            // trace('Tried to access undefined variable $name with stackFrames ${stackFrames.toPrint()}');
-                            return Nil;
-                        }
-                        if (HissTools.truthy(returnScope)) {
-                            VarInfo(varInfo);
-                        } else {
-                            varInfo.value;
-                        }
+            case Int(v):
+                expr;
+            case Float(v):
+                expr;
+            case String(v):
+                expr;
+            case Symbol(name):
+                var varInfo = resolve(name);
+                if (varInfo.value == null) {
+                    // TODO make this error message come back!
+                    // trace('Tried to access undefined variable $name with stackFrames ${stackFrames.toPrint()}');
+                    return Nil;
+                }
+                if (HissTools.truthy(returnScope)) {
+                    VarInfo(varInfo);
+                } else {
+                    varInfo.value;
                 }
             case List([]):
                 Nil;

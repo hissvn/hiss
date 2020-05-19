@@ -22,11 +22,11 @@ class HissRepl {
 	}
 
 	public function read(hiss: String): HValue {
-		return HissReader.read(Atom(String(hiss+ "\n")));
+		return HissReader.read(String(hiss+ "\n"));
 	}
 
 	public function readAll(hiss: String): HValue {
-		return HissReader.readAll(Atom(String(hiss+"\n")));
+		return HissReader.readAll(String(hiss+"\n"));
 	}
 
 	public function eval(hiss: String): HValue {
@@ -36,8 +36,8 @@ class HissRepl {
 	}
 
 	public function load(file: String) {
-		var list = [Atom(Symbol("progn"))];
-		list = list.concat(HissReader.readAll(Atom(String(StaticFiles.getContent(file)))).toList());
+		var list = [Symbol("progn")];
+		list = list.concat(HissReader.readAll(String(StaticFiles.getContent(file))).toList());
 		interp.eval(List(list));
 	}
 
@@ -66,7 +66,7 @@ class HissRepl {
 
 			input = consoleReader.readLine();
 			try {
-				var parsed = HissReader.read(Atom(String(input+ "\n")));
+				var parsed = HissReader.read(String(input+ "\n"));
 				//trace(parsed);
 				var hval = interp.eval(parsed);
 				
