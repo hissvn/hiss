@@ -12,6 +12,7 @@
     "dependencies": {
         "uuid": "",
         "utest": "",
-        "haxe-strings": ""
+        "haxe-strings": "",
+        "ihx": ""
     }
 }

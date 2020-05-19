@@ -1,5 +1,7 @@
 package hiss;
 
+import ihx.ConsoleReader;
+
 import hiss.HissReader;
 import hiss.HissInterp;
 import hiss.HTypes;
@@ -9,12 +11,13 @@ using hiss.HissTools;
 
 class HissRepl {
 	public var interp: HissInterp;
-	var reader: HissReader;
+	var consoleReader: ConsoleReader;
 
 	public function new() {
 		// TODO it's weird that all of these parts are necessary in this order to get a working hiss environment, and once we have it, it's actually static.
 		interp = new HissInterp();
 		var reader = new HissReader(interp);
+		consoleReader = new ConsoleReader();
 		load("stdlib.hiss");
 	}
 
@@ -58,9 +61,10 @@ class HissRepl {
 		while (interp.variables.toDict()['__running__'].truthy()) {
 	 		HaxeTools.print(">>> ");
 			var input = "";
-			#if sys
-				input = Sys.stdin().readLine();
-			#end
+			
+			consoleReader.cmd.prompt = ">>> ";
+
+			input = consoleReader.readLine();
 			try {
 				var parsed = HissReader.read(Atom(String(input+ "\n")));
 				//trace(parsed);
