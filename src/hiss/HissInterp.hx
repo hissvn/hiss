@@ -360,7 +360,9 @@ class HissInterp {
             Functions implemented in Haxe with unnecessary maintainence overload
         **/
         {
+            // This one might be unportable because we can't instantiate a Map with a type parameter using reflection:
             vars['empty-dict'] = Function(Haxe(Fixed, function() { return Dict([]); }, "empty-dict"));
+            
             vars['return'] = Function(Haxe(Fixed, hissReturn, "return"));
             vars['break'] = Function(Haxe(Fixed, hissBreak, "break"));
             vars['continue'] = Function(Haxe(Fixed, hissContinue, "continue"));        
