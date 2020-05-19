@@ -7,6 +7,8 @@
 (defun not (b)
     (if b nil t))
 
+(defun nil? (v) (eq nil v))
+
 (defmacro or (&rest args)
     `(if (haxe== ,(length args) 0)
         nil

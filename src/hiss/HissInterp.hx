@@ -280,11 +280,6 @@ class HissInterp {
     }
 
     // *
-    function nil(value: HValue) {
-        return if (value == Nil) T else Nil;
-    }
-
-    // *
     function bound(value: HValue) {
         return if (resolve(symbolName(value).toString()).value != null) T else Nil;
     }
@@ -346,7 +341,7 @@ class HissInterp {
         return value;
     }
 
-    // *
+    // Keep
     public static function eq(a: HValue, b: HValue): HValue {
         if (Type.enumIndex(a) != Type.enumIndex(b)) {
             return Nil;
@@ -415,128 +410,120 @@ class HissInterp {
         variables = Dict([]);
         var vars: HDict = variables.toDict();
 
+        stackFrames = List([]);
+        vars['*stack-frames*'] = stackFrames;
+
+        // Access to the variable dictionary allows setq to be a Hiss macro
         vars['variables'] = Function(Haxe(Fixed, getVariables, "variables"));
-        
+
+        // Variables (Can keep all of these statements with no maintenance overhead)
         vars['Type'] = Object("Class", Type);
         vars['Strings'] = Object("Class", Strings);
         vars['H-Value'] = Object("Enum", HValue);
         vars['H-Atom'] = Object("Enum", HAtom);
-        vars['empty-dict'] = Function(Haxe(Fixed, function() { return Dict([]); }, "empty-dict"));
-
-        vars['return'] = Function(Haxe(Fixed, hissReturn, "return"));
-        vars['break'] = Function(Haxe(Fixed, hissBreak, "break"));
-        vars['continue'] = Function(Haxe(Fixed, hissContinue, "continue"));
-
         vars['nil'] = Nil;
         vars['null'] = Nil;
         vars['false'] = Nil;
         vars['t'] = T;
         vars['true'] = T;
-               
-        vars['sort'] = Function(Haxe(Var, sort, "sort"));
 
-        importWrapped2(this, Reflect.compare);
-                
-        importFixed(getProperty);
-        importFixed(callMethod);
+        /**
+            Functions implemented in Haxe with unnecessary maintainence overload
+        **/
+        {
+            vars['empty-dict'] = Function(Haxe(Fixed, function() { return Dict([]); }, "empty-dict"));
+            vars['return'] = Function(Haxe(Fixed, hissReturn, "return"));
+            vars['break'] = Function(Haxe(Fixed, hissBreak, "break"));
+            vars['continue'] = Function(Haxe(Fixed, hissContinue, "continue"));        
+            vars['sort'] = Function(Haxe(Var, sort, "sort"));
+            vars['list'] = Function(Haxe(Var, makeList, "list"));
+            importWrapped2(this, Reflect.compare);
+            
+            
+            importPredicate(int);
+            importPredicate(list);
+            importPredicate(symbol);
+            vars['string?'] = Function(Haxe(Fixed, isString, "string?"));
+            vars['error?'] = Function(Haxe(Fixed, isError, "error?"));
 
-        // Control flow
-        vars['if'] = Function(Macro(false, Haxe(Fixed, hissIf, "if")));
+            // Wait a minute... these will still require re-working in continuation style
+            importFixed(HissTools.first);
+            importFixed(HissTools.rest);
 
-        vars['progn'] = Function(Macro(false, Haxe(Var, progn, "progn")));
+            importFixed(symbolName);
+            importFixed(cons);
 
-        vars['list'] = Function(Haxe(Var, makeList, "list"));
+            // In the new continuation-based regime, managing scope might this way might not even make sense:
+            vars['scope-in'] = Function(Haxe(Fixed, scopeIn, "scope-in"));
+            vars['scope-out'] = Function(Haxe(Fixed, scopeOut, "scope-out"));
+            vars['scope-return'] = Function(Haxe(Fixed, scopeReturn, "scope-return"));
+            
+            
+            vars['error'] = Function(Haxe(Fixed, error, "error"));
 
-        vars['quote'] = Function(Macro(false, Haxe(Fixed, quote, "quote")));
+            vars['setlocal'] = Function(Macro(false, Haxe(Var, setlocal, "setlocal")));
 
-        importPredicate(nil);
-        importPredicate(bound);
-        importPredicate(int);
-        importPredicate(list);
-        importPredicate(symbol);
-        vars['string?'] = Function(Haxe(Fixed, isString, "string?"));
-        vars['error?'] = Function(Haxe(Fixed, isError, "error?"));
+            vars['set-nth'] = Function(Haxe(Fixed, setNth, "set-nth"));
+        }
 
-        // Haxe std io
-        importFixed(print);
-        importFixed(uglyPrint);
+        /**
+            Primitives -- Functions implemented in Haxe that might be impossible to port to Hiss/worth keeping around
+        **/
+        {
+            importPredicate(bound); // because it checks for Haxe null
+            importFixed(getProperty);
+            importFixed(callMethod);
 
-        importFixed(HissReader.read);
-        importFixed(HissReader.readAll);
-        importFixed(HissReader.readString);
-        importFixed(HissReader.readNumber);
-        importFixed(HissReader.readSymbol);
-        importFixed(HissReader.readDelimitedList);
-        importFixed(HissReader.setMacroString);
-        importFixed(HissReader.setDefaultReadFunction);
+            importFixed(eval);
+            vars['funcall'] = Function(Haxe(Fixed, funcall.bind(Nil), "funcall"));
 
-        importFixed(eval);
+            // This one is probably necessary:
+            importFixed(HissTools.nth); // Because I don't think the Haxe reflection API allows array indexing
 
-        importFixed(HissTools.first);
-        importFixed(HissTools.rest);
-        importFixed(HissTools.nth);
+            // Control flow 
+            vars['if'] = Function(Macro(false, Haxe(Fixed, hissIf, "if")));
+            vars['progn'] = Function(Macro(false, Haxe(Var, progn, "progn")));
+            vars['for'] = Function(Macro(false, Haxe(Var, hissDoFor.bind(T), "for")));
+            vars['do-for'] = Function(Macro(false, Haxe(Var, hissDoFor.bind(Nil), "do-for")));
+            vars['while'] = Function(Macro(false, Haxe(Var, hissWhile, "while")));
 
-        importFixed(symbolName);
+            // Reader functions
+            importFixed(HissReader.read);
+            importFixed(HissReader.readAll);
+            importFixed(HissReader.readString);
+            importFixed(HissReader.readNumber);
+            importFixed(HissReader.readSymbol);
+            importFixed(HissReader.readDelimitedList);
+            importFixed(HissReader.setMacroString);
+            importFixed(HissReader.setDefaultReadFunction);
 
-        // most haxe binary operators are non-binary (like me!) in most Lisps.
-        // They can take any number of arguments.
-        // Since we still need haxe to run the computations, Hiss imports those binary
-        // operators, but hides them with the prefix 'haxe' to it can provide its own
-        // lispy operator functions.
-        importBinops(true, "+", "-", "/", "*", ">", ">=", "<", "<=", "==");
+            // Iffy -- maybe these can be ported
+            vars['quote'] = Function(Macro(false, Haxe(Fixed, quote, "quote")));
+            // Haxe std io
+            importFixed(print);
+            importFixed(uglyPrint);
 
-        // Still more binary operators just don't exist in lisp because they are named functions like `and` or `or`
-        importBinops(true, /* "&&",*/ "||", "...");
+            // most haxe binary operators are non-binary (like me!) in most Lisps.
+            // They can take any number of arguments.
+            // Since we still need haxe to run the computations, Hiss imports those binary
+            // operators, but hides them with the prefix 'haxe' to it can provide its own
+            // lispy (variadic) operator functions.
+            importBinops(true, "+", "-", "/", "*", ">", ">=", "<", "<=", "==");
 
-        /* variables['haxe&&'] = Function(Haxe(Fixed, (a: HValue, b: HValue) -> {
-            if (truthy(a) && truthy(b)) T else Nil;
-        })); */
+            // Some binary operators are Lisp-compatible as-is
+            importBinops(false, "%"); 
 
-        importFixed(eq);
+            // We don't need && or || because they only operate on booleans (which Hiss doesn't have).
+            // But we do import the ... range operator because ranges are nice so why not
+            importBinops(true, "...");
 
-        // Some binary operators are Lisp-compatible as-is
-        importBinops(false, "%");  
+            importFixed(eq); // Seems like a headache to implement in Hiss
 
-        vars['lambda'] = Function(Macro(false, Haxe(Var, lambda, "lambda")));
-        vars['defun'] = Function(Macro(false, Haxe(Var, defun, "defun")));
-        vars['defmacro'] = Function(Macro(false, Haxe(Var, defmacro, "defmacro")));
-
-        importFixed(cons);
-
-        importFixed(resolve);
-        vars['funcall'] = Function(Haxe(Fixed, funcall.bind(Nil), "funcall"));
-        
-        vars['scope-in'] = Function(Haxe(Fixed, scopeIn, "scope-in"));
-        vars['scope-out'] = Function(Haxe(Fixed, scopeOut, "scope-out"));
-        vars['scope-return'] = Function(Haxe(Fixed, scopeReturn, "scope-return"));
-        
-        vars['error'] = Function(Haxe(Fixed, error, "error"));
-
-        // TODO strings with interpolation
-
-        vars['setlocal'] = Function(Macro(false, Haxe(Var, setlocal, "setlocal")));
-
-        vars['set-nth'] = Function(Haxe(Fixed, setNth, "set-nth"));
-
-        vars['for'] = Function(Macro(false, Haxe(Var, hissDoFor.bind(T), "for")));
-        vars['do-for'] = Function(Macro(false, Haxe(Var, hissDoFor.bind(Nil), "do-for")));
-
-        vars['while'] = Function(Macro(false, Haxe(Var, hissWhile, "while")));
-        
-        stackFrames = List([]);
-
-        // TODO make these all imported getters
-        vars['*stack-frames*'] = stackFrames;
-
-        // Import enums and stuff
-        //importEnum(haxe.ds.Option);
-
-        //try {
-            // TODO obviously this needs to happen
-        //} catch (s: Dynamic) {
-            // This catch expression makes things unsafe, and even if it is there, this trace should be uncommented eventually:
-            // trace('Error loading the standard library: $s');
-        //}
+            // I can't believe I tried to port lambda....
+            vars['lambda'] = Function(Macro(false, Haxe(Var, lambda, "lambda")));
+            vars['defun'] = Function(Macro(false, Haxe(Var, defun, "defun")));
+            vars['defmacro'] = Function(Macro(false, Haxe(Var, defmacro, "defmacro")));
+        }
     }
 
     /** Get a field out of a container (object/class) **/
@@ -832,7 +819,7 @@ class HissInterp {
         };
     }
 
-    // *
+    // Keep
     public function eval(expr: HValue, returnScope: HValue = Nil): HValue {
         //trace('eval called on ${expr.toPrint()}');
         var value = switch (expr) {
