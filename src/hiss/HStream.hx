@@ -213,7 +213,7 @@ class HStream {
 		return switch (nextLine) {
 			case Some({output: nextLine, terminator: _}):
 				if (nextLine.charAt(nextLine.length-1) == '\n') {
-					trace('dropping the thing');
+					//trace('dropping the thing');
 					nextLine = nextLine.substr(0, -1);
 				}
 				if (trimmed.indexOf('r') != -1) {

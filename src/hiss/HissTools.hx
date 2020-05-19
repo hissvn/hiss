@@ -174,10 +174,7 @@ class HissTools {
             if (indices.indexOf(idx++) != -1) {
                 v;
             } else {
-                // Counter-intuitively, it seems we never want to unwrap lists inside argument lists for reflective calls. Maybe someday keepWrapped may need to be a nested list.
-                var vv = HissTools.valueOf(v);
-                trace (vv);
-                vv;
+                HissTools.valueOf(v);
             }
         }];
     }
@@ -214,7 +211,7 @@ class HissTools {
                 if (reference) {
                     l;
                 } else {
-                    [for (hvv in l) HissTools.valueOf(hvv)];
+                    [for (hvv in l) HissTools.valueOf(hvv, true)]; // So far it seems that nested list elements should stay wrapped
                 }
             case Dict(d):
                 d;

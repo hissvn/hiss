@@ -199,6 +199,8 @@ true
 (eq '((6 5)) (groups '(6 5 3) 2))
 (eq '((6 5) (3)) (groups '(6 5 3) 2 t))
 
+(eq '("hey" 5 sym) (create-enum H-Value "List" (list (list "hey" 5 'sym))))
+
 ; Test custom reader macros
 (set-macro-string "#" (lambda (a b c) (list 'sharp (read-string a b))))
 (eq '(sharp "fork") (read "#fork\""))

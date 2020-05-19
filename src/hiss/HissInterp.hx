@@ -535,7 +535,6 @@ class HissInterp {
     function callMethod(container: HValue, method: HValue, ?args: HValue, ?callOnReference: HValue = Nil, ?keepArgsWrapped: HValue = Nil) {
         if (args == null) args = List([]);
         var callArgs: Array<Dynamic> = HissTools.unwrapList(args, keepArgsWrapped);
-        trace(callArgs);
         try {
             return HissTools.toHValue(Reflect.callMethod(HissTools.valueOf(container, HissTools.truthy(callOnReference)), HissTools.toFunction(getProperty(container, method, callOnReference)), callArgs));
         } catch (s: Dynamic) {
@@ -819,7 +818,6 @@ class HissInterp {
 
     // Keep
     public function eval(expr: HValue, returnScope: HValue = Nil): HValue {
-        //trace('eval called on ${expr.toPrint()}');
         var value = switch (expr) {
             case Atom(a):
                 switch (a) {
@@ -852,7 +850,7 @@ class HissInterp {
                     default: 
                         return Signal(Error('${expr.toPrint()}: ${funcInfo.toPrint()} is not a function pointer'));
                 }
-                if (funcInfo == null || value == null) { trace(funcInfo); }
+                if (funcInfo == null || value == null) { trace(funcInfo); } // TODO is this line an important error check? If so, it should throw? and if not, get rid of it, right?
                 var args = HissTools.rest(expr);
 
                 // trace('calling funcall $funcInfo with args (before evaluation): $args');
