@@ -114,6 +114,13 @@ class HissInterp {
         };
     }
 
+    static macro function importMacro(f: Expr, argType: Expr, name: Expr) {
+        return macro {
+            variables.toDict()[$name] = Function(Macro(false, Haxe($argType, $f, $name)));
+        }
+    }
+
+
     public static macro function importBinops(prefix: Bool, rest: Array<ExprOf<String>>) {
         var block = [];
         for (e in rest) {
@@ -350,9 +357,6 @@ class HissInterp {
             Functions implemented in Haxe with unnecessary maintainence overload
         **/
         {
-            // This one might be unportable because we can't instantiate a Map with a type parameter using reflection:
-            vars['empty-dict'] = Function(Haxe(Fixed, function() { return Dict([]); }, "empty-dict"));
-            
             vars['return'] = Function(Haxe(Fixed, hissReturn, "return"));
             vars['break'] = Function(Haxe(Fixed, hissBreak, "break"));
             vars['continue'] = Function(Haxe(Fixed, hissContinue, "continue"));        
@@ -372,20 +376,26 @@ class HissInterp {
             importFunction(cons, Fixed, "");
 
             // In the new continuation-based regime, managing scope might this way might not even make sense:
-            vars['scope-in'] = Function(Haxe(Fixed, scopeIn, "scope-in"));
-            vars['scope-out'] = Function(Haxe(Fixed, scopeOut, "scope-out"));
-            vars['scope-return'] = Function(Haxe(Fixed, scopeReturn, "scope-return"));
             
-            vars['error'] = Function(Haxe(Fixed, error, "error"));
+            importFunction(scopeIn, Fixed, "");
+            importFunction(scopeOut, Fixed, "");
+            importFunction(scopeReturn, Fixed, "");
+            
+            importFunction(error, Fixed, "");
 
-            vars['setlocal'] = Function(Macro(false, Haxe(Var, setlocal, "setlocal")));
+            importMacro(setlocal, Var, "setlocal");
         }
 
         /**
             Primitives -- Functions implemented in Haxe that might be impossible to port to Hiss/worth keeping around
         **/
         {
-            importFunction(bound, Fixed, "?"); // because it checks for Haxe null
+             // This one might be unportable because we can't instantiate a Map with a type parameter using reflection:
+             vars['empty-dict'] = Function(Haxe(Fixed, function() { return Dict([]); }, "empty-dict"));
+            
+            importFunction(bound, Fixed, "?"); // not portable because it checks for Haxe null
+            
+            // These are the reflective functions that make so many cool things possible:
             importFunction(getProperty, Fixed, "");
             importFunction(callMethod, Fixed, "");
 
@@ -397,11 +407,11 @@ class HissInterp {
             importFunction(setNth, Fixed, "");
 
             // Control flow 
-            vars['if'] = Function(Macro(false, Haxe(Fixed, hissIf, "if")));
-            vars['progn'] = Function(Macro(false, Haxe(Var, progn, "progn")));
-            vars['for'] = Function(Macro(false, Haxe(Var, hissDoFor.bind(T), "for")));
-            vars['do-for'] = Function(Macro(false, Haxe(Var, hissDoFor.bind(Nil), "do-for")));
-            vars['while'] = Function(Macro(false, Haxe(Var, hissWhile, "while")));
+            importMacro(hissIf, Fixed, "if");
+            importMacro(progn, Var, "progn");
+            importMacro(hissDoFor.bind(T), Var, "for");
+            importMacro(hissDoFor.bind(Nil), Var, "do-for");
+            importMacro(hissWhile, Var, "while");
 
             // Reader functions
             importFunction(HissReader.read, Fixed, "");
@@ -414,7 +424,7 @@ class HissInterp {
             importFunction(HissReader.setDefaultReadFunction, Fixed, "");
 
             // Iffy -- maybe these can be ported
-            vars['quote'] = Function(Macro(false, Haxe(Fixed, quote, "quote")));
+            importMacro(quote, Fixed, "quote");
             // Haxe std io
             importFunction(print, Fixed, "");
             importFunction(uglyPrint, Fixed, "");
@@ -436,9 +446,9 @@ class HissInterp {
             importFunction(eq, Fixed, ""); // Seems like a headache to implement in Hiss
 
             // I can't believe I tried to port lambda....
-            vars['lambda'] = Function(Macro(false, Haxe(Var, lambda, "lambda")));
-            vars['defun'] = Function(Macro(false, Haxe(Var, defun, "defun")));
-            vars['defmacro'] = Function(Macro(false, Haxe(Var, defmacro, "defmacro")));
+            importMacro(lambda, Var, "lambda");
+            importMacro(defun, Var, "defun");
+            importMacro(defmacro, Var, "defmacro");
         }
     }
 
