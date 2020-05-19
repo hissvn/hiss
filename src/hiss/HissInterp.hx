@@ -99,42 +99,18 @@ class HissInterp {
     function defmacro(args: HValue): HValue {
         return defun(args, T);
     }
-    
-    public static macro function importFixed(f: Expr) {
-        function findFunctionName(e:Expr) {
-	        switch(e.expr) {
-		        case EConst(CIdent(s)) | EField(_, s):
-			        // handle s
-                    return s;
-		        case _:
-			        throw 'improper expression for importing haxe function to interpreter';
-            }
-	    }
-        var name = findFunctionName(f);
-        //var name = "";
-        return macro {
-            var tlh = $v{name}.toLowerHyphen();
-            functionStats[tlh] = 0;
-            variables.toDict()[tlh] = Function(Haxe(Fixed, $f, tlh));            
-        };
-    }
 
-    public static macro function importPredicate(f: Expr) {
-        function findFunctionName(e:Expr) {
-	        switch(e.expr) {
-		        case EConst(CIdent(s)) | EField(_, s):
-			        // handle s
-                    return s;
-		        case _:
-			        throw 'improper expression for importing haxe function to interpreter';
-            }
-	    }
-        var name = findFunctionName(f);
-        //var name = "";
+    public static macro function importFunction(f: Expr, argType: Expr, suffix: Expr) {
+        var name = switch(f.expr) {
+            case EConst(CIdent(s)) | EField(_, s):
+                s.toLowerHyphen();
+            default:
+                throw "Failed to get function name";
+        }
         return macro {
-            var tlh = $v{name}.toLowerHyphen() + "?";
-            functionStats[tlh] = 0;
-            variables.toDict()[tlh] = Function(Haxe(Fixed, $f, tlh));     
+            var vname = $v{name} + $suffix;
+            functionStats[vname] = 0;
+            variables.toDict()[vname] = Function(Haxe($argType, $f, vname));            
         };
     }
 
@@ -391,18 +367,18 @@ class HissInterp {
             vars['sort'] = Function(Haxe(Var, sort, "sort"));
             vars['list'] = Function(Haxe(Var, makeList, "list"));
             
-            importPredicate(int);
-            importPredicate(list);
-            importPredicate(symbol);
+            importFunction(int, Fixed, "?");
+            importFunction(list, Fixed, "?");
+            importFunction(symbol, Fixed, "?");
             vars['string?'] = Function(Haxe(Fixed, isString, "string?"));
             vars['error?'] = Function(Haxe(Fixed, isError, "error?"));
 
             // Wait a minute... these will still require re-working in continuation style
-            importFixed(HissTools.first);
-            importFixed(HissTools.rest);
+            importFunction(HissTools.first, Fixed, "");
+            importFunction(HissTools.rest, Fixed, "");
 
-            importFixed(symbolName);
-            importFixed(cons);
+            importFunction(symbolName, Fixed, "");
+            importFunction(cons, Fixed, "");
 
             // In the new continuation-based regime, managing scope might this way might not even make sense:
             vars['scope-in'] = Function(Haxe(Fixed, scopeIn, "scope-in"));
@@ -418,16 +394,16 @@ class HissInterp {
             Primitives -- Functions implemented in Haxe that might be impossible to port to Hiss/worth keeping around
         **/
         {
-            importPredicate(bound); // because it checks for Haxe null
-            importFixed(getProperty);
-            importFixed(callMethod);
+            importFunction(bound, Fixed, "?"); // because it checks for Haxe null
+            importFunction(getProperty, Fixed, "");
+            importFunction(callMethod, Fixed, "");
 
-            importFixed(eval);
+            importFunction(eval, Fixed, "");
             vars['funcall'] = Function(Haxe(Fixed, funcall.bind(Nil), "funcall"));
 
             // This one is probably necessary:
-            importFixed(HissTools.nth); // Because I don't think the Haxe reflection API allows array indexing
-            vars['set-nth'] = Function(Haxe(Fixed, setNth, "set-nth"));
+            importFunction(HissTools.nth, Fixed, ""); // Because I don't think the Haxe reflection API allows array indexing
+            importFunction(setNth, Fixed, "");
 
             // Control flow 
             vars['if'] = Function(Macro(false, Haxe(Fixed, hissIf, "if")));
@@ -437,20 +413,20 @@ class HissInterp {
             vars['while'] = Function(Macro(false, Haxe(Var, hissWhile, "while")));
 
             // Reader functions
-            importFixed(HissReader.read);
-            importFixed(HissReader.readAll);
-            importFixed(HissReader.readString);
-            importFixed(HissReader.readNumber);
-            importFixed(HissReader.readSymbol);
-            importFixed(HissReader.readDelimitedList);
-            importFixed(HissReader.setMacroString);
-            importFixed(HissReader.setDefaultReadFunction);
+            importFunction(HissReader.read, Fixed, "");
+            importFunction(HissReader.readAll, Fixed, "");
+            importFunction(HissReader.readString, Fixed, "");
+            importFunction(HissReader.readNumber, Fixed, "");
+            importFunction(HissReader.readSymbol, Fixed, "");
+            importFunction(HissReader.readDelimitedList, Fixed, "");
+            importFunction(HissReader.setMacroString, Fixed, "");
+            importFunction(HissReader.setDefaultReadFunction, Fixed, "");
 
             // Iffy -- maybe these can be ported
             vars['quote'] = Function(Macro(false, Haxe(Fixed, quote, "quote")));
             // Haxe std io
-            importFixed(print);
-            importFixed(uglyPrint);
+            importFunction(print, Fixed, "");
+            importFunction(uglyPrint, Fixed, "");
 
             // most haxe binary operators are non-binary (like me!) in most Lisps.
             // They can take any number of arguments.
@@ -466,7 +442,7 @@ class HissInterp {
             // But we do import the ... range operator because ranges are nice so why not
             importBinops(true, "...");
 
-            importFixed(eq); // Seems like a headache to implement in Hiss
+            importFunction(eq, Fixed, ""); // Seems like a headache to implement in Hiss
 
             // I can't believe I tried to port lambda....
             vars['lambda'] = Function(Macro(false, Haxe(Var, lambda, "lambda")));
