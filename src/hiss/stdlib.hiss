@@ -4,6 +4,8 @@
 (defun length (str-or-list)
     (get-property str-or-list "length"))
 
+(defun list? (arg) (and (length arg) (error? (+ arg arg))))
+
 (defun not (b)
     (if b nil t))
 

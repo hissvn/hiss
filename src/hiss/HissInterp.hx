@@ -214,16 +214,6 @@ class HissInterp {
     }
 
     // *
-    function list(value: HValue) {
-        try {
-            value.toList();
-            return T;
-        } catch (s: Dynamic) {
-            return Nil;
-        }
-    }
-
-    // *
     function hissReturn(value: HValue): HValue {
         return Signal(Return(value));
     }
@@ -370,7 +360,6 @@ class HissInterp {
             vars['list'] = Function(Haxe(Var, makeList, "list"));
             
             importFunction(int, Fixed, "?");
-            importFunction(list, Fixed, "?");
             importFunction(symbol, Fixed, "?");
             vars['string?'] = Function(Haxe(Fixed, isString, "string?"));
             vars['error?'] = Function(Haxe(Fixed, isError, "error?"));
@@ -682,9 +671,9 @@ class HissInterp {
         } 
         #if !throwErrors
         catch (s: Dynamic) {
-            trace('error $s while $message');
+            // trace('error $s while $message');
             stackFrames = oldStackFrames;
-            throw s;
+            return Signal(Error(s));
         }
         #end
     }
