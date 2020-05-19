@@ -255,6 +255,23 @@
 (defmacro call (obj function &rest args)
     `(call-method ,obj (to-lower-camel (symbol-name ',function)) (for arg ',args (eval arg))))
 
+(register-function Type enumConstructor enum-constructor t)
+(register-function Type enumParameters enum-parameters t)
+// WIP: Maybe someday this macro will be capable of everything Haxe switch is.
+// For now it just compares enum constructor names and captures variables.
+(defmacro switch (arg &rest cases)
+    (case (length cases)
+        (1 (if (and (list? (first cases)) (eq 'default (first (first cases)))) ; Default case
+                    `(progn ,@(rest (first cases)))
+                (error "switch fell through without a default case")))
+        (t (let (c (first cases)
+                    constructor (first c)
+                    params (nth c 1)
+                    case-body (slice c 2))
+            `(if (= (enum-constructor ,arg) (symbol-name ',constructor))
+                    (funcall (lambda ,params ,@case-body) (enum-parameters ,arg))
+                (switch ,arg ,@(rest cases)))))))
+
 (import "haxe.Resource")
 (import "sys.io.File")
 (import "hiss.StaticFiles")

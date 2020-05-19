@@ -208,7 +208,7 @@ class HissInterp {
         }
     }
 
-    // *
+    // Keep
     function bound(value: HValue) {
         return if (resolve(symbolName(value).toString()).value != null) T else Nil;
     }
@@ -719,13 +719,19 @@ class HissInterp {
                 // If any of exps is an UnquoteList, expand it and insert the values at that index
                 var idx = 0;
                 while (idx < copy.length) {
-                    switch (copy[idx]) {   
+                    switch (copy[idx]) {
                         case UnquoteList(exp):
                             copy.splice(idx, 1);
                             var innerList = eval(exp);
-                            for (exp in innerList.toList()) {
-                                
+                            for (exp in innerList.toList()) { 
                                 copy.insert(idx++, exp);
+                            }
+                        // If an UnquoteList is quoted, apply the quote to each expression in the list
+                        case Quote(UnquoteList(exp)):
+                            copy.splice(idx, 1);
+                            var innerList = eval(exp);
+                            for (exp in innerList.toList()) { 
+                                copy.insert(idx++, Quote(exp));
                             }
                         default:
                             var exp = copy[idx];
@@ -773,18 +779,11 @@ class HissInterp {
             case List([]):
                 Nil;
             case List(exps):
-                var funcInfo = eval(HissTools.first(expr), T);
-                var value = switch (funcInfo) {
-                    case VarInfo(v):
-                        v.value;
-                    default: 
-                        return Signal(Error('${expr.toPrint()}: ${funcInfo.toPrint()} is not a function pointer'));
-                }
-                if (funcInfo == null || value == null) { trace(funcInfo); } // TODO is this line an important error check? If so, it should throw? and if not, get rid of it, right?
+                var func = eval(HissTools.first(expr), T);
                 var args = HissTools.rest(expr);
 
                 // trace('calling funcall $funcInfo with args (before evaluation): $args');
-                funcall(T, funcInfo, List(args.toList().copy()));
+                return funcall(T, func, List(args.toList().copy()));
             case Quote(exp):
                 exp;
             case Quasiquote(exp):

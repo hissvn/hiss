@@ -50,7 +50,7 @@ class HissTools {
         return list.toList()[idx.toInt()];
     }
 
-    static var recursivePrintDepth = 3;
+    static var recursivePrintDepth = 5;
     public static function toPrint(v: HValue, recursiveCall: Int = 0): String {
         return switch (v) {
             case Atom(Int(i)):

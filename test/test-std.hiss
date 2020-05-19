@@ -201,6 +201,26 @@ true
 
 (eq '("hey" 5 sym) (create-enum H-Value "List" (list (list "hey" 5 'sym))))
 
+// Test the switch macro
+(eq 3 (switch 'Fork 
+    (List (l) 1)
+    (Signal (s) 2)
+    (Atom (a) 3)
+    (default 'default)))
+
+(eq 'default (switch 'Fork
+    (List (l) l)
+    (default 'default)))
+
+(eq 4 (switch '(4 5 6)
+    (Atom (a) a)
+    (List (l) (first l))
+    (Signal (s) s)
+    (default 'default)))
+
+(print "You should see this helpful message when switch is used without a default:")
+(error? (switch 'fork (Atom (a) a)))
+
 ; Test custom reader macros
 (set-macro-string "#" (lambda (a b c) (list 'sharp (read-string a b))))
 (eq '(sharp "fork") (read "#fork\""))
