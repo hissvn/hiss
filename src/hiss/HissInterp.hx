@@ -367,9 +367,6 @@ class HissInterp {
             vars['error?'] = Function(Haxe(Fixed, isError, "error?"));
 
             // Wait a minute... these will still require re-working in continuation style
-            importFunction(HissTools.first, Fixed, "");
-            importFunction(HissTools.rest, Fixed, "");
-
             importFunction(symbolName, Fixed, "");
             importFunction(cons, Fixed, "");
 

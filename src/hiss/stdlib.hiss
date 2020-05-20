@@ -1,3 +1,8 @@
+(defun first (l)
+    (nth l 0))
+(defun rest (l)
+    (call-method l "slice" '(1)))
+
 (defun load (file)
     (eval `(progn ,@(read-all (get-content file)))))
 
