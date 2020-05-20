@@ -185,16 +185,6 @@ class HissInterp {
     }
 
     // *
-    function makeList(exps: HValue) {
-        return exps;
-    }
-
-    // *
-    function quote(exp: HValue) {
-        return exp;
-    }
-
-    // *
     function isError(exp: HValue) {
         return switch (exp) {
             case Signal(Error(_)):
@@ -238,16 +228,6 @@ class HissInterp {
     function symbol(value: HValue) {
         try {
             symbolName(value);
-            return T;
-        } catch (s: Dynamic) {
-            return Nil;
-        }
-    }
-
-    // *
-    function isString(value: HValue) {
-        try {
-            value.toString();
             return T;
         } catch (s: Dynamic) {
             return Nil;
@@ -326,6 +306,10 @@ class HissInterp {
         variables.toDict()[varName] = HissTools.toHValue(value);
     }
 
+    static function emptyDict() {
+        return Dict([]);
+    }
+
     public function new() {
         // Load the standard library and test files:
         StaticFiles.compileWith("stdlib.hiss");
@@ -359,11 +343,9 @@ class HissInterp {
             vars['break'] = Function(Haxe(Fixed, hissBreak, "break"));
             vars['continue'] = Function(Haxe(Fixed, hissContinue, "continue"));        
             vars['sort'] = Function(Haxe(Var, sort, "sort"));
-            vars['list'] = Function(Haxe(Var, makeList, "list"));
             
             importFunction(int, Fixed, "?");
             importFunction(symbol, Fixed, "?");
-            vars['string?'] = Function(Haxe(Fixed, isString, "string?"));
             vars['error?'] = Function(Haxe(Fixed, isError, "error?"));
 
             // Wait a minute... these will still require re-working in continuation style
@@ -385,10 +367,11 @@ class HissInterp {
             Primitives -- Functions implemented in Haxe that might be impossible to port to Hiss/worth keeping around
         **/
         {
-             // This one might be unportable because we can't instantiate a Map with a type parameter using reflection:
-             vars['empty-dict'] = Function(Haxe(Fixed, function() { return Dict([]); }, "empty-dict"));
-            
-            importFunction(bound, Fixed, "?"); // not portable because it checks for Haxe null
+            // This one might be unportable because we can't instantiate a Map with a type parameter using reflection:
+            importFunction(emptyDict, Fixed, "");
+
+            // not portable because it checks for Haxe null
+            importFunction(bound, Fixed, "?");
             
             // These are the reflective functions that make so many cool things possible:
             importFunction(getProperty, Fixed, "");
@@ -418,8 +401,6 @@ class HissInterp {
             importFunction(HissReader.setMacroString, Fixed, "");
             importFunction(HissReader.setDefaultReadFunction, Fixed, "");
 
-            // Iffy -- maybe these can be ported
-            importMacro(quote, Fixed, "quote");
             // Haxe std io
             importFunction(print, Fixed, "");
             importFunction(uglyPrint, Fixed, "");
