@@ -1,5 +1,7 @@
 package test;
 
+import haxe.Timer;
+
 using hx.strings.Strings;
 import utest.Assert;
 
@@ -21,13 +23,20 @@ class HissTestCase extends utest.Test {
     }
 
     function testFile() {
-        repl = new HissRepl();
+        trace("Measuring time to construct the Hiss environment:");
+        repl = Timer.measure(function () { return new HissRepl(); });
         
-        var expressions = HissReader.readAll(String(StaticFiles.getContent(file)));
-        for (e in expressions.toList()) {
-            var v = repl.interp.eval(e);
-            Assert.isTrue(HissTools.truthy(v), 'Failure: ${HissTools.toPrint(e)} evaluated to ${HissTools.toPrint(v)}');
-        }
+        trace("Measuring time taken to read the unit tests:");
+        var expressions = Timer.measure(function() { return HissReader.readAll(String(StaticFiles.getContent(file))); });
+
+        trace("Measuring time taken to run the unit tests:");
+
+        Timer.measure(function() {
+            for (e in expressions.toList()) {
+                var v = repl.interp.eval(e);
+                Assert.isTrue(HissTools.truthy(v), 'Failure: ${HissTools.toPrint(e)} evaluated to ${HissTools.toPrint(v)}');
+            }
+        });
 
         for (fun => callCount in repl.interp.functionStats) {
             if (fun != "read-line" && fun != "test-std" && fun != "lp" && fun != "lstd" && fun != "compare-by-even-odd" && fun != "what")

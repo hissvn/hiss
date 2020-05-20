@@ -8,8 +8,11 @@ class TestAll {
     StaticFiles.compileWith("module.hiss");
     utest.UTest.run([
       new test.HissTestCase("test-std.hiss"),
-      new test.HStreamTestCase(),
-      new test.HissReaderTestCase(),
+      
+      // Internal Tests. These were helpful while implementing and re-implementing core components,
+      // but they're slow and not really worth it now.
+      //new test.HStreamTestCase(),
+      //new test.HissReaderTestCase(),
       //new test.NativeObjectTestCase(),
     ]);
     

@@ -628,24 +628,13 @@ class HissInterp {
                         stackFrames.toList().push(Dict(argStackFrame));
                     }
                     
-                    var lastResult = null;
-                    for (expression in funDef.body) {
-                        try {
-                            lastResult = eval(expression);
-                        } 
-                        #if !throwErrors
-                        catch (e: Dynamic) {
-                            stackFrames = oldStackFrames;
-                            throw e;
-                        }
-                        #end
-                    }
-
-                    while (!stackFrames.toList().empty()) stackFrames.toList().pop();
-                    while (!oldStackFrames.toList().empty()) stackFrames.toList().push(oldStackFrames.toList().pop());
-                    stackFrames.toList().reverse();
+                    var result = eval(cons(Symbol('progn'), List(funDef.body)));
                     
-                    return lastResult;
+                    stackFrames = oldStackFrames;
+                    // This extra step is required so Hiss code still has a valid reference to stackFrames:
+                    variables.toDict()["*stack-frames*"] = stackFrames;
+                    
+                    return result;
                 default: throw 'cannot call $funcOrPointer as a function';
             }
         } 

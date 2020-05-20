@@ -29,6 +29,13 @@ true
 
 (error? (/))
 
+// Functions should honor return statements
+(defun fork (knife-of-choice) 
+    (return "fork")
+    knife-of-choice)
+
+(eq "fork" (fork "butIWantMyReallyShinyKnife"))
+
 (setq unsorted-int-list '(1 7 4 3 6 2 5))
 (setq unsorted-string-list '("baby" "Dont" "hurt" "me"))
 
