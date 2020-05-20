@@ -46,10 +46,7 @@ class HissInterp {
 
     public var functionStats: Map<String, Int> = new Map<String, Int>();
 
-    // *
-    static function symbolName(v: HValue): HValue {
-        return String(HaxeTools.extract(v, Symbol(name) => name, "symbol name"));
-    }
+    
 
     /**
      * Implementation of the `if` macro. Returns value of `thenExp` if condition is truthy, else * evaluates `elseExp`
@@ -327,7 +324,6 @@ class HissInterp {
             vars['error?'] = Function(Haxe(Fixed, isError, "error?"));
 
             // Wait a minute... these will still require re-working in continuation style
-            importFunction(symbolName, Fixed, "");
             importFunction(cons, Fixed, "");
 
             // In the new continuation-based regime, managing scope might this way might not even make sense:

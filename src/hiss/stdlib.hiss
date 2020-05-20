@@ -23,6 +23,11 @@
 
 (defun nil? (v) (eq nil v))
 
+(defun symbol-name (sym)
+    (if (= "Symbol" (call-method Type "enumConstructor" (list sym)))
+            (first (call-method Type "enumParameters" (list sym)))
+        (error "Tried to get symbol-name of non-symbol")))
+
 (defmacro or (&rest args)
     `(if (haxe== ,(length args) 0)
         nil
@@ -113,23 +118,23 @@
 ; Haxe interop
 (defmacro register-method (method &optional name call-on-reference keep-args-wrapped return-instance)
     (default name
-        (intern (call-method Strings "toLowerHyphen" (list (symbol-name method)))))
+        (intern (call-method Strings "toLowerHyphen" (list method))))
     `(defun ,name (instance &rest args)
-        (let (result (call-method instance (symbol-name ',method) args ,call-on-reference ,keep-args-wrapped))
+        (let (result (call-method instance ,method args ,call-on-reference ,keep-args-wrapped))
             (if ,return-instance instance result))))
 
 
-(register-method substr)
-(register-method join)
-(register-method split)
-(register-method toUpperCase)
-(register-method toLowerCase)
-(register-method indexOf)
-(register-method lastIndexOf)
-(register-method charAt)
+(register-method "substr")
+(register-method "join")
+(register-method "split")
+(register-method "toUpperCase")
+(register-method "toLowerCase")
+(register-method "indexOf")
+(register-method "lastIndexOf")
+(register-method "charAt")
 
-(register-method copy)
-(register-method slice)
+(register-method "copy")
+(register-method "slice")
 (defun take (l num)
     (slice l 0 num))
 (defun reverse (l)
@@ -161,9 +166,9 @@
     (let (new-dict (empty-dict))
         (do-for pair (groups pairs 2) (dict-set new-dict (first pair) (nth pair 1)))
         new-dict))
-(register-method get dict-get)
-(register-method set dict-set t '(1) t)
-(register-method remove dict-erase t '(1) t)
+(register-method "get" dict-get)
+(register-method "set" dict-set t '(1) t)
+(register-method "remove" dict-erase t '(1) t)
 
 (defmacro setq (&rest args)
     (let (s (first args)
@@ -184,18 +189,22 @@
                 ,catch-expression
             val)))
 
+// TODO registering functions in this way may introduce unnecessary slowdown.
+// Instead, we could just set the name to (get-property [the function]) and
+// it would be just as fast as functions installed with importFunction().
+// Right? idk
 (defmacro register-function (class function &optional name keep-args-wrapped)
     (default name 
-        (intern (call-method Strings "toLowerHyphen" (list (symbol-name function)))))
+        (intern (call-method Strings "toLowerHyphen" (list function))))
     `(defun ,name (&rest args)
-        (call-method ,class (symbol-name ',function) args nil ,keep-args-wrapped)))
+        (call-method ,class ,function args nil ,keep-args-wrapped)))
 
-(register-function Type createInstance)
-(register-function Type createEnum)
+(register-function Type "createInstance")
+(register-function Type "createEnum")
 
-(register-function Strings toLowerHyphen)
-(register-function Strings toUpperCamel)
-(register-function Strings toLowerCamel)
+(register-function Strings "toLowerHyphen")
+(register-function Strings "toUpperCamel")
+(register-function Strings "toLowerCamel")
 
 (defun replace-at (str index new-value)
     (if (>= (length (substr str index)) (length new-value))
@@ -216,27 +225,27 @@
         `(setq ,(intern type-name) ,type)))
 
 (import "Reflect")
-(register-function Reflect compare)
+(register-function Reflect "compare")
 
 (import "Std")
-(register-function Std string)
-(register-function Std parseInt)
-(register-function Std parseFloat)
+(register-function Std "string")
+(register-function Std "parseInt")
+(register-function Std "parseFloat")
 
 (import "Math")
-(register-function Math round)
-(register-function Math floor)
-(register-function Math ceil)
-(register-function Math abs)
+(register-function Math "round")
+(register-function Math "floor")
+(register-function Math "ceil")
+(register-function Math "abs")
 
 (import "StringTools")
-(register-function String-Tools replace)
-(register-function String-Tools ltrim)
-(register-function String-Tools rtrim)
-(register-function String-Tools trim)
+(register-function String-Tools "replace")
+(register-function String-Tools "ltrim")
+(register-function String-Tools "rtrim")
+(register-function String-Tools "trim")
 ; For some reason these don't work with reflection:
-;(register-function String-Tools lpad)
-;(register-function String-Tools rpad)
+;(register-function String-Tools "lpad")
+;(register-function String-Tools "rpad")
 (defun lpad (s c l)
     (while (< (length s) l)
         (setlocal s (+ c s)))
@@ -248,7 +257,7 @@
 
 
 (import "uuid.Uuid")
-(register-function Uuid v4 uuid)
+(register-function Uuid "v4" uuid)
 (defun gensym ()
     (intern (+ "_g_" (uuid))))
 
@@ -260,18 +269,9 @@
         (t
             (if (eq tree old) new tree))))
 
-;; Sleek interfaces to work with Haxe objects with lisp format:
-(defmacro new (class &rest args)
-    `(create-instance ,class (for arg ',args (eval arg))))
+(register-function Type "enumConstructor" enum-constructor t)
+(register-function Type "enumParameters" enum-parameters t)
 
-(defmacro get (obj field)
-    `(get-property ,obj (to-lower-camel (symbol-name ',field))))
-
-(defmacro call (obj function &rest args)
-    `(call-method ,obj (to-lower-camel (symbol-name ',function)) (for arg ',args (eval arg))))
-
-(register-function Type enumConstructor enum-constructor t)
-(register-function Type enumParameters enum-parameters t)
 // WIP: Maybe someday this macro will be capable of everything Haxe switch is.
 // For now it just compares enum constructor names and captures variables.
 (defmacro switch (arg &rest cases)
@@ -286,6 +286,16 @@
             `(if (= (enum-constructor ,arg) (symbol-name ',constructor))
                     (funcall (lambda ,params ,@case-body) (enum-parameters ,arg))
                 (switch ,arg ,@(rest cases)))))))
+
+;; Sleek interfaces to work with Haxe objects with lisp format:
+(defmacro new (class &rest args)
+    `(create-instance ,class (for arg ',args (eval arg))))
+
+(defmacro get (obj field)
+    `(get-property ,obj (to-lower-camel (symbol-name ',field))))
+
+(defmacro call (obj function &rest args)
+    `(call-method ,obj (to-lower-camel (symbol-name ',function)) (for arg ',args (eval arg))))
 
 (import "haxe.Resource")
 (import "sys.io.File")
@@ -316,7 +326,7 @@
         (haxe... arg1 arg2)
         (haxe... 0 arg1)))
 
-(register-method push push t t t)
+(register-method "push" push t t t)
 
 (defun filter (l &optional criterion)
     (default criterion (lambda (val) val))

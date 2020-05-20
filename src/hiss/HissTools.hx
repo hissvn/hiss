@@ -50,6 +50,10 @@ class HissTools {
         return list.toList()[idx.toInt()];
     }
 
+    static function symbolName(v: HValue): HValue {
+        return String(HaxeTools.extract(v, Symbol(name) => name, "symbol name"));
+    }
+
     static var recursivePrintDepth = 5;
     public static function toPrint(v: HValue, recursiveCall: Int = 0): String {
         return switch (v) {
