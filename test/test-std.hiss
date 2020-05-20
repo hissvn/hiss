@@ -33,8 +33,11 @@ true
 (defun fork (knife-of-choice) 
     (return "fork")
     knife-of-choice)
-
 (eq "fork" (fork "butIWantMyReallyShinyKnife"))
+
+// And throw errors
+(defun fork (me) (error "fork you") 5)
+(error? (fork 'you))
 
 // Loops should honor break and continue statements
 (eq '(2 4 6) 

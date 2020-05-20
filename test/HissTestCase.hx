@@ -33,8 +33,12 @@ class HissTestCase extends utest.Test {
 
         Timer.measure(function() {
             for (e in expressions.toList()) {
-                var v = repl.interp.eval(e);
-                Assert.isTrue(HissTools.truthy(v), 'Failure: ${HissTools.toPrint(e)} evaluated to ${HissTools.toPrint(v)}');
+                try {
+                    var v = repl.interp.eval(e);
+                    Assert.isTrue(HissTools.truthy(v), 'Failure: ${HissTools.toPrint(e)} evaluated to ${HissTools.toPrint(v)}');
+                } catch (s: Dynamic) {
+                    trace('uncaught error $s from test expression ${HissTools.toPrint(e)}');
+                }
             }
         });
 

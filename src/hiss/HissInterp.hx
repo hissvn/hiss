@@ -168,30 +168,12 @@ class HissInterp {
             switch (value) {
                 case Return(v):
                     return v;
+                case Error(m):
+                    return value;
                 default:
             }
         }
         return value;
-    }
-
-    // *
-    function isError(exp: HValue) {
-        return switch (exp) {
-            case Error(_):
-                T;
-            default:
-                Nil;
-        };
-    }
-
-    // *
-    function int(value: HValue) {
-        try {
-            value.toInt();
-            return T;
-        } catch (s: Dynamic) {
-            return Nil;
-        }
     }
 
     // Keep
@@ -202,16 +184,6 @@ class HissInterp {
     // Keep
     function _return(value: HValue): HValue {
         return Return(value);
-    }
-
-    // *
-    function symbol(value: HValue) {
-        try {
-            HissTools.symbolName(value);
-            return T;
-        } catch (s: Dynamic) {
-            return Nil;
-        }
     }
 
     // *
@@ -273,9 +245,15 @@ class HissInterp {
         return v;
     }
 
-    // *
-    function error(message: HValue) {
-        return Error(message.toString());
+    // Keep
+    // This predicate has to be a Haxe function because a progn will always return the error without catching it
+    function error(exp: HValue) {
+        return switch (exp) {
+            case Error(_):
+                T;
+            default:
+                Nil;
+         };
     }
 
     public function importObject(name: String, obj: Dynamic) {
@@ -317,13 +295,10 @@ class HissInterp {
 
         /**
             Functions implemented in Haxe with unnecessary maintainence overload
+            Some of these may not be portable to pure Hiss, but they can still be moved out of HissInterp
+            and brought into the Hiss environment with (register-function) instead of import macros.
         **/
         {
-            importFunction(int, Fixed, "?");
-            importFunction(symbol, Fixed, "?");
-            vars['error?'] = Function(Haxe(Fixed, isError, "error?"));
-
-            // Wait a minute... these will still require re-working in continuation style
             importFunction(cons, Fixed, "");
 
             // In the new continuation-based regime, managing scope might this way might not even make sense:
@@ -332,15 +307,8 @@ class HissInterp {
             importFunction(scopeOut, Fixed, "");
             importFunction(scopeReturn, Fixed, "");
             
-            importFunction(error, Fixed, "");
-
             importMacro(setlocal, Var, "setlocal");
-        }
 
-        /**
-            Primitives -- Functions implemented in Haxe that might be impossible to port to Hiss/worth keeping around
-        **/
-        {
             // This one might be unportable because we can't instantiate a Map with a type parameter using reflection:
             importFunction(emptyDict, Fixed, "");
 
@@ -353,24 +321,10 @@ class HissInterp {
 
             // not portable because it checks for Haxe null
             importFunction(bound, Fixed, "?");
-            
-            // These are the reflective functions that make so many cool things possible:
-            importFunction(getProperty, Fixed, "");
-            importFunction(callMethod, Fixed, "");
-
-            importFunction(eval, Fixed, "");
-            vars['funcall'] = Function(Haxe(Fixed, funcall.bind(Nil), "funcall"));
 
             // This one is probably necessary:
             importFunction(HissTools.nth, Fixed, ""); // Because I don't think the Haxe reflection API allows array indexing
             importFunction(setNth, Fixed, "");
-
-            // Control flow 
-            importMacro(hissIf, Fixed, "if");
-            importMacro(progn, Var, "progn");
-            importMacro(hissDoFor.bind(T), Var, "for");
-            importMacro(hissDoFor.bind(Nil), Var, "do-for");
-            importMacro(hissWhile, Var, "while");
 
             // Reader functions
             importFunction(HissReader.read, Fixed, "");
@@ -386,6 +340,17 @@ class HissInterp {
             importFunction(print, Fixed, "");
             importFunction(uglyPrint, Fixed, "");
 
+            importFunction(eq, Fixed, ""); // Seems like a headache to implement in Hiss
+
+            // Control flow
+            importMacro(hissIf, Fixed, "if");
+            importMacro(progn, Var, "progn");
+            importMacro(hissDoFor.bind(T), Var, "for");
+            importMacro(hissDoFor.bind(Nil), Var, "do-for");
+            importMacro(hissWhile, Var, "while");
+
+            vars['funcall'] = Function(Haxe(Fixed, funcall.bind(Nil), "funcall")); // Can this be imported and apply-partiallied?
+
             // most haxe binary operators are non-binary (like me!) in most Lisps.
             // They can take any number of arguments.
             // Since we still need haxe to run the computations, Hiss imports those binary
@@ -399,8 +364,19 @@ class HissInterp {
             // We don't need && or || because they only operate on booleans (which Hiss doesn't have).
             // But we do import the ... range operator because ranges are nice so why not
             importBinops(true, "...");
+        }
 
-            importFunction(eq, Fixed, ""); // Seems like a headache to implement in Hiss
+        /**
+            Primitives -- Functions implemented in Haxe that might be impossible to port to Hiss/worth keeping around
+        **/
+        {
+            // These are the reflective functions that make so many cool things possible:
+            importFunction(getProperty, Fixed, "");
+            importFunction(callMethod, Fixed, "");
+
+            importFunction(eval, Fixed, "");
+
+            importFunction(error, Fixed, "?");
 
             // I can't believe I tried to port lambda....
             importMacro(lambda, Var, "lambda");

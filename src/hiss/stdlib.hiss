@@ -1,3 +1,4 @@
+(defun error (m) (create-enum H-Value "Error" (list m)))
 (defun continue () (create-enum H-Value "Continue" (list)))
 (defun break () (create-enum H-Value "Break" (list)))
 
@@ -286,6 +287,16 @@
             `(if (= (enum-constructor ,arg) (symbol-name ',constructor))
                     (funcall (lambda ,params ,@case-body) (enum-parameters ,arg))
                 (switch ,arg ,@(rest cases)))))))
+
+(defun int? (v)
+    (switch v
+        (Int (i) t)
+        (default nil)))
+
+(defun symbol? (v)
+    (switch v
+        (Symbol (s) t)
+        (default nil)))
 
 ;; Sleek interfaces to work with Haxe objects with lisp format:
 (defmacro new (class &rest args)
