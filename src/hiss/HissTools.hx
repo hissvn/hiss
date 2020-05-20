@@ -103,7 +103,6 @@ class HissTools {
                 return ',${e.toPrint()}';
             case UnquoteList(e):
                 return ',@${e.toPrint()}';
-
             default: 
                 throw 'Not clear why $v is being converted to string';
         }

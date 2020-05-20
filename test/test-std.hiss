@@ -36,6 +36,19 @@ true
 
 (eq "fork" (fork "butIWantMyReallyShinyKnife"))
 
+// Loops should honor break and continue statements
+(eq '(2 4 6) 
+    (for i (range 1 100)
+        (cond
+            ((> i 6)
+                (break))
+            ((= 1 (% i 2))
+                (continue))
+            (t
+                i))))
+
+// TODO test while loops, do-fors, etcs
+
 (setq unsorted-int-list '(1 7 4 3 6 2 5))
 (setq unsorted-string-list '("baby" "Dont" "hurt" "me"))
 

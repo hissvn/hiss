@@ -202,19 +202,9 @@ class HissInterp {
         return if (resolve(symbolName(value).toString()).value != null) T else Nil;
     }
 
-    // *
-    function hissReturn(value: HValue): HValue {
+    // Keep
+    function _return(value: HValue): HValue {
         return Return(value);
-    }
-
-    // *
-    function hissContinue(): HValue {
-        return Continue;
-    }
-
-    // *
-    function hissBreak(): HValue {
-        return Break;
     }
 
     // *
@@ -332,10 +322,6 @@ class HissInterp {
             Functions implemented in Haxe with unnecessary maintainence overload
         **/
         {
-            vars['return'] = Function(Haxe(Fixed, hissReturn, "return"));
-            vars['break'] = Function(Haxe(Fixed, hissBreak, "break"));
-            vars['continue'] = Function(Haxe(Fixed, hissContinue, "continue"));        
-            
             importFunction(int, Fixed, "?");
             importFunction(symbol, Fixed, "?");
             vars['error?'] = Function(Haxe(Fixed, isError, "error?"));
@@ -361,6 +347,9 @@ class HissInterp {
         {
             // This one might be unportable because we can't instantiate a Map with a type parameter using reflection:
             importFunction(emptyDict, Fixed, "");
+
+            // This has to be in Haxe because of the implicit progn in funcall.
+            importFunction(_return, Fixed, "");
 
             // Sort can't be ported because it has to convert hiss function definitions into Haxe function types.
             // This is almost possible through witchcraft, but in the end it isn't because Haxe doesn't support varargs.
@@ -495,7 +484,7 @@ class HissInterp {
                 case Continue:
                     continue;
                 case Break:
-                    return Nil;
+                    return if (HissTools.truthy(collect)) List(results) else Nil;
                 default:
                     if (HissTools.truthy(collect)) {
                         results.push(value);

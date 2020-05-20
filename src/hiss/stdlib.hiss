@@ -1,3 +1,6 @@
+(defun continue () (create-enum H-Value "Continue" (list)))
+(defun break () (create-enum H-Value "Break" (list)))
+
 (defun first (l)
     (nth l 0))
 (defun rest (l)
