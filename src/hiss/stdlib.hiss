@@ -238,7 +238,8 @@
             type
                 (try (call-method Type "resolveClass" (list class-or-enum-path))
                     (call-method Type "resolveEnum" (list class-or-enum-path))))
-        `(setq ,(intern type-name) ,type)))
+        `(when (nil? (setq ,(intern type-name) ,type))
+            (error (+ "Import failed for " ,class-or-enum-path)))))
 
 (import "hiss.HissReader")
 (register-function Hiss-Reader "read" read t)
