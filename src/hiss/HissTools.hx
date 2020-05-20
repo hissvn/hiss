@@ -82,7 +82,7 @@ class HissTools {
                 '[hissfunction ${f.argNames}]';
             case Function(Macro(e,f)):
                 '[${if (!e) "special " else ""}macro ${Function(f).toPrint()}]';
-            case Signal(Error(m)):
+            case Error(m):
                 '!$m!';
             case Nil:
                 'nil';
@@ -185,7 +185,7 @@ class HissTools {
             case Nil: false;
             //case Int(i) if (i == 0): false; /* 0 being falsy will be useful for Hank read-counts */
             case List(l) if (l.length == 0): false;
-            case Signal(Error(m)): false;
+            case Error(m): false;
             default: true;
         }
     }

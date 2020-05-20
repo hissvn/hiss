@@ -149,7 +149,7 @@ class HissInterp {
         return List(l);
     }
 
-    // *
+    // Keep
     function sort(args: HValue) {
         var argList = args.toList();
         var listToSort = argList[0].toList();
@@ -164,20 +164,13 @@ class HissInterp {
     }
 
     // *
-    // TODO maybe this doesn't need to be a getter?
-    function getVariables() { return variables; }
-
-    // *
     function progn(exps: HValue) {
         var value = null;
         for (exp in exps.toList()) {
             value = eval(exp);
             switch (value) {
-                case Signal(Return(v)):
+                case Return(v):
                     return v;
-                // This block breaks `let` expressions where the expression is an error:
-                /*case Signal(_):
-                    return value;*/
                 default:
             }
         }
@@ -187,7 +180,7 @@ class HissInterp {
     // *
     function isError(exp: HValue) {
         return switch (exp) {
-            case Signal(Error(_)):
+            case Error(_):
                 T;
             default:
                 Nil;
@@ -211,17 +204,17 @@ class HissInterp {
 
     // *
     function hissReturn(value: HValue): HValue {
-        return Signal(Return(value));
+        return Return(value);
     }
 
     // *
     function hissContinue(): HValue {
-        return Signal(Continue);
+        return Continue;
     }
 
     // *
     function hissBreak(): HValue {
-        return Signal(Break);
+        return Break;
     }
 
     // *
@@ -295,7 +288,7 @@ class HissInterp {
 
     // *
     function error(message: HValue) {
-        return Signal(Error(message.toString()));
+        return Error(message.toString());
     }
 
     public function importObject(name: String, obj: Dynamic) {
@@ -446,7 +439,7 @@ class HissInterp {
         try {
             return HissTools.toHValue(Reflect.callMethod(HissTools.valueOf(container, HissTools.truthy(callOnReference)), HissTools.toFunction(getProperty(container, method, callOnReference)), callArgs));
         } catch (s: Dynamic) {
-            return Signal(Error('Cannot call method `${method.toString()}` from object $container because $s'));
+            return Error('Cannot call method `${method.toString()}` from object $container because $s');
         }
     }
 
@@ -499,9 +492,9 @@ class HissInterp {
 
             var value = eval(cons(Symbol("progn"), body));
             switch (value) {
-                case Signal(Continue):
+                case Continue:
                     continue;
-                case Signal(Break):
+                case Break:
                     return Nil;
                 default:
                     if (HissTools.truthy(collect)) {
@@ -525,9 +518,9 @@ class HissInterp {
         while (HissTools.truthy(eval(cond))) {
             var value = eval(cons(Symbol("progn"), body));
             switch (value) {
-                case Signal(Break):
+                case Break:
                     break;
-                case Signal(Continue):
+                case Continue:
                     continue;
                 default:
             }
@@ -660,7 +653,7 @@ class HissInterp {
         catch (s: Dynamic) {
             //trace('error $s while $message');
             stackFrames = oldStackFrames;
-            return Signal(Error(s));
+            return Error(s);
         }
         #end
     }
@@ -767,20 +760,22 @@ class HissInterp {
                 expr;
             case Nil | T:
                 expr;
-            case Signal(Error(m)):
+            case Error(m):
                 //print(expr);
                 // TODO make a modifiable variable for whether to throw errors or return them
                 expr;
                 //throw m;
-            case Signal(_):
+            /*case Break:
                 expr;
+            case Continue;
+                expr;*/
             case Object(_, _):
                 expr;
             default:
-                Signal(Error('Eval for type of expression ${expr} is not yet implemented'));
+                Error('Eval for type of expression ${expr} is not yet implemented');
         };
         if (value == null) {
-            return Signal(Error('Expression evaluated null: ${expr.toPrint()}'));
+            return Error('Expression evaluated null: ${expr.toPrint()}');
         }
         // trace('${expr.toPrint()} -> ${value.toPrint()}'); // Good for debugging crazy stuff
         return value;

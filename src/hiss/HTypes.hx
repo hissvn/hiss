@@ -7,28 +7,31 @@ enum HValue {
     Float(value: Float);
     Symbol(name: String);
     String(value: String);
-    // Non-atomic/backend-only types:
+
+    Nil;
+    T;
+
     List(l: HList);
+    Dict(n: HDict);
+    Function(f: HFunction);
+    // If you're going to store arbitrary objects in Hiss variables, do yourself a favor and give them a descriptive label because Haxe runtime type info can be squirrely on different platforms
+    Object(t: String, v: Dynamic);
+
     Quote(exp: HValue);
+
+    Error(m: String);
+
+    // Backend-only types. These are used internally but never returned by the interpreter
     Quasiquote(exp: HValue);
     Unquote(exp: HValue);
     UnquoteList(exp: HValue);
-    // If you're going to store arbitrary objects in Hiss variables, do yourself a favor and give them a descriptive label because Haxe runtime type info can be squirrely on different platforms
-    Object(t: String, v: Dynamic);
-    Function(f: HFunction);
-    Dict(n: HDict);
     VarInfo(i: HVarInfo);
-    Signal(s: HSignal);
-    Nil;
-    T;
-    Comment;
-}
-
-enum HSignal {
-    Error(m: String);
+    
     Return(v: HValue);
     Break;
     Continue;
+
+    Comment;
 }
 
 enum HArgType {
