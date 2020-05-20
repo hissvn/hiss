@@ -218,7 +218,6 @@ true
     (Signal (s) s)
     (default 'default)))
 
-(print "You should see this helpful message when switch is used without a default:")
 (error? (switch 'fork (Symbol (s) s)))
 
 ; Test custom reader macros

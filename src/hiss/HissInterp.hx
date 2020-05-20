@@ -586,8 +586,6 @@ class HissInterp {
             default:
         }
         
-
-        
         var argVals = args;
         if (HissTools.truthy(evalArgs)) {
             argVals = List([for (exp in argVals.toList()) eval(exp)]);
@@ -679,7 +677,7 @@ class HissInterp {
         } 
         #if !throwErrors
         catch (s: Dynamic) {
-            // trace('error $s while $message');
+            //trace('error $s while $message');
             stackFrames = oldStackFrames;
             return Signal(Error(s));
         }
@@ -777,7 +775,7 @@ class HissInterp {
                 var args = HissTools.rest(expr);
 
                 // trace('calling funcall $funcInfo with args (before evaluation): $args');
-                return funcall(T, func, List(args.toList().copy()));
+                funcall(T, func, List(args.toList().copy()));
             case Quote(exp):
                 exp;
             case Quasiquote(exp):
@@ -789,7 +787,7 @@ class HissInterp {
             case Nil | T:
                 expr;
             case Signal(Error(m)):
-                print(expr);
+                //print(expr);
                 // TODO make a modifiable variable for whether to throw errors or return them
                 expr;
                 //throw m;
@@ -798,10 +796,10 @@ class HissInterp {
             case Object(_, _):
                 expr;
             default:
-                throw 'Eval for type of expression ${expr} is not yet implemented';
+                Signal(Error('Eval for type of expression ${expr} is not yet implemented'));
         };
         if (value == null) {
-            throw('Expression evaluated null: ${expr.toPrint()}');
+            return Signal(Error('Expression evaluated null: ${expr.toPrint()}'));
         }
         // trace('${expr.toPrint()} -> ${value.toPrint()}'); // Good for debugging crazy stuff
         return value;

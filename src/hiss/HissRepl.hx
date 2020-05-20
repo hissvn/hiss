@@ -69,7 +69,6 @@ class HissRepl {
 				var parsed = HissReader.read(String(input+ "\n"));
 				//trace(parsed);
 				var hval = interp.eval(parsed);
-				
 				HaxeTools.println(hval.toPrint());
 			}
 			#if !throwErrors
