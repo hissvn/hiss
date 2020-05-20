@@ -342,7 +342,6 @@ class HissInterp {
             vars['return'] = Function(Haxe(Fixed, hissReturn, "return"));
             vars['break'] = Function(Haxe(Fixed, hissBreak, "break"));
             vars['continue'] = Function(Haxe(Fixed, hissContinue, "continue"));        
-            vars['sort'] = Function(Haxe(Var, sort, "sort"));
             
             importFunction(int, Fixed, "?");
             importFunction(symbol, Fixed, "?");
@@ -369,6 +368,10 @@ class HissInterp {
         {
             // This one might be unportable because we can't instantiate a Map with a type parameter using reflection:
             importFunction(emptyDict, Fixed, "");
+
+            // Sort can't be ported because it has to convert hiss function definitions into Haxe function types.
+            // This is almost possible through witchcraft, but in the end it isn't because Haxe doesn't support varargs.
+            importFunction(sort, Var, "");
 
             // not portable because it checks for Haxe null
             importFunction(bound, Fixed, "?");
