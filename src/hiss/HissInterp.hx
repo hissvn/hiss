@@ -139,13 +139,6 @@ class HissInterp {
         return expr;
     }
 
-    // *
-    static function cons(hv: HValue, hl: HValue): HValue {
-        var l = hl.toList().copy();
-        l.insert(0, hv);
-        return List(l);
-    }
-
     // Sort can't be ported because it has to convert hiss function definitions into Haxe function types.
     // This is almost possible through witchcraft, but in the end it isn't because Haxe doesn't support varargs.
     function sort(args: HValue) {
@@ -177,7 +170,7 @@ class HissInterp {
         return value;
     }
 
-    // Keep
+    // not portable to Hiss because it checks for Haxe null
     function bound(value: HValue) {
         return if (resolve(HissTools.symbolName(value).toHaxeString()).value != null) T else Nil;
     }
@@ -234,10 +227,6 @@ class HissInterp {
         variables.toDict()[varName] = HissTools.toHValue(value);
     }
 
-    static function emptyDict() {
-        return Dict([]);
-    }
-
     // This has to be in Haxe because of the implicit progn in funcall.
     function _return(value: HValue): HValue {
         return Return(value);
@@ -277,25 +266,7 @@ class HissInterp {
             and brought into the Hiss environment with (register-function) instead of import macros.
         **/
         {
-            importFunction(cons, Fixed, "");
-
-            // In the new continuation-based regime, managing scope might this way might not even make sense:
-            
-            importFunction(scopeIn, Fixed, "");
-            importFunction(scopeOut, Fixed, "");
-            importFunction(scopeReturn, Fixed, "");
-            
             importMacro(setlocal, Var, "setlocal");
-
-            // This one might be unportable because we can't instantiate a Map with a type parameter using reflection:
-            importFunction(emptyDict, Fixed, "");
-
-            // not portable because it checks for Haxe null
-            importFunction(bound, Fixed, "?");
-
-            // This one is probably necessary:
-            importFunction(HissTools.nth, Fixed, ""); // Because I don't think the Haxe reflection API allows array indexing
-            importFunction(setNth, Fixed, "");
 
             // Haxe std io
             importFunction(print, Fixed, "");
@@ -341,6 +312,7 @@ class HissInterp {
 
             // These are primitives for counter-intuitive, possibly
             // work-around-able reasons:
+            importFunction(bound, Fixed, "?");
             importFunction(error, Fixed, "?");
             importFunction(_return, Fixed, "");
             importFunction(sort, Var, "");
@@ -386,11 +358,6 @@ class HissInterp {
         }
     }
 
-    // *
-    function setNth(arr: HValue, idx: HValue, val: HValue) { 
-        arr.toList()[idx.toInt()] = val; return arr;
-    }
-
     // Keep
     function hissDoFor(collect: HValue, args: HValue): HValue {
         var argList = args.toList();
@@ -413,7 +380,7 @@ class HissInterp {
         for (v in iterator) {
             setlocal(List([name, Quote(HissTools.toHValue(v))]));
 
-            var value = eval(cons(Symbol("progn"), body));
+            var value = progn(body);
             switch (value) {
                 case Continue:
                     continue;
@@ -439,7 +406,7 @@ class HissInterp {
         var body: HValue = List(argList.slice(1));
         
         while (HissTools.truthy(eval(cond))) {
-            var value = eval(cons(Symbol("progn"), body));
+            var value = progn(body);
             switch (value) {
                 case Break:
                     break;
@@ -451,6 +418,7 @@ class HissInterp {
         return Nil;
     }
 
+    // Keep
     public function funcall(evalArgs: HValue, funcOrPointer: HValue, args: HValue): HValue {
         var container = null;
         var name = "anonymous";
@@ -551,7 +519,7 @@ class HissInterp {
                         stackFrames.toList().push(Dict(argStackFrame));
                     }
                     
-                    var result = eval(cons(Symbol('progn'), List(funDef.body)));
+                    var result = progn(List(funDef.body));
                     
                     stackFrames = oldStackFrames;
                     // This extra step is required so Hiss code still has a valid reference to stackFrames:

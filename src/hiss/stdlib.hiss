@@ -2,6 +2,9 @@
 (defun continue () (create-enum H-Value "Continue" (list)))
 (defun break () (create-enum H-Value "Break" (list)))
 
+(defun nth (l n) (call-method Hiss-Tools "nth" (list l n) nil t))
+(defun cons (elem l) (call-method Hiss-Tools "cons" (list elem l) nil t))
+
 (defun first (l)
     (nth l 0))
 (defun rest (l)
@@ -53,8 +56,8 @@
 (defmacro let (bindings &rest body)
     `(progn
         (scope-in)
-        ,(cons 'setlocal ,bindings)
-        (setlocal let-result ,(cons 'progn body))
+        (setlocal ,@bindings)
+        (setlocal let-result (progn ,@body))
         (scope-return let-result)))
 
 (defmacro case (form &rest case-list)
@@ -62,8 +65,8 @@
             case-rest (rest case-list))
         (if case-first                                      
             `(if (or (eq ,(first case-first) t) (eq ,(first case-first) ,form))
-                ,(cons 'progn (rest case-first))
-                ,(cons 'case (cons form case-rest)))
+                (progn ,@(rest case-first))
+                (case ,form ,@case-rest))
             nil)))
 
 (defmacro default (var value)
@@ -135,6 +138,8 @@
 (register-method "charAt")
 
 (register-method "copy")
+(register-method "insert" insert t '(1) t)
+
 (register-method "slice")
 (defun take (l num)
     (slice l 0 num))
@@ -201,6 +206,14 @@
         (call-method ,class ,function args nil ,keep-args-wrapped)))
 
 (register-function Hiss-Tools "eq" eq t)
+
+// In the new continuation-based regime, managing scope might this way might not even make sense: 
+(register-function *interp* "scopeIn")
+(register-function *interp* "scopeOut")
+(register-function *interp* "scopeReturn" scope-return t)
+
+(register-function Hiss-Tools "emptyDict")
+(register-function Hiss-Tools "setNth" set-nth t)
 
 (register-function Type "createInstance")
 (register-function Type "createEnum")

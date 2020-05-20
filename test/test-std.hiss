@@ -243,7 +243,7 @@ true
 
 (error? (switch 'fork (Symbol (s) s)))
 
-(error? (first '()))
+(nil? (first '()))
 
 ; Test custom reader macros
 (set-macro-string "#" (lambda (a b c) (list 'sharp (read-string a b))))

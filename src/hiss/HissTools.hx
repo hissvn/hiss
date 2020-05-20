@@ -47,12 +47,31 @@ class HissTools {
         return List(list.toList().slice(1));
     }
 
+    // Can't be ported because the Haxe reflection API allows array indexing
     public static function nth(list: HValue, idx: HValue):HValue {
         return list.toList()[idx.toInt()];
     }
+    
+    public static function setNth(arr: HValue, idx: HValue, val: HValue) { 
+        arr.toList()[idx.toInt()] = val; return arr;
+    }
+
 
     public static function symbolName(v: HValue): HValue {
         return String(HaxeTools.extract(v, Symbol(name) => name, "symbol name"));
+    }
+
+    // Since the variadic binop macro uses cons and it's one of the first
+    // things in the Hiss prelude, might as well let this one stand as a Haxe function.
+    public static function cons(hv: HValue, hl: HValue): HValue {
+        var l = hl.toList().copy();
+        l.insert(0, hv);
+        return List(l);
+    }
+
+    // This one can't be pure Hiss because we can't instantiate a Map with a type parameter using reflection:
+    static function emptyDict() {
+        return Dict([]);
     }
 
     // TODO It's possible eq could be re-implemented in Hiss now
