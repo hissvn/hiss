@@ -5,6 +5,8 @@
 (defun nth (l n) (call-method Hiss-Tools "nth" (list l n) nil t))
 (defun cons (elem l) (call-method Hiss-Tools "cons" (list elem l) nil t))
 
+(defun haxe== (a b) (call-method Haxe-Binops "equals" (list a b)))
+
 (defun first (l)
     (nth l 0))
 (defun rest (l)
@@ -205,6 +207,18 @@
     `(defun ,name (&rest args)
         (call-method ,class ,function args nil ,keep-args-wrapped)))
 
+; Register the Binops - haxe== is already registered
+(register-function Haxe-Binops "add" haxe+)
+(register-function Haxe-Binops "subtract" haxe-)
+(register-function Haxe-Binops "divide" haxe/)
+(register-function Haxe-Binops "multiply" haxe*)
+(register-function Haxe-Binops "greater" haxe>)
+(register-function Haxe-Binops "greaterEqual" haxe>=)
+(register-function Haxe-Binops "lesser" haxe<)
+(register-function Haxe-Binops "lesserEqual" haxe<=)
+(register-function Haxe-Binops "modulo" %)
+(register-function Haxe-Binops "range" haxe...)
+
 (register-function Hiss-Tools "eq" eq t)
 
 // In the new continuation-based regime, managing scope might this way might not even make sense: 
@@ -238,8 +252,9 @@
             type
                 (try (call-method Type "resolveClass" (list class-or-enum-path))
                     (call-method Type "resolveEnum" (list class-or-enum-path))))
-        `(when (nil? (setq ,(intern type-name) ,type))
-            (error (+ "Import failed for " ,class-or-enum-path)))))
+        `(if (nil? (setq ,(intern type-name) ,type))
+                (error (+ "Import failed for " ,class-or-enum-path))
+            ,type)))
 
 (import "hiss.HissReader")
 (register-function Hiss-Reader "read" read t)

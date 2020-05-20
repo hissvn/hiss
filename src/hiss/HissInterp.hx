@@ -41,13 +41,16 @@ import uuid.Uuid;
 import Sys;
 
 
+@:build(hiss.BinopsBuilder.build())
+class HaxeBinops {
+
+}
+
 class HissInterp {
     var stackFrames: HValue;
     public var variables: HValue;
 
     public var functionStats: Map<String, Int> = new Map<String, Int>();
-
-    
 
     /**
      * Implementation of the `if` macro. Returns value of `thenExp` if condition is truthy, else * evaluates `elseExp`
@@ -97,27 +100,17 @@ class HissInterp {
         return defun(args, T);
     }
 
-    public static macro function importFunction(f: Expr, argType: Expr, suffix: Expr) {
-        var name = switch(f.expr) {
-            case EConst(CIdent(s)) | EField(_, s):
-                s.toLowerHyphen();
-            default:
-                throw "Failed to get function name";
-        }
-        return macro {
-            var vname = $v{name} + $suffix;
-            functionStats[vname] = 0;
-            variables.toDict()[vname] = Function(Haxe($argType, $f, vname));            
-        };
+    public function importFunction(f: Dynamic, argType: HArgType, name: String) {
+        functionStats[name] = 0;
+        variables.toDict()[name] = Function(Haxe(argType, f, name));            
     }
 
-    static macro function importMacro(f: Expr, argType: Expr, name: Expr) {
-        return macro {
-            variables.toDict()[$name] = Function(Macro(false, Haxe($argType, $f, $name)));
-        }
+    public function importMacro(f: Dynamic, argType: HArgType, name: String) {
+        variables.toDict()[name] = Function(Macro(false, Haxe(argType, f, name)));
     }
 
 
+    /*
     public static macro function importBinops(prefix: Bool, rest: Array<ExprOf<String>>) {
         var block = [];
         for (e in rest) {
@@ -139,6 +132,7 @@ class HissInterp {
         var expr = Context.parse(code, Context.currentPos());
         return expr;
     }
+    */
 
     // Sort can't be ported because it has to convert hiss function definitions into Haxe function types.
     // This is almost possible through witchcraft, but in the end it isn't because Haxe doesn't support varargs.
@@ -172,7 +166,7 @@ class HissInterp {
     }
 
     // not portable to Hiss because it checks for Haxe null
-    function bound(value: HValue) {
+    function isBound(value: HValue) {
         return if (resolve(HissTools.symbolName(value).toHaxeString()).value != null) T else Nil;
     }
 
@@ -211,7 +205,7 @@ class HissInterp {
 
     // Keep
     // This predicate has to be a Haxe function because a hiss function's implicit progn will always return the error without catching it
-    function error(exp: HValue) {
+    function isError(exp: HValue) {
         return switch (exp) {
             case Error(_):
                 T;
@@ -255,6 +249,7 @@ class HissInterp {
         vars['Strings'] = Object("Class", Strings);
         vars['H-Value'] = Object("Enum", HValue);
         vars['Hiss-Tools'] = Object("Class", HissTools);
+        vars['Haxe-Binops'] = Object("Class", HaxeBinops);
         vars['nil'] = Nil;
         vars['null'] = Nil;
         vars['false'] = Nil;
@@ -270,8 +265,8 @@ class HissInterp {
             importMacro(setlocal, Var, "setlocal");
 
             // Haxe std io
-            importFunction(print, Fixed, "");
-            importFunction(uglyPrint, Fixed, "");
+            importFunction(print, Fixed, "print");
+            importFunction(uglyPrint, Fixed, "ugly-print");
             // Control flow
             importMacro(hissIf, Fixed, "if");
             importMacro(progn, Var, "progn");
@@ -280,20 +275,6 @@ class HissInterp {
             importMacro(hissWhile, Var, "while");
 
             vars['funcall'] = Function(Haxe(Fixed, funcall.bind(Nil), "funcall")); // Can this be imported and apply-partiallied?
-
-            // most haxe binary operators are non-binary (like me!) in most Lisps.
-            // They can take any number of arguments.
-            // Since we still need haxe to run the computations, Hiss imports those binary
-            // operators, but hides them with the prefix 'haxe' to it can provide its own
-            // lispy (variadic) operator functions.
-            importBinops(true, "+", "-", "/", "*", ">", ">=", "<", "<=", "==");
-
-            // Some binary operators are Lisp-compatible as-is
-            importBinops(false, "%"); 
-
-            // We don't need && or || because they only operate on booleans (which Hiss doesn't have).
-            // But we do import the ... range operator because ranges are nice so why not
-            importBinops(true, "...");
         }
 
         /**
@@ -301,10 +282,10 @@ class HissInterp {
         **/
         {
             // These are the reflective functions that make so many cool things possible:
-            importFunction(getProperty, Fixed, "");
-            importFunction(callMethod, Fixed, "");
+            importFunction(getProperty, Fixed, "get-property");
+            importFunction(callMethod, Fixed, "call-method");
 
-            importFunction(eval, Fixed, "");
+            importFunction(eval, Fixed, "eval");
 
             // I can't believe I tried to port lambda....
             importMacro(lambda, Var, "lambda");
@@ -313,10 +294,10 @@ class HissInterp {
 
             // These are primitives for counter-intuitive, possibly
             // work-around-able reasons:
-            importFunction(bound, Fixed, "?");
-            importFunction(error, Fixed, "?");
-            importFunction(_return, Fixed, "");
-            importFunction(sort, Var, "");
+            importFunction(isBound, Fixed, "bound?");
+            importFunction(isError, Fixed, "error?");
+            importFunction(_return, Fixed, "return");
+            importFunction(sort, Var, "sort");
         }
     }
 
