@@ -66,7 +66,7 @@ class HissInterp {
 
     // Keep
     function lambda(args: HValue): HValue {
-        var argNames = HissTools.first(args).toList().map(s -> HissTools.symbolName(s).toString());
+        var argNames = HissTools.first(args).toList().map(s -> HissTools.symbolName(s).toHaxeString());
         
         var body: HList = HissTools.rest(args).toList();
 
@@ -81,7 +81,7 @@ class HissInterp {
     // Keep
     // TODO optional docstrings lollll
     function defun(args: HValue, isMacro: HValue = Nil) {
-        var name = HissTools.symbolName(HissTools.first(args)).toString();
+        var name = HissTools.symbolName(HissTools.first(args)).toHaxeString();
         functionStats[name] = 0;
         var fun: HValue = lambda(HissTools.rest(args));
         if (HissTools.truthy(isMacro)) {
@@ -178,7 +178,7 @@ class HissInterp {
 
     // Keep
     function bound(value: HValue) {
-        return if (resolve(HissTools.symbolName(value).toString()).value != null) T else Nil;
+        return if (resolve(HissTools.symbolName(value).toHaxeString()).value != null) T else Nil;
     }
 
     // Keep
@@ -196,32 +196,6 @@ class HissInterp {
     public function uglyPrint(value: HValue) {
         HaxeTools.println(Std.string(value));
         return value;
-    }
-
-    // Keep
-    public static function eq(a: HValue, b: HValue): HValue {
-        if (Type.enumIndex(a) != Type.enumIndex(b)) {
-            return Nil;
-        }
-        switch (a) {
-            case Int(_) | String(_) | Symbol(_) | Float(_)  | T | Nil:
-                return if (Type.enumEq(a, b)) T else Nil;
-            case List(_):
-                var l1 = a.toList();
-                var l2 = b.toList();
-                if (l1.length != l2.length) return Nil;
-                var i = 0;
-                while (i < l1.length) {
-                    if (!HissTools.truthy(eq(l1[i], l2[i]))) return Nil;
-                    i++;
-                }
-                return T;
-            case Quote(aa) | Quasiquote(aa) | Unquote(aa) | UnquoteList(aa):
-                var bb = HaxeTools.extract(b, Quote(e) | Quasiquote(e) | Unquote(e) | UnquoteList(e) => e);
-                return eq(aa, bb);
-            default:
-                return Nil;
-        }
     }
 
     // *
@@ -246,7 +220,7 @@ class HissInterp {
     }
 
     // Keep
-    // This predicate has to be a Haxe function because a progn will always return the error without catching it
+    // This predicate has to be a Haxe function because a hiss function's implicit progn will always return the error without catching it
     function error(exp: HValue) {
         return switch (exp) {
             case Error(_):
@@ -287,6 +261,7 @@ class HissInterp {
         vars['Type'] = Object("Class", Type);
         vars['Strings'] = Object("Class", Strings);
         vars['H-Value'] = Object("Enum", HValue);
+        vars['Hiss-Tools'] = Object("Class", HissTools);
         vars['nil'] = Nil;
         vars['null'] = Nil;
         vars['false'] = Nil;
@@ -339,9 +314,6 @@ class HissInterp {
             // Haxe std io
             importFunction(print, Fixed, "");
             importFunction(uglyPrint, Fixed, "");
-
-            importFunction(eq, Fixed, ""); // Seems like a headache to implement in Hiss
-
             // Control flow
             importMacro(hissIf, Fixed, "if");
             importMacro(progn, Var, "progn");
@@ -388,9 +360,9 @@ class HissInterp {
     /** Get a field out of a container (object/class) **/
     function getProperty(container: HValue, field: HValue, byReference: HValue = Nil) {
         try {
-            return HissTools.toHValue(Reflect.getProperty(HissTools.valueOf(container, HissTools.truthy(byReference)), field.toString()));
+            return HissTools.toHValue(Reflect.getProperty(HissTools.valueOf(container, HissTools.truthy(byReference)), field.toHaxeString()));
         } catch (s: Dynamic) {
-            throw 'Cannot retrieve field `${field.toString()}` from object $container because $s';
+            throw 'Cannot retrieve field `${field.toHaxeString()}` from object $container because $s';
         }
     }
 
@@ -400,14 +372,14 @@ class HissInterp {
         try {
             return HissTools.toHValue(Reflect.callMethod(HissTools.valueOf(container, HissTools.truthy(callOnReference)), HissTools.toFunction(getProperty(container, method, callOnReference)), callArgs));
         } catch (s: Dynamic) {
-            return Error('Cannot call method `${method.toString()}` from object $container because $s');
+            return Error('Cannot call method `${method.toHaxeString()}` from object $container because $s');
         }
     }
 
     // *
     function setlocal (l: HValue) {
         var list = l.toList();
-        var name = HissTools.symbolName(list[0]).toString();
+        var name = HissTools.symbolName(list[0]).toHaxeString();
 
         var value = eval(list[1]);
         var stackFrame: HDict = variables.toDict();

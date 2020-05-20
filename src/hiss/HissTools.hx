@@ -2,6 +2,7 @@ package hiss;
 
 import haxe.macro.Expr;
 
+import hiss.HaxeTools;
 import hiss.HTypes;
 import Type;
 
@@ -22,7 +23,7 @@ class HissTools {
         return HaxeTools.extract(f, Function(Haxe(_, v, _)) => v, hint);
     }
 
-    public static function toString(hv: HValue): String {
+    public static function toHaxeString(hv: HValue): String {
         return HaxeTools.extract(hv, String(s) => s, "string");
     }
 
@@ -52,6 +53,33 @@ class HissTools {
 
     public static function symbolName(v: HValue): HValue {
         return String(HaxeTools.extract(v, Symbol(name) => name, "symbol name"));
+    }
+
+    // Keep
+    // TODO It's possible eq could be re-implemented in Hiss
+    public static function eq(a: HValue, b: HValue): HValue {
+        if (Type.enumIndex(a) != Type.enumIndex(b)) {
+            return Nil;
+        }
+        switch (a) {
+            case Int(_) | String(_) | Symbol(_) | Float(_)  | T | Nil:
+                return if (Type.enumEq(a, b)) T else Nil;
+            case List(_):
+                var l1 = a.toList();
+                var l2 = b.toList();
+                if (l1.length != l2.length) return Nil;
+                var i = 0;
+                while (i < l1.length) {
+                    if (!HissTools.truthy(eq(l1[i], l2[i]))) return Nil;
+                    i++;
+                }
+                return T;
+            case Quote(aa) | Quasiquote(aa) | Unquote(aa) | UnquoteList(aa):
+                var bb = HaxeTools.extract(b, Quote(e) | Quasiquote(e) | Unquote(e) | UnquoteList(e) => e);
+                return eq(aa, bb);
+            default:
+                return Nil;
+        }
     }
 
     static var recursivePrintDepth = 5;

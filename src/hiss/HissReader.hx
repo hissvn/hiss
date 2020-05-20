@@ -20,7 +20,7 @@ class HissReader {
     static var macroLengths = [];
 
     public static function setMacroString(s: HValue, f: HValue) {
-        var sk = s.toString();
+        var sk = s.toHaxeString();
         readTable.put(sk, f);
         if (macroLengths.indexOf(sk.length) == -1) {
             macroLengths.push(sk.length);
@@ -90,7 +90,7 @@ class HissReader {
 
     public static function readQuoteExpression(start: HValue, str: HValue, terminators: HValue, position: HValue): HValue {
         var expression = read(str, terminators, position);
-        return switch (start.toString()) {
+        return switch (start.toHaxeString()) {
             case "`":
                 Quasiquote(expression);
             case "'":
@@ -106,7 +106,7 @@ class HissReader {
 
     public static function readNumber(start: HValue, str: HValue, ?terminators: HValue, position: HValue): HValue {
         var stream = toStream(str);
-        stream.putBack(start.toString());
+        stream.putBack(start.toHaxeString());
 
         var token = nextToken(str, terminators);
         return if (token.indexOf('.') != -1) {
@@ -118,7 +118,7 @@ class HissReader {
 
     public static function readSymbolOrSign(start: HValue, str: HValue, terminators: HValue, position: HValue): HValue {
         // Hyphen could either be a symbol, or the start of a negative numeral
-        return if (toStream(str).nextIsWhitespace() || toStream(str).nextIsOneOf([for (term in terminators.toList()) term.toString()])) {
+        return if (toStream(str).nextIsWhitespace() || toStream(str).nextIsOneOf([for (term in terminators.toList()) term.toHaxeString()])) {
             readSymbol(String(""), start, terminators, position);
         } else {
             readNumber(start, str, terminators, position);
@@ -160,7 +160,7 @@ class HissReader {
         var whitespaceOrTerminator = HStream.WHITESPACE.copy();
         if (terminators != null) {
             for (terminator in terminators.toList()) {
-                whitespaceOrTerminator.push(terminator.toString());
+                whitespaceOrTerminator.push(terminator.toHaxeString());
             }
         }
 
@@ -177,7 +177,7 @@ class HissReader {
 
     public static function readDelimitedList(terminator: HValue, ?delimiters: HValue, start: HValue, str: HValue, terminators: HValue, position: HValue): HValue {
         var stream = toStream(str, position);
-        /*trace('t: ${terminator.toString()}');
+        /*trace('t: ${terminator.toHaxeString()}');
         trace('s: $start');
         trace('str: ${toStream(str).peekAll()}');
         */
@@ -186,7 +186,7 @@ class HissReader {
         if (delimiters == null || delimiters.match(Nil)) {
             delims = HStream.WHITESPACE.copy();
         } else {
-            delims = [for (s in delimiters.toList()) s.toString()];
+            delims = [for (s in delimiters.toList()) s.toHaxeString()];
         }
 
         var delimsOrTerminator = [for (delim in delims) String(delim)];
@@ -195,13 +195,13 @@ class HissReader {
         delimsOrTerminator.push(String("/*"));
 
 
-        var term = terminator.toString();
+        var term = terminator.toHaxeString();
 
         var values = [];
 
         stream.dropWhile(delims);
         //trace(stream.length());
-        while (stream.length() >= terminator.toString().length && stream.peek(term.length) != term) {
+        while (stream.length() >= terminator.toHaxeString().length && stream.peek(term.length) != term) {
             values.push(read(Object("HStream", stream), /*terminator*/ List(delimsOrTerminator)));
             //trace(values);
             stream.dropWhile(delims);
@@ -210,7 +210,7 @@ class HissReader {
         }
 
         //trace('made it');
-        stream.drop(terminator.toString());
+        stream.drop(terminator.toHaxeString());
         return List(values);
     }
 

@@ -200,6 +200,8 @@
     `(defun ,name (&rest args)
         (call-method ,class ,function args nil ,keep-args-wrapped)))
 
+(register-function Hiss-Tools "eq" eq t)
+
 (register-function Type "createInstance")
 (register-function Type "createEnum")
 
@@ -224,6 +226,7 @@
                 (try (call-method Type "resolveClass" (list class-or-enum-path))
                     (call-method Type "resolveEnum" (list class-or-enum-path))))
         `(setq ,(intern type-name) ,type)))
+
 
 (import "Reflect")
 (register-function Reflect "compare")
