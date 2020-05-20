@@ -220,6 +220,8 @@ true
 
 (error? (switch 'fork (Symbol (s) s)))
 
+(error? (first '()))
+
 ; Test custom reader macros
 (set-macro-string "#" (lambda (a b c) (list 'sharp (read-string a b))))
 (eq '(sharp "fork") (read "#fork\""))
