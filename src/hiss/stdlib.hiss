@@ -227,6 +227,16 @@
                     (call-method Type "resolveEnum" (list class-or-enum-path))))
         `(setq ,(intern type-name) ,type)))
 
+(import "hiss.HissReader")
+(register-function Hiss-Reader "read" read t)
+(register-function Hiss-Reader "readAll" read-all t)
+(register-function Hiss-Reader "readString" read-string t)
+(register-function Hiss-Reader "readNumber" read-number t)
+(register-function Hiss-Reader "readSymbol" read-symbol t)
+(register-function Hiss-Reader "readDelimitedList" read-delimited-list t)
+(register-function Hiss-Reader "setMacroString" set-macro-string t)
+(register-function Hiss-Reader "setDefaultReadFunction" set-default-read-function t)
+
 
 (import "Reflect")
 (register-function Reflect "compare")

@@ -301,16 +301,6 @@ class HissInterp {
             importFunction(HissTools.nth, Fixed, ""); // Because I don't think the Haxe reflection API allows array indexing
             importFunction(setNth, Fixed, "");
 
-            // Reader functions
-            importFunction(HissReader.read, Fixed, "");
-            importFunction(HissReader.readAll, Fixed, "");
-            importFunction(HissReader.readString, Fixed, "");
-            importFunction(HissReader.readNumber, Fixed, "");
-            importFunction(HissReader.readSymbol, Fixed, "");
-            importFunction(HissReader.readDelimitedList, Fixed, "");
-            importFunction(HissReader.setMacroString, Fixed, "");
-            importFunction(HissReader.setDefaultReadFunction, Fixed, "");
-
             // Haxe std io
             importFunction(print, Fixed, "");
             importFunction(uglyPrint, Fixed, "");
