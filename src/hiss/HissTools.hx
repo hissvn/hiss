@@ -50,7 +50,7 @@ class HissTools {
         return list.toList()[idx.toInt()];
     }
 
-    static function symbolName(v: HValue): HValue {
+    public static function symbolName(v: HValue): HValue {
         return String(HaxeTools.extract(v, Symbol(name) => name, "symbol name"));
     }
 

@@ -66,7 +66,7 @@ class HissInterp {
 
     // Keep
     function lambda(args: HValue): HValue {
-        var argNames = HissTools.first(args).toList().map(s -> symbolName(s).toString());
+        var argNames = HissTools.first(args).toList().map(s -> HissTools.symbolName(s).toString());
         
         var body: HList = HissTools.rest(args).toList();
 
@@ -81,7 +81,7 @@ class HissInterp {
     // Keep
     // TODO optional docstrings lollll
     function defun(args: HValue, isMacro: HValue = Nil) {
-        var name = symbolName(HissTools.first(args)).toString();
+        var name = HissTools.symbolName(HissTools.first(args)).toString();
         functionStats[name] = 0;
         var fun: HValue = lambda(HissTools.rest(args));
         if (HissTools.truthy(isMacro)) {
@@ -196,7 +196,7 @@ class HissInterp {
 
     // Keep
     function bound(value: HValue) {
-        return if (resolve(symbolName(value).toString()).value != null) T else Nil;
+        return if (resolve(HissTools.symbolName(value).toString()).value != null) T else Nil;
     }
 
     // Keep
@@ -207,7 +207,7 @@ class HissInterp {
     // *
     function symbol(value: HValue) {
         try {
-            symbolName(value);
+            HissTools.symbolName(value);
             return T;
         } catch (s: Dynamic) {
             return Nil;
@@ -431,7 +431,7 @@ class HissInterp {
     // *
     function setlocal (l: HValue) {
         var list = l.toList();
-        var name = symbolName(list[0]).toString();
+        var name = HissTools.symbolName(list[0]).toString();
 
         var value = eval(list[1]);
         var stackFrame: HDict = variables.toDict();
