@@ -55,8 +55,7 @@ class HissTools {
         return String(HaxeTools.extract(v, Symbol(name) => name, "symbol name"));
     }
 
-    // Keep
-    // TODO It's possible eq could be re-implemented in Hiss
+    // TODO It's possible eq could be re-implemented in Hiss now
     public static function eq(a: HValue, b: HValue): HValue {
         if (Type.enumIndex(a) != Type.enumIndex(b)) {
             return Nil;

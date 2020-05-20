@@ -146,7 +146,8 @@ class HissInterp {
         return List(l);
     }
 
-    // Keep
+    // Sort can't be ported because it has to convert hiss function definitions into Haxe function types.
+    // This is almost possible through witchcraft, but in the end it isn't because Haxe doesn't support varargs.
     function sort(args: HValue) {
         var argList = args.toList();
         var listToSort = argList[0].toList();
@@ -160,7 +161,7 @@ class HissInterp {
         return List(sorted);
     }
 
-    // *
+    // Keep
     function progn(exps: HValue) {
         var value = null;
         for (exp in exps.toList()) {
@@ -179,11 +180,6 @@ class HissInterp {
     // Keep
     function bound(value: HValue) {
         return if (resolve(HissTools.symbolName(value).toHaxeString()).value != null) T else Nil;
-    }
-
-    // Keep
-    function _return(value: HValue): HValue {
-        return Return(value);
     }
 
     // *
@@ -242,6 +238,11 @@ class HissInterp {
         return Dict([]);
     }
 
+    // This has to be in Haxe because of the implicit progn in funcall.
+    function _return(value: HValue): HValue {
+        return Return(value);
+    }
+
     public function new() {
         // Load the standard library and test files:
         StaticFiles.compileWith("stdlib.hiss");
@@ -256,6 +257,8 @@ class HissInterp {
 
         // Access to the variable dictionary allows setq to be a Hiss macro
         vars['*variables*'] = variables;
+
+        vars['*interp*'] = Object("HissInterp", this);
 
         // Variables (Can keep all of these statements with no maintenance overhead)
         vars['Type'] = Object("Class", Type);
@@ -286,13 +289,6 @@ class HissInterp {
 
             // This one might be unportable because we can't instantiate a Map with a type parameter using reflection:
             importFunction(emptyDict, Fixed, "");
-
-            // This has to be in Haxe because of the implicit progn in funcall.
-            importFunction(_return, Fixed, "");
-
-            // Sort can't be ported because it has to convert hiss function definitions into Haxe function types.
-            // This is almost possible through witchcraft, but in the end it isn't because Haxe doesn't support varargs.
-            importFunction(sort, Var, "");
 
             // not portable because it checks for Haxe null
             importFunction(bound, Fixed, "?");
@@ -338,12 +334,16 @@ class HissInterp {
 
             importFunction(eval, Fixed, "");
 
-            importFunction(error, Fixed, "?");
-
             // I can't believe I tried to port lambda....
             importMacro(lambda, Var, "lambda");
             importMacro(defun, Var, "defun");
             importMacro(defmacro, Var, "defmacro");
+
+            // These are primitives for counter-intuitive, possibly
+            // work-around-able reasons:
+            importFunction(error, Fixed, "?");
+            importFunction(_return, Fixed, "");
+            importFunction(sort, Var, "");
         }
     }
 
