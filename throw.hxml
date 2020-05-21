@@ -1,5 +1,6 @@
 -lib uuid
 -lib haxe-strings
+-lib ihx
 -cp src
 -D analyzer-optimize
 -D no-deprecation-warnings

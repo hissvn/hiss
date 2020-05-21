@@ -51,7 +51,7 @@ class HissTools {
     public static function nth(list: HValue, idx: HValue):HValue {
         return list.toList()[idx.toInt()];
     }
-    
+
     public static function setNth(arr: HValue, idx: HValue, val: HValue) { 
         arr.toList()[idx.toInt()] = val; return arr;
     }
@@ -123,7 +123,7 @@ class HissTools {
                     '(${valueStr})';
                 };
             case Quote(e):
-                "'" + e.toPrint();
+                "'" + e.toPrint(recursiveCall+1);
             case Object(t, o):
                 '[$t: ${Std.string(o)}]';
             case Function(Haxe(_, _)):
@@ -131,7 +131,7 @@ class HissTools {
             case Function(Hiss(f)):
                 '[hissfunction ${f.argNames}]';
             case Function(Macro(e,f)):
-                '[${if (!e) "special " else ""}macro ${Function(f).toPrint()}]';
+                '[${if (!e) "special " else ""}macro ${Function(f).toPrint(recursiveCall+1)}]';
             case Error(m):
                 '!$m!';
             case Nil:
@@ -146,13 +146,13 @@ class HissTools {
                 }
             case VarInfo(hvi):
                 var container = if (hvi.container != null) Std.string(hvi.container) else "null";
-                '{name: ${hvi.name}, value: ${hvi.value.toPrint()}, container: $container}';
+                '{name: ${hvi.name}, value: ${hvi.value.toPrint(recursiveCall+1)}, container: $container}';
             case Quasiquote(e):
-                return '`${e.toPrint()}';
+                return '`${e.toPrint(recursiveCall+1)}';
             case Unquote(e):
-                return ',${e.toPrint()}';
+                return ',${e.toPrint(recursiveCall+1)}';
             case UnquoteList(e):
-                return ',@${e.toPrint()}';
+                return ',@${e.toPrint(recursiveCall+1)}';
             default: 
                 throw 'Not clear why $v is being converted to string';
         }
