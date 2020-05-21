@@ -2,24 +2,15 @@
 (defun continue () (create-enum H-Value "Continue" (list)))
 (defun break () (create-enum H-Value "Break" (list)))
 
-// In the new continuation-based regime, managing scope might this way might not even make sense: 
-(defun scope-in () (call-method *interp* "scopeIn" '()))
-(defun scope-out () (call-method *interp* "scopeOut" '()))
-(defun scope-return (val) (call-method *interp* "scopeReturn" (list val) t))
-
 (defun nth (l n) (call-method Hiss-Tools "nth" (list l n) nil t))
 (defun cons (elem l) (call-method Hiss-Tools "cons" (list elem l) nil t))
 
 (defun haxe== (a b) (call-method Haxe-Binops "equals" (list a b)))
-(defun haxe< (a b) (call-method Haxe-Binops "lesser" (list a b)))
-(defun haxe... (a b) (call-method Haxe-Binops "range" (list a b)))
 
 (defun first (l)
     (nth l 0))
 (defun rest (l)
     (call-method l "slice" '(1)))
-(defun slice (l idx)
-    (call-method l "slice" (list idx)))
 
 (defun load (file)
     (eval `(progn ,@(read-all (get-content file)))))
@@ -64,18 +55,12 @@
 (defun last (l)
     (nth l (- (length l) 1)))
 
-(defun alternates (start l)
-    (if (not l) 
-            '()
-        (if start
-                (cons (first l) (alternates t (slice l 2)))
-            (alternates t (rest l)))))
-
 (defmacro let (bindings &rest body)
-    `((lambda 
-            ,(alternates t bindings) 
-            ,@body)
-        ,@(alternates nil bindings)))
+    `(progn
+        (scope-in)
+        (setlocal ,@bindings)
+        (setlocal let-result (progn ,@body))
+        (scope-return let-result)))
 
 (defmacro case (form &rest case-list)
     (let (case-first (first case-list)
@@ -86,41 +71,11 @@
                 (case ,form ,@case-rest))
             nil)))
 
-(defun compare (a b) (call-method Reflect "compare" (list a b)))
-
-(defun zip (&rest lists)
-    "Create a list of tuples by grouping all same-nth elements in the given lists. Discards elements with no corresponding element in all other lists"
-    (let (final-length (first (sort (for l lists (length l)))))
-        (for i (haxe... 0 final-length)
-            (for l lists (nth l i)))))
-
-(defmacro _set (global &rest args)
-    (let (names (alternates t args)
-            values (alternates nil args)
-            bindings (zip names values))
-        (cons 'progn
-            (for pair bindings
-                `(progn
-                    (dict-set 
-                        (if (or ,global (= 1 (length *stack-frames*)))
-                                *variables*
-                            (last *stack-frames*))
-                        (symbol-name ',s)
-                        ,value)
-                    ,value)))))
-
-(defmacro setlocal (&rest args)
-    `(_set nil ,@args))
-
-(defmacro setq (&rest args)
-    `(_set t ,@args))
-
 (defmacro default (var value)
-    `(if (or 
-        (not (bound? (quote ,var))) 
-        (nil? ,var))
-            (setlocal ,var ,value)
-        ,var))
+    `(setlocal ,var
+        (if (and (bound? (quote ,var)) ,var)
+            ,var
+            ,value)))
 
 (defmacro variadic-binop (symbol base-function &optional zero-case one-case two-case)
     (default zero-case 0)
@@ -187,6 +142,7 @@
 (register-method "copy")
 (register-method "insert" insert t '(1) t)
 
+(register-method "slice")
 (defun take (l num)
     (slice l 0 num))
 (defun reverse (l)
@@ -222,6 +178,16 @@
 (register-method "set" dict-set t '(1) t)
 (register-method "remove" dict-erase t '(1) t)
 
+(defmacro setq (&rest args)
+    (let (s (first args)
+            value (nth args 1)
+            num (length args))
+        `(progn 
+            (dict-set *variables* (symbol-name ',s) ,value)
+            (case ,num
+                (2 ,value)
+                (t (eval (cons 'setq ',(slice args 2))))))))
+
 (defmacro when (cond &rest body)
     `(if ,cond ,(cons 'progn body)))
 
@@ -248,12 +214,17 @@
 (register-function Haxe-Binops "multiply" haxe*)
 (register-function Haxe-Binops "greater" haxe>)
 (register-function Haxe-Binops "greaterEqual" haxe>=)
+(register-function Haxe-Binops "lesser" haxe<)
 (register-function Haxe-Binops "lesserEqual" haxe<=)
 (register-function Haxe-Binops "modulo" %)
-(register-function *interp* "print" print t)
-(register-function *interp* "uglyPrint" ugly-print t)
+(register-function Haxe-Binops "range" haxe...)
 
 (register-function Hiss-Tools "eq" eq t)
+
+// In the new continuation-based regime, managing scope might this way might not even make sense: 
+(register-function *interp* "scopeIn")
+(register-function *interp* "scopeOut")
+(register-function *interp* "scopeReturn" scope-return t)
 
 (register-function Hiss-Tools "emptyDict")
 (register-function Hiss-Tools "setNth" set-nth t)
@@ -294,6 +265,10 @@
 (register-function Hiss-Reader "readDelimitedList" read-delimited-list t)
 (register-function Hiss-Reader "setMacroString" set-macro-string t)
 (register-function Hiss-Reader "setDefaultReadFunction" set-default-read-function t)
+
+
+(import "Reflect")
+(register-function Reflect "compare")
 
 (import "Std")
 (register-function Std "string")
@@ -436,6 +411,12 @@
 
 (defun list-of (size element)
     (for i (range size) element))
+
+(defun zip (&rest lists)
+    "Create a list of tuples by grouping all same-nth elements in the given lists. Discards elements with no corresponding element in all other lists"
+    (let (final-length (funcall min (map lists length)))
+        (for i (range final-length)
+            (for l lists (nth l i)))))
 
 (defmacro add-hook (hook-name hook-function)
     `(push ,hook-name ,hook-function))
