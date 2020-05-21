@@ -1,6 +1,10 @@
+(defun print (v) (call-method *interp* "print" (list v) t t) v)
 (defun error (m) (create-enum H-Value "Error" (list m)))
 (defun continue () (create-enum H-Value "Continue" (list)))
 (defun break () (create-enum H-Value "Break" (list)))
+
+(defun eq (a b)
+    (call-method Hiss-Tools "eq" (list a b) nil t))
 
 // In the new continuation-based regime, managing scope might this way might not even make sense: 
 (defun scope-in () (call-method *interp* "scopeIn" '()))
@@ -9,17 +13,30 @@
 
 (defun nth (l n) (call-method Hiss-Tools "nth" (list l n) nil t))
 (defun cons (elem l) (call-method Hiss-Tools "cons" (list elem l) nil t))
+(defun copy (v) (call-method v "copy"))
 
-(defun haxe== (a b) (call-method Haxe-Binops "equals" (list a b)))
-(defun haxe< (a b) (call-method Haxe-Binops "lesser" (list a b)))
-(defun haxe... (a b) (call-method Haxe-Binops "range" (list a b)))
+; Register the Binops - haxe== is already registered
+(defmacro register-binop (name func)
+    `(defun ,func (a b) (call-method Haxe-Binops ,name (list a b))))
+(register-binop "add" haxe+)
+(register-binop "subtract" haxe-)
+(register-binop "divide" haxe/)
+(register-binop "multiply" haxe*)
+(register-binop "greater" haxe>)
+(register-binop "greaterEqual" haxe>=)
+(register-binop "lesser" haxe<)
+(register-binop "lesserEqual" haxe<=)
+(register-binop "modulo" %)
+(register-binop "equals" haxe==)
+(register-binop "range" haxe...)
 
+(defun list (&rest args) args)
 (defun first (l)
     (nth l 0))
 (defun rest (l)
     (call-method l "slice" '(1)))
-(defun slice (l idx)
-    (call-method l "slice" (list idx)))
+(defun slice (l start &optional end)
+    (call-method l "slice" (list start (or end (length l)))))
 
 (defun load (file)
     (eval `(progn ,@(read-all (get-content file)))))
@@ -27,7 +44,7 @@
 (defun length (str-or-list)
     (get-property str-or-list "length"))
 
-(defun list (&rest args) args)
+
 (defmacro quote (arg) `',arg)
 
 (defun list? (arg) (and (length arg) (error? (+ arg arg))))
@@ -39,7 +56,7 @@
 (defun nil? (v) (eq nil v))
 
 (defun symbol-name (sym)
-    (if (= "Symbol" (call-method Type "enumConstructor" (list sym)))
+    (if (haxe== "Symbol" (call-method Type "enumConstructor" (list sym)))
             (first (call-method Type "enumParameters" (list sym)))
         (error "Tried to get symbol-name of non-symbol")))
 
@@ -62,20 +79,24 @@
                 nil))))
 
 (defun last (l)
-    (nth l (- (length l) 1)))
+    (nth l (haxe- (length l) 1)))
 
 (defun alternates (start l)
-    (if (not l) 
+    (if (not l)
             '()
         (if start
                 (cons (first l) (alternates t (slice l 2)))
             (alternates t (rest l)))))
 
+(defun push (l elem) 
+    (call-method l "push" (list elem) t t)
+    l)
+
 (defmacro let (bindings &rest body)
-    `((lambda 
-            ,(alternates t bindings) 
+    `(funcall-inline
+        (lambda ,(alternates t bindings)
             ,@body)
-        ,@(alternates nil bindings)))
+        (list ,@(alternates nil bindings))))
 
 (defmacro case (form &rest case-list)
     (let (case-first (first case-list)
@@ -86,6 +107,11 @@
                 (case ,form ,@case-rest))
             nil)))
 
+(defmacro cond (&rest forms)
+    `(and ',forms (if (eval (first (first ',forms)))
+            (eval (cons 'progn (rest (first ',forms))))
+        (eval (cons 'cond (rest ',forms))))))
+
 (defun compare (a b) (call-method Reflect "compare" (list a b)))
 
 (defun zip (&rest lists)
@@ -94,20 +120,32 @@
         (for i (haxe... 0 final-length)
             (for l lists (nth l i)))))
 
+(defun groups (l size &optional take-remainder)
+    (cond
+        ((< (length l) size)
+            (if take-remainder
+                    (list l)
+                (list)))
+        ((= (length l) size)
+            (list l))
+        (t (cons (take l size) (groups (slice l size) size take-remainder)))))
+
+(defun dict-set (d k v) (call-method d "set" (list k v) t '(1)) d)
+
 (defmacro _set (global &rest args)
     (let (names (alternates t args)
-            values (alternates nil args)
-            bindings (zip names values))
+            values (alternates nil args))
         (cons 'progn
-            (for pair bindings
+            (for binding (zip names values)
                 `(progn
-                    (dict-set 
-                        (if (or ,global (= 1 (length *stack-frames*)))
-                                *variables*
-                            (last *stack-frames*))
-                        (symbol-name ',s)
-                        ,value)
-                    ,value)))))
+                    (let (value ,(nth binding 1))
+                        (funcall-inline dict-set 
+                            '((if (or ,global (= 1 (length *stack-frames*)))
+                                    *variables*
+                                (last *stack-frames*))
+                            (symbol-name ',(first binding))
+                            value))
+                        value))))))
 
 (defmacro setlocal (&rest args)
     `(_set nil ,@args))
@@ -115,26 +153,23 @@
 (defmacro setq (&rest args)
     `(_set t ,@args))
 
-(defmacro default (var value)
-    `(if (or 
-        (not (bound? (quote ,var))) 
-        (nil? ,var))
-            (setlocal ,var ,value)
-        ,var))
-
 (defmacro variadic-binop (symbol base-function &optional zero-case one-case two-case)
-    (default zero-case 0)
-    (default one-case 'val)
-    (default two-case '(fun val1 val2))
-    `(defun ,symbol (&rest args)
-        (case (length args)
-            (0 ,zero-case)
-            (1 (let (val (first args)) ,one-case))
-            (2 (let (val1 (nth args 0)
-                    val2 (nth args 1)
-                    fun ,base-function)
-                ,two-case))
-            (t (funcall ,symbol (cons (funcall ,symbol (take args 2)) (slice args 2)))))))
+    (let (c0 (or zero-case 0)
+            c1 (or one-case 'val)
+            c2 (or two-case '(fun val1 val2)))
+        
+        `(defun ,symbol (&rest args)
+            (case (length args)
+                (0 ,c0)
+                (1 (let (val (first args)) ,c1))
+                (2 (let (val1 (nth args 0)
+                        val2 (nth args 1)
+                        fun ,base-function)
+                    ,c2))
+                (t 
+                    (funcall ,symbol (cons
+                        (funcall ,symbol (take args 2))
+                        (slice args 2))))))))
 
 (variadic-binop - haxe- 0 (haxe- 0 val))
 (variadic-binop + haxe+)
@@ -147,7 +182,7 @@
 (variadic-binop >= haxe>= (error "cannot evaluate greater-than-equal without operands") t (if (fun val1 val2) val2))
 
 (variadic-binop append (lambda (l1 l2) (call-method l1 "concat" (list l2))) (error "cannot append without argument lists"))
-
+*/
 (defun between-exclusive (a b c)
     (or (< b a c) (< c a b)))
 (defun between-inclusive (a b c)
@@ -168,9 +203,7 @@
 
 ; Haxe interop
 (defmacro register-method (method &optional name call-on-reference keep-args-wrapped return-instance)
-    (default name
-        (intern (call-method Strings "toLowerHyphen" (list method))))
-    `(defun ,name (instance &rest args)
+    `(defun ,(or name (intern (call-method Strings "toLowerHyphen" (list method)))) (instance &rest args)
         (let (result (call-method instance ,method args ,call-on-reference ,keep-args-wrapped))
             (if ,return-instance instance result))))
 
@@ -184,7 +217,6 @@
 (register-method "lastIndexOf")
 (register-method "charAt")
 
-(register-method "copy")
 (register-method "insert" insert t '(1) t)
 
 (defun take (l num)
@@ -199,27 +231,11 @@
 (defun reverse-sort (l &optional fun)
     (reverse (sort l fun)))
 
-(defmacro cond (&rest forms)
-    `(and ',forms (if (eval (first (first ',forms)))
-            (eval (cons 'progn (rest (first ',forms))))
-        (eval (cons 'cond (rest ',forms))))))
-
-(defun groups (l size &optional take-remainder)
-    (cond
-        ((< (length l) size)
-            (if take-remainder
-                    (list l)
-                (list)))
-        ((= (length l) size)
-            (list l))
-        (t (cons (take l size) (groups (slice l size) size take-remainder)))))
-
 (defun dict (&rest pairs)
     (let (new-dict (empty-dict))
         (do-for pair (groups pairs 2) (dict-set new-dict (first pair) (nth pair 1)))
         new-dict))
 (register-method "get" dict-get)
-(register-method "set" dict-set t '(1) t)
 (register-method "remove" dict-erase t '(1) t)
 
 (defmacro when (cond &rest body)
@@ -236,24 +252,10 @@
 // it would be just as fast as functions installed with importFunction().
 // Right? idk
 (defmacro register-function (class function &optional name keep-args-wrapped)
-    (default name 
-        (intern (call-method Strings "toLowerHyphen" (list function))))
-    `(defun ,name (&rest args)
+    `(defun ,(or name (intern (call-method Strings "toLowerHyphen" (list function)))) (&rest args)
         (call-method ,class ,function args nil ,keep-args-wrapped)))
 
-; Register the Binops - haxe== is already registered
-(register-function Haxe-Binops "add" haxe+)
-(register-function Haxe-Binops "subtract" haxe-)
-(register-function Haxe-Binops "divide" haxe/)
-(register-function Haxe-Binops "multiply" haxe*)
-(register-function Haxe-Binops "greater" haxe>)
-(register-function Haxe-Binops "greaterEqual" haxe>=)
-(register-function Haxe-Binops "lesserEqual" haxe<=)
-(register-function Haxe-Binops "modulo" %)
-(register-function *interp* "print" print t)
 (register-function *interp* "uglyPrint" ugly-print t)
-
-(register-function Hiss-Tools "eq" eq t)
 
 (register-function Hiss-Tools "emptyDict")
 (register-function Hiss-Tools "setNth" set-nth t)
@@ -404,13 +406,10 @@
         (haxe... arg1 arg2)
         (haxe... 0 arg1)))
 
-(register-method "push" push t t t)
-
 (defun filter (l &optional criterion)
-    (default criterion (lambda (val) val))
     (let (result (list))
         (do-for val l
-            (if (funcall criterion `(,val))
+            (if (funcall (or criterion (lambda (val) val)) `(,val))
                 (push result val)))
         result))
 

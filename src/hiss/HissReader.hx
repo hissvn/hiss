@@ -217,7 +217,7 @@ class HissReader {
     static function callReadFunction(func: HValue, start: String, stream: HStream, terminators: HValue): HValue {
         var pos = stream.position();
         try {
-            return interp.funcall(T, func, List([String(start), Object("HStream", stream), Quote(terminators), Object("HPosition", pos)]));
+            return interp.funcall(T, Nil, func, List([String(start), Object("HStream", stream), Quote(terminators), Object("HPosition", pos)]));
         } 
         #if !throwErrors
         catch (s: Dynamic) {

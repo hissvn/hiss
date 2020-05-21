@@ -31,14 +31,19 @@ class HissTestCase extends utest.Test {
 
         trace("Measuring time taken to run the unit tests:");
 
+        var num = expressions.toList().length;
+        var count = 0;
         Timer.measure(function() {
             for (e in expressions.toList()) {
+                //trace('testing expression #$count: ${e.toPrint()}');
                 try {
                     var v = repl.interp.eval(e);
                     Assert.isTrue(HissTools.truthy(v), 'Failure: ${HissTools.toPrint(e)} evaluated to ${HissTools.toPrint(v)}');
                 } catch (s: Dynamic) {
                     trace('uncaught error $s from test expression ${HissTools.toPrint(e)}');
                 }
+
+                count++;
             }
         });
 

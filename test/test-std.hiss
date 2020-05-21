@@ -150,6 +150,7 @@ true
 (eq "fork   " (ltrim str))
 (eq "    fork" (rtrim str))
 (setq str "fork")
+(print "About to run a test that might infinite loop")
 (eq "      fork" (lpad str " " 10))
 (eq "fork      " (rpad str " " 10))
 

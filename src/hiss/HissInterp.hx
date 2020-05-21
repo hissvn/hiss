@@ -144,7 +144,7 @@ class HissInterp {
         var sorted = listToSort.copy();
         
         sorted.sort((v1:HValue, v2:HValue) -> {
-            HissTools.valueOf(funcall(Nil, sortFunction, List([v1, v2])));
+            HissTools.valueOf(funcall(Nil, Nil, sortFunction, List([v1, v2])));
         });
         return List(sorted);
     }
@@ -258,15 +258,6 @@ class HissInterp {
         vars['true'] = T;
 
         /**
-            Functions implemented in Haxe with unnecessary maintainence overload
-            Some of these may not be portable to pure Hiss, but they can still be moved out of HissInterp
-            and brought into the Hiss environment with (register-function) instead of import macros.
-        **/
-        {
-            importMacro(setlocal, Var, "setlocal");
-        }
-
-        /**
             Primitives -- Functions implemented in Haxe that might be impossible to port to Hiss/worth keeping around
         **/
         {
@@ -281,7 +272,8 @@ class HissInterp {
             importMacro(lambda, Var, "lambda");
             importMacro(defun, Var, "defun");
             importMacro(defmacro, Var, "defmacro");
-            importFunction(funcall.bind(Nil), Fixed, "funcall");
+            importFunction(funcall.bind(Nil, Nil), Fixed, "funcall");
+            importFunction(funcall.bind(Nil, T), Fixed, "funcall-inline");
 
 
             // Control flow macros
@@ -320,7 +312,7 @@ class HissInterp {
         }
     }
 
-    // *
+    // This is still here for internal use because if not, everything sucks
     function setlocal (l: HValue) {
         var list = l.toList();
         var name = HissTools.symbolName(list[0]).toHaxeString();
@@ -345,8 +337,6 @@ class HissInterp {
         var argList = args.toList();
         var name = argList[0];
         var coll = eval(argList[1]);
-
-        trace ('slap ${argList[1]} which is $coll');
 
         var results = [];
 
@@ -402,7 +392,7 @@ class HissInterp {
     }
 
     // Keep
-    public function funcall(evalArgs: HValue, funcOrPointer: HValue, args: HValue): HValue {
+    public function funcall(evalArgs: HValue, evalInline: HValue, funcOrPointer: HValue, args: HValue): HValue {
         var container = null;
         var name = "anonymous";
         var func = funcOrPointer;
@@ -418,6 +408,13 @@ class HissInterp {
             default:
         }
 
+        var argsToPrint = args.toPrint();
+        //trace(argsToPrint.length);
+        if (argsToPrint.length > 50) {
+            argsToPrint = argsToPrint.substr(0, 50);
+        }
+        //trace('calling funcall $name with args (before evaluation): ${argsToPrint}');
+
         if (!functionStats.exists(name)) functionStats[name] = 0;
         functionStats[name] = functionStats[name] + 1;
 
@@ -425,7 +422,7 @@ class HissInterp {
 
         switch (func) {
             case Function(Macro(e, m)):
-                var macroExpansion = funcall(Nil, Function(m), args);
+                var macroExpansion = funcall(Nil, T, Function(m), args);
                 return if (e) {
                     eval(macroExpansion);
                 } else {
@@ -445,12 +442,16 @@ class HissInterp {
 
         var hfunc = func.toHFunction();
 
-        var argRep = if (argVals.toList().length > 10) {
-            "an unreasonable number of arguments";
+        var trunc = 100;
+        var argRep = if (argVals.toPrint().length > 100) {
+            argVals.toPrint().substr(0, 100) + " + an unreasonable number of arguments";
         } else {
             argVals.toPrint();
         }
-        var message = 'calling `$name`: $hfunc with args ${argRep}';
+        var message = 'calling `$name`';
+        if (name == 'anonymous') message += ': $hfunc';
+        message += 'with args ${argRep}';
+        // if (name.indexOf("read") == -1)    trace( message);
 
         try {
             switch (hfunc) {
@@ -492,16 +493,17 @@ class HissInterp {
                         }
                     }
 
-                    // Functions bodies should be executed in their own cut-off stack frame without access to locals at the callsite
-                    if (HissTools.truthy(evalArgs)) {
+                    // Functions bodies should be executed in their own 
+                    // cut-off stack frame without access to locals at the callsite.
+                    // Macros should not!
+                    if (HissTools.truthy(evalInline)) {
+                        stackFrames.toList().push(Dict(argStackFrame));
+                    }
+                    else {
                         while (!stackFrames.toList().empty()) stackFrames.toList().pop();
                         stackFrames.toList().push(Dict(argStackFrame));
                     } 
-                    //  Macros should not!
-                    else {
-                        trace("macro ho");
-                        stackFrames.toList().push(Dict(argStackFrame));
-                    }
+                    
                     
                     var result = progn(List(funDef.body));
                     
@@ -544,7 +546,7 @@ class HissInterp {
         return info;
     }
 
-    // *
+    // Move this to HissTools
     public function evalUnquotes(expr: HValue): HValue {
         switch (expr) {
             case List(exps):
@@ -554,6 +556,8 @@ class HissInterp {
                 while (idx < copy.length) {
                     switch (copy[idx]) {
                         case UnquoteList(exp):
+                            //trace(expr.toPrint());
+
                             copy.splice(idx, 1);
                             var innerList = eval(exp);
                             for (exp in innerList.toList()) { 
@@ -613,8 +617,7 @@ class HissInterp {
                 var func = eval(HissTools.first(expr), T);
                 var args = HissTools.rest(expr);
 
-                //trace('calling funcall $func');// with args (before evaluation): $args');
-                funcall(T, func, List(args.toList().copy()));
+                funcall(T, Nil, func, List(args.toList().copy()));
             case Quote(exp):
                 exp;
             case Quasiquote(exp):
