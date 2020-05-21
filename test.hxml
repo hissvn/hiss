@@ -5,6 +5,7 @@
 -cp src
 -cp test
 -D analyzer-optimize
+-D test
 -D no-deprecation-warnings
 -main test.TestAll
 --interp

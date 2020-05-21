@@ -7,9 +7,10 @@
     (call-method Hiss-Tools "eq" (list a b) nil t))
 
 // In the new continuation-based regime, managing scope might this way might not even make sense: 
-(defun scope-in () (call-method *interp* "scopeIn" '()))
-(defun scope-out () (call-method *interp* "scopeOut" '()))
-(defun scope-return (val) (call-method *interp* "scopeReturn" (list val) t))
+; These are macros because they need to be called inline
+(defmacro scope-in (&optional d) `(call-method *interp* "scopeIn" (list d) t t))
+(defmacro scope-out () `(call-method *interp* "scopeOut" '()))
+(defmacro scope-return (val) `(call-method *interp* "scopeReturn" (list ,val) t))
 
 (defun nth (l n) (call-method Hiss-Tools "nth" (list l n) nil t))
 (defun cons (elem l) (call-method Hiss-Tools "cons" (list elem l) nil t))
@@ -98,6 +99,13 @@
             ,@body)
         (list ,@(alternates nil bindings))))
 
+(defmacro let* (bindings &rest body)
+    `(progn
+        (scope-in)
+        (setlocal ,@bindings)
+        (setlocal let-result (progn ,@body))
+        (scope-return let-result)))
+
 (defmacro case (form &rest case-list)
     (let (case-first (first case-list)
             case-rest (rest case-list))
@@ -132,27 +140,15 @@
 
 (defun dict-set (d k v) (call-method d "set" (list k v) t '(1)) d)
 
-(defmacro _set (global &rest args)
-    (let (names (alternates t args)
-            values (alternates nil args))
-        (cons 'progn
-            (for binding (zip names values)
-                `(progn
-                    (let (value ,(nth binding 1)
-                            env (if (or ,global (= 1 (length *stack-frames*)))
-                                    *variables*
-                                (last *stack-frames*)))
-                        (funcall-inline dict-set 
-                            (list env
-                                (symbol-name ',(first binding))
-                                value))
-                        value))))))
-
-(defmacro setlocal (&rest args)
-    `(_set nil ,@args))
-
 (defmacro setq (&rest args)
-    `(_set t ,@args))
+    (let (s (first args)
+            value (nth args 1)
+            num (length args))
+        `(progn 
+            (dict-set *variables* (symbol-name ',s) ,value)
+            (case ,num
+                (2 ,value)
+                (t (eval (cons 'setq ',(slice args 2))))))))
 
 (defmacro variadic-binop (symbol base-function &optional zero-case one-case two-case)
     (let (c0 (or zero-case 0)
@@ -350,7 +346,7 @@
         (1 (if (and (list? (first cases)) (eq 'default (first (first cases)))) ; Default case
                     `(progn ,@(rest (first cases)))
                 (error "switch fell through without a default case")))
-        (t (let (c (first cases)
+        (t (let* (c (first cases)
                     constructor (first c)
                     params (nth c 1)
                     case-body (slice c 2))
@@ -427,7 +423,7 @@
 
 (defun sort-by (l function)
     "Sort a list by applying a function that returns a comparable to each element"
-    (sort l (lambda (a b) (- (funcall function `(,a)) (funcall function `(,b))))))
+    (sort l (lambda (a b) (- (funcall function (list a)) (funcall function (list b))))))
 
 (defmacro apply-partially (function &rest args)
     (setlocal evaled-args (for arg args (eval arg)))

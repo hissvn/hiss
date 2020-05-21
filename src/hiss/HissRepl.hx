@@ -1,5 +1,7 @@
 package hiss;
 
+import haxe.Timer;
+import haxe.ds.ListSort;
 import ihx.ConsoleReader;
 
 import hiss.HissReader;
@@ -11,14 +13,19 @@ using hiss.HissTools;
 
 class HissRepl {
 	public var interp: HissInterp;
-	var consoleReader: ConsoleReader;
 
 	public function new() {
 		// TODO it's weird that all of these parts are necessary in this order to get a working hiss environment, and once we have it, it's actually static.
 		interp = new HissInterp();
 		var reader = new HissReader(interp);
-		consoleReader = new ConsoleReader();
-		load("stdlib.hiss");
+		load("stdlib.hiss",
+			// When running the tests, time the execution of each expression in stdlib.hiss
+			#if test
+			true
+			#else
+			false
+			#end
+		);
 	}
 
 	public function read(hiss: String): HValue {
@@ -35,10 +42,19 @@ class HissRepl {
 		return hval;
 	}
 
-	public function load(file: String) {
-		var list = [Symbol("progn")];
-		list = list.concat(HissReader.readAll(String(StaticFiles.getContent(file))).toList());
-		interp.eval(List(list));
+	public function load(file: String, timed = false) {
+		var program = HissReader.readAll(String(StaticFiles.getContent(file))).toList();
+		
+		if (timed) {
+			for (expression in program) {
+				trace('loading expression ${expression.toPrint()}');
+				Timer.measure(function() {interp.eval(expression);});
+			}
+		} else {
+			var list = [Symbol("progn")];
+			list = list.concat(program);
+			interp.eval(List(list));
+		}
 	}
 
 	public function repl(hiss: String) {
@@ -49,6 +65,7 @@ class HissRepl {
 		#if !sys
 		throw 'Cannot run a repl on a non-system platform';
 		#end
+		var consoleReader = new ConsoleReader();
 
 		interp.variables.toDict()['__running__'] = T;
 		interp.variables.toDict()['quit'] = Function(Haxe(Fixed, () -> {

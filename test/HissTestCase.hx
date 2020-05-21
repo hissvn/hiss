@@ -35,16 +35,19 @@ class HissTestCase extends utest.Test {
         var count = 0;
         Timer.measure(function() {
             for (e in expressions.toList()) {
-                //trace('testing expression #$count: ${e.toPrint()}');
-                try {
-                    var v = repl.interp.eval(e);
-                    Assert.isTrue(HissTools.truthy(v), 'Failure: ${HissTools.toPrint(e)} evaluated to ${HissTools.toPrint(v)}');
-                } catch (s: Dynamic) {
-                    trace('uncaught error $s from test expression ${HissTools.toPrint(e)}');
-                }
+                trace('testing expression #$count: ${e.toPrint()}');
+                Timer.measure(function () {
+                    try {
+                        var v = repl.interp.eval(e);
+                        Assert.isTrue(HissTools.truthy(v), 'Failure: ${HissTools.toPrint(e)} evaluated to ${HissTools.toPrint(v)}');
+                    } catch (s: Dynamic) {
+                        trace('uncaught error $s from test expression ${HissTools.toPrint(e)}');
+                    }
+                });
 
                 count++;
             }
+            trace("Total time to run tests:");
         });
 
         for (fun => callCount in repl.interp.functionStats) {

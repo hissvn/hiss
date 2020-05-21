@@ -267,6 +267,7 @@ class HissInterp {
 
             importFunction(eval, Fixed, "eval");
 
+            importMacro(setlocal, Var, "setlocal");
 
             // I can't believe I tried to port lambda....
             importMacro(lambda, Var, "lambda");
@@ -312,7 +313,7 @@ class HissInterp {
         }
     }
 
-    // This is still here for internal use because if not, everything sucks
+    // Keep this in Haxe because trying to manipulate stack frames from within Hiss, is a mess
     function setlocal (l: HValue) {
         var list = l.toList();
         var name = HissTools.symbolName(list[0]).toHaxeString();
