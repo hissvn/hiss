@@ -138,13 +138,14 @@
         (cons 'progn
             (for binding (zip names values)
                 `(progn
-                    (let (value ,(nth binding 1))
-                        (funcall-inline dict-set 
-                            '((if (or ,global (= 1 (length *stack-frames*)))
+                    (let (value ,(nth binding 1)
+                            env (if (or ,global (= 1 (length *stack-frames*)))
                                     *variables*
-                                (last *stack-frames*))
-                            (symbol-name ',(first binding))
-                            value))
+                                (last *stack-frames*)))
+                        (funcall-inline dict-set 
+                            (list env
+                                (symbol-name ',(first binding))
+                                value))
                         value))))))
 
 (defmacro setlocal (&rest args)
