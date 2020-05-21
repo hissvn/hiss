@@ -246,6 +246,7 @@ class HissInterp {
 
         // Variables (Can keep all of these statements with no maintenance overhead)
         vars['Type'] = Object("Class", Type);
+        vars['Reflect'] = Object("Class", Reflect);
         vars['Strings'] = Object("Class", Strings);
         vars['H-Value'] = Object("Enum", HValue);
         vars['Hiss-Tools'] = Object("Class", HissTools);
@@ -263,18 +264,6 @@ class HissInterp {
         **/
         {
             importMacro(setlocal, Var, "setlocal");
-
-            // Haxe std io
-            importFunction(print, Fixed, "print");
-            importFunction(uglyPrint, Fixed, "ugly-print");
-            // Control flow
-            importMacro(hissIf, Fixed, "if");
-            importMacro(progn, Var, "progn");
-            importMacro(hissDoFor.bind(T), Var, "for");
-            importMacro(hissDoFor.bind(Nil), Var, "do-for");
-            importMacro(hissWhile, Var, "while");
-
-            vars['funcall'] = Function(Haxe(Fixed, funcall.bind(Nil), "funcall")); // Can this be imported and apply-partiallied?
         }
 
         /**
@@ -287,10 +276,20 @@ class HissInterp {
 
             importFunction(eval, Fixed, "eval");
 
+
             // I can't believe I tried to port lambda....
             importMacro(lambda, Var, "lambda");
             importMacro(defun, Var, "defun");
             importMacro(defmacro, Var, "defmacro");
+            importFunction(funcall.bind(Nil), Fixed, "funcall");
+
+
+            // Control flow macros
+            importMacro(hissIf, Fixed, "if");
+            importMacro(progn, Var, "progn");
+            importMacro(hissDoFor.bind(T), Var, "for");
+            importMacro(hissDoFor.bind(Nil), Var, "do-for");
+            importMacro(hissWhile, Var, "while");
 
             // These are primitives for counter-intuitive, possibly
             // work-around-able reasons:
@@ -310,6 +309,7 @@ class HissInterp {
         }
     }
 
+    // This is the basis for Hiss calling any Haxe functions
     function callMethod(container: HValue, method: HValue, ?args: HValue, ?callOnReference: HValue = Nil, ?keepArgsWrapped: HValue = Nil) {
         if (args == null) args = List([]);
         var callArgs: Array<Dynamic> = HissTools.unwrapList(args, keepArgsWrapped);
@@ -345,7 +345,8 @@ class HissInterp {
         var argList = args.toList();
         var name = argList[0];
         var coll = eval(argList[1]);
-        //var coll = argList[1];
+
+        trace ('slap ${argList[1]} which is $coll');
 
         var results = [];
 
@@ -498,6 +499,7 @@ class HissInterp {
                     } 
                     //  Macros should not!
                     else {
+                        trace("macro ho");
                         stackFrames.toList().push(Dict(argStackFrame));
                     }
                     
@@ -607,10 +609,11 @@ class HissInterp {
             case List([]):
                 Nil;
             case List(exps):
+                //trace(exps);
                 var func = eval(HissTools.first(expr), T);
                 var args = HissTools.rest(expr);
 
-                // trace('calling funcall $funcInfo with args (before evaluation): $args');
+                //trace('calling funcall $func');// with args (before evaluation): $args');
                 funcall(T, func, List(args.toList().copy()));
             case Quote(exp):
                 exp;
