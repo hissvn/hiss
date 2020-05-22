@@ -19,8 +19,8 @@ class HissTools {
         return HaxeTools.extract(obj, Object(_, o) => o, "object");
     }
 
-    public static function toFunction(f: HValue, hint: String = "function"): Dynamic {
-        return HaxeTools.extract(f, Function(Haxe(_, v, _)) => v, hint);
+    public static function toFunction(f: HValue, hint: String = "function"): HFunction {
+        return HaxeTools.extract(f, Function(haxeF) => haxeF, hint);
     }
 
     public static function toHaxeString(hv: HValue): String {
@@ -69,9 +69,45 @@ class HissTools {
         return HaxeTools.extract(v, Symbol(name) => name, "symbol name");
     }
 
+    /**
+        Return the first argument HDict extended with the keys and values of the second.
+    **/
+    public static function extend(env: HValue, extension: HValue) {
+        var extended = env.toDict().copy();
+        for (pair in extension.toDict().keyValueIterator()) {
+            extended.set(pair.key, pair.value);
+        }
+        return Dict(extended);
+    }
+
+    public static function destructuringBind(names: HValue, values: HValue) {
+        var bindings = Dict([]);
+
+        var l1 = names.toList();
+        var l2 = values.toList();
+        if (l1.length != l2.length) {
+            throw 'Cannot bind ${l2.length} values to ${l1.length} names';
+        }
+
+        for (idx in 0...l1.length) {
+            switch (l1[idx]) {
+                case List(nestedList):
+                    bindings = bindings.extend(destructuringBind(l1[idx], l2[idx]));
+                case Symbol(name):
+                    bindings.put(name, l2[idx]);
+                default:
+                    throw 'Bad element ${l1[idx]} in name list for bindings';
+            }
+            
+        }
+
+        return bindings;
+    }
+
     // Since the variadic binop macro uses cons and it's one of the first
     // things in the Hiss prelude, might as well let this one stand as a Haxe function.
     public static function cons(hv: HValue, hl: HValue): HValue {
+        if (!hl.truthy()) return List([hv]);
         var l = hl.toList().copy();
         l.insert(0, hv);
         return List(l);
@@ -134,12 +170,10 @@ class HissTools {
                 "'" + e.toPrint(recursiveCall+1);
             case Object(t, o):
                 '[$t: ${Std.string(o)}]';
-            case Function(Haxe(_, _)):
+            case Function(_):
                 '[hxfunction]';
-            case Function(Hiss(f)):
-                '[hissfunction ${f.argNames}]';
-            case Function(Macro(e,f)):
-                '[${if (!e) "special " else ""}macro ${Function(f).toPrint(recursiveCall+1)}]';
+            /*case Function(Macro(e,f)):
+                '[${if (!e) "special " else ""}macro ${Function(f).toPrint(recursiveCall+1)}]';*/
             case Error(m):
                 '!$m!';
             case Nil:
@@ -205,7 +239,7 @@ class HissTools {
             case TObject:
                 Object("!ANONYMOUS!", v);
             case TFunction:
-                Function(Haxe(Fixed, v, "[wrapped-function]"));
+                Function(v);//Haxe(Fixed, v, "[wrapped-function]"));
             
             default:
                 throw 'value $v of type $t cannot be wrapped as $hint';
@@ -229,7 +263,7 @@ class HissTools {
             if (indices.indexOf(idx++) != -1) {
                 v;
             } else {
-                HissTools.valueOf(v);
+                HissTools.value(v);
             }
         }];
     }
@@ -250,7 +284,7 @@ class HissTools {
     /**
      * Behind the scenes function to HaxeTools.extract a haxe-compatible value from an HValue
      **/
-     public static function valueOf(hv: HValue, reference: Bool = false): Dynamic {
+     public static function value(hv: HValue, reference: Bool = false): Dynamic {
         return switch (hv) {
             case Nil: false;
             case T: true;
@@ -266,7 +300,7 @@ class HissTools {
                 if (reference) {
                     l;
                 } else {
-                    [for (hvv in l) HissTools.valueOf(hvv, true)]; // So far it seems that nested list elements should stay wrapped
+                    [for (hvv in l) HissTools.value(hvv, true)]; // So far it seems that nested list elements should stay wrapped
                 }
             case Dict(d):
                 d;

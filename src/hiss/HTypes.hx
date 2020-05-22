@@ -39,12 +39,17 @@ enum HArgType {
     Var;
 }
 
+typedef Continuation = (HValue) -> Void;
+
+typedef HFunction = (HValue, HValue, Continuation) -> Void;
+
+/*
 @:using(HissTools.HissTools)
 enum HFunction {
     Haxe(t: HArgType, f: Dynamic, name: String);
     Hiss(f: HFunDef);
     Macro(evalResult: Bool, f: HFunction);
-}
+}*/
 
 typedef HDict = Map<String, HValue>;
 

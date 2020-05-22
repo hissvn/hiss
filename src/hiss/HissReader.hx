@@ -12,14 +12,14 @@ using hiss.HaxeTools;
 import hiss.HStream.HPosition;
 
 class HissReader {
-    static var readTable: HValue;
-    static var defaultReadFunction: HValue;
+    static var readTable: Map<String, Dynamic> = new Map();
+    static var defaultReadFunction: Dynamic;
 
     static var macroLengths = [];
 
-    public static function setMacroString(s: HValue, f: HValue) {
+    public static function setMacroString(s: HValue, f: Dynamic) {
         var sk = s.toHaxeString();
-        readTable.put(sk, f);
+        readTable.set(sk, f);
         if (macroLengths.indexOf(sk.length) == -1) {
             macroLengths.push(sk.length);
         }
@@ -29,12 +29,12 @@ class HissReader {
         return f;
     }
 
-    public static function setDefaultReadFunction(f: HValue) {
+    public static function setDefaultReadFunction(f: Dynamic) {
         defaultReadFunction = f;
     }
 
     static function internalSetMacroString(s: String, f: Dynamic) {
-        readTable.put(s, Function(Haxe(Fixed, f, 'read$s')));
+        readTable.set(s, f);
         if (macroLengths.indexOf(s.length) == -1) {
             macroLengths.push(s.length);
         }
@@ -42,9 +42,7 @@ class HissReader {
     }
 
     public function new() {
-        readTable = Dict(new HDict());
-
-        defaultReadFunction = Function(Haxe(Fixed, readSymbol, "read-symbol"));
+        defaultReadFunction = readSymbol;
 
         // Literals
         internalSetMacroString('"', readString);
@@ -72,7 +70,7 @@ class HissReader {
     }
     
     static function toStream(stringOrStream: HValue, ?pos: HValue) {
-        var position = if (pos != null) HissTools.valueOf(pos) else null;
+        var position = if (pos != null) pos.value() else null;
 
         return switch (stringOrStream) {
             case String(s):
@@ -210,12 +208,10 @@ class HissReader {
         return List(values);
     }
 
-    static function callReadFunction(func: HValue, start: String, stream: HStream, terminators: HValue): HValue {
+    static function callReadFunction(func: Dynamic, start: String, stream: HStream, terminators: HValue): HValue {
         var pos = stream.position();
         try {
-            var hissFunc = func.extract(Function(f) => f);
-            var haxeFunc = hissFunc.extract(Haxe(_, f, _) => f);
-            return haxeFunc(String(start), Object("HStream", stream), terminators, Object("HPosition", pos));
+            return func(String(start), Object("HStream", stream), terminators, Object("HPosition", pos));
         } 
         #if !throwErrors
         catch (s: Dynamic) {
@@ -236,13 +232,13 @@ class HissReader {
         for (length in macroLengths) {
             if (stream.length() < length) continue;
             var couldBeAMacro = stream.peek(length);
-            if (readTable.toDict().exists(couldBeAMacro)) {
+            if (readTable.exists(couldBeAMacro)) {
                 stream.drop(couldBeAMacro);
                 var pos = stream.position();
                 var expression = null;
                 //trace('read called');
                 
-                expression = callReadFunction(readTable.toDict()[couldBeAMacro], couldBeAMacro, stream, terminators);
+                expression = callReadFunction(readTable[couldBeAMacro], couldBeAMacro, stream, terminators);
 
                 // If the expression is a comment, try to read the next one
                 return switch (expression) {
