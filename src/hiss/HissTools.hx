@@ -43,6 +43,10 @@ class HissTools {
         return list.toList()[0];
     }
 
+    public static function second(list: HValue): HValue {
+        return list.toList()[1];
+    }
+
     public static function rest(list: HValue): HValue {
         return List(list.toList().slice(1));
     }
