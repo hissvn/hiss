@@ -4,5 +4,5 @@
 -cp src
 -D analyzer-optimize
 -D no-deprecation-warnings
--main hiss.Main
+-main hiss.CCInterp
 --interp

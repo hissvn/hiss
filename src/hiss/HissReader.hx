@@ -6,17 +6,15 @@ using hiss.HissReader;
 
 import hiss.HTypes;
 
-using hiss.HissInterp;
 using hiss.HissTools;
+using hiss.HaxeTools;
 
 import hiss.HStream.HPosition;
 
-@:allow(hiss.HissInterp)
 class HissReader {
     static var readTable: HValue;
     static var defaultReadFunction: HValue;
 
-    static var interp: HissInterp;
     static var macroLengths = [];
 
     public static function setMacroString(s: HValue, f: HValue) {
@@ -43,10 +41,8 @@ class HissReader {
         macroLengths.sort(function(a, b) { return b - a; });
     }
 
-    public function new(globalInterp: HissInterp) {
-        interp = globalInterp;
+    public function new() {
         readTable = Dict(new HDict());
-        interp.set("*readtable*", readTable);
 
         defaultReadFunction = Function(Haxe(Fixed, readSymbol, "read-symbol"));
 
@@ -217,7 +213,9 @@ class HissReader {
     static function callReadFunction(func: HValue, start: String, stream: HStream, terminators: HValue): HValue {
         var pos = stream.position();
         try {
-            return interp.funcall(T, Nil, func, List([String(start), Object("HStream", stream), Quote(terminators), Object("HPosition", pos)]));
+            var hissFunc = func.extract(Function(f) => f);
+            var haxeFunc = hissFunc.extract(Haxe(_, f, _) => f);
+            return haxeFunc(String(start), Object("HStream", stream), terminators, Object("HPosition", pos));
         } 
         #if !throwErrors
         catch (s: Dynamic) {

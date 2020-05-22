@@ -4,46 +4,79 @@ import hiss.HTypes;
 import ihx.ConsoleReader;
 import hiss.HissReader;
 import hiss.HissTools;
-using HissTools;
+using hiss.HissTools;
+
+typedef Continuation = (HValue) -> Void;
 
 class CCInterp {
     public static function main() {
-        var hReader = new HissReader(null);
+        var hReader = new HissReader();
         var cReader = new ConsoleReader();
 
+        var env = Dict([]);
+
         while (true) {
+            HaxeTools.print(">>> ");
+            cReader.cmd.prompt = ">>> ";
+
             var next = cReader.readLine();
             if (next == "(quit)") break;
 
             var exp = HissReader.read(String(next));
 
-            var env = Dict([]);
 
-            eval(exp, env, print);
+            try {
+                eval(exp, env, print);
+            } catch (s: Dynamic) {
+                trace('psych lol $s');
+            }
         }
     }
 
-    public static function print(exp: HValue) {
+    static function print(exp: HValue) {
         HaxeTools.println(exp.toPrint());
     }
 
-    public static function begin(exps: HValue, env: HValue, cc: (HValue) -> Void) {
+    static function begin(exps: HValue, env: HValue, cc: Continuation) {
         // TODO
     }
 
-    public static function set(args: HValue, env: HValue) {
+    static function set(args: HValue, env: HValue, cc: Continuation) {
         eval(HissTools.second(args),
-            env, function(val) {
+            env, (val) -> {
                 env.put(args.first().symbolName(), val);
+                cc(val);
             });
-        env.toDict()[HissTools.first(args).toHaxeString()] = 
-        return HissTools.second(args);
     }
 
-    public static function eval(exp: HValue, env: HValue, cc: (HValue) -> Void) {
+    static function _if(args: HValue, env: HValue, cc: Continuation) {
+        eval(args.first(), env, (val) -> {
+            eval(if (val.truthy()) {
+                args.second();
+            } else {
+                args.third();
+            }, env, cc);
+        });
+    }
+
+    static function getVar(name: HValue, env: HValue, cc: Continuation) {
+        var d = env.toDict();
+        var name = name.symbolName();
+        cc(if (d.exists(name)) {
+            d[name];
+        } else {
+            Nil;
+        });
+    }
+
+    static function lambda(args: HValue, env: HValue, cc: Continuation) {
+        
+    }
+
+    public static function eval(exp: HValue, env: HValue, cc: Continuation) {
         switch (exp) {
-            case Symbol(name):
-                cc(env.toDict()[name]);
+            case Symbol(_):
+                getVar(exp, env, cc);
             case Int(_) | Float(_) | String(_):
                 cc(exp);
             
@@ -52,11 +85,17 @@ class CCInterp {
             default:
                 switch (HissTools.first(exp)) {
                     case Symbol("quote"):
-                        cc(HissTools.second(exp));
+                        cc(exp.second());
                     case Symbol("begin"):
-                        begin(HissTools.rest(exp), env, cc);
+                        begin(exp.rest(), env, cc);
                     case Symbol("set!"):
-                        cc(set(HissTools.rest(exp)))
+                        set(exp.rest(), env, cc);
+                    case Symbol("if"):
+                        _if(exp.rest(), env, cc);
+                    case Symbol("lambda"):
+
+                    default:
+                        throw 'yeet';
                 }
         }
     }

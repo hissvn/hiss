@@ -47,6 +47,10 @@ class HissTools {
         return list.toList()[1];
     }
 
+    public static function third(list: HValue): HValue {
+        return list.toList()[2];
+    }
+
     public static function rest(list: HValue): HValue {
         return List(list.toList().slice(1));
     }
@@ -61,8 +65,8 @@ class HissTools {
     }
 
 
-    public static function symbolName(v: HValue): HValue {
-        return String(HaxeTools.extract(v, Symbol(name) => name, "symbol name"));
+    public static function symbolName(v: HValue): String {
+        return HaxeTools.extract(v, Symbol(name) => name, "symbol name");
     }
 
     // Since the variadic binop macro uses cons and it's one of the first
