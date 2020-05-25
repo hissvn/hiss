@@ -102,13 +102,27 @@ class CCInterp {
         var params = args.first();
         var body = Symbol('begin').cons(args.rest());
         cc(Function((fArgs, env, fCC) -> {
-            trace("calling shtuff");
             var callEnv = env.extend(params.destructuringBind(fArgs)); // extending the outer env is how lambdas capture values
             eval(body, callEnv, fCC);
         }));
     }
 
+    static function callCC(args: HValue, env: HValue, cc: Continuation) {
+        // Convert the continuation to a hiss function accepting one argument
+        var ccHFunction = Function((innerArgs: HValue, innerEnv: HValue, innerCC: Continuation) -> {
+            cc(innerArgs.first());
+        });
+
+        funcall(
+            List([
+                args.first(),
+                ccHFunction]),
+            env, 
+            cc);
+    }
+
     public static function eval(exp: HValue, env: HValue, cc: Continuation) {
+
         switch (exp) {
             case Symbol(_):
                 getVar(exp, env, cc);
@@ -117,7 +131,13 @@ class CCInterp {
             
             // TODO the macro case would go here, but hold your horses!
 
-            default:
+            case Quote(e):
+                cc(e);
+            case Function(_):
+                cc(exp);
+
+
+            case List(_):
                 switch (exp.first()) {
                     case Symbol("quote"):
                         cc(exp.second());
@@ -129,9 +149,14 @@ class CCInterp {
                         _if(exp.rest(), env, cc);
                     case Symbol("lambda"):
                         lambda(exp.rest(), env, cc);
+                    case Symbol("call/cc"):
+                        trace("what");
+                        callCC(exp.rest(), env, cc);
                     default:
                         funcall(exp, env, cc);
                 }
+            default:
+                throw 'Cannot evaluate $exp yet';
         }
     }
 }
