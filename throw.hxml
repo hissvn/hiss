@@ -5,5 +5,5 @@
 -D analyzer-optimize
 -D no-deprecation-warnings
 -D throwErrors
--main hiss.Main
+-main hiss.CCInterp
 --interp
