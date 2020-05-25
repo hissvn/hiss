@@ -13,7 +13,6 @@ class CCInterp {
         globals.put("print", Function(_print));
         globals.put("quote", SpecialForm(quote));
         globals.put("begin", SpecialForm(begin));
-        globals.put("macroexpand", SpecialForm(specialForm));
         globals.put("setlocal", SpecialForm(set.bind(false)));
         globals.put("defvar", SpecialForm(set.bind(true)));
         globals.put("defun", SpecialForm(setCallable.bind(false)));
@@ -22,6 +21,8 @@ class CCInterp {
         globals.put("lambda", SpecialForm(lambda.bind(false)));
         globals.put("call/cc", SpecialForm(callCC));
         globals.put("eval", SpecialForm(_eval));
+        globals.put("quit", Function(quit));
+        globals.put("bound?", SpecialForm(bound));
 
         globals.put("+", Function((args: HValue, env: HValue, cc: Continuation) -> {
             cc((args.first().value() + args.second().value()).toHValue());
@@ -39,7 +40,6 @@ class CCInterp {
             cReader.cmd.prompt = ">>> ";
 
             var next = cReader.readLine();
-            if (next == "(quit)") break;
 
             var exp = HissReader.read(String(next));
 
@@ -54,9 +54,13 @@ class CCInterp {
         }
     }
 
-    function _print(exp: HValue, env: HValue, cc: Continuation) {
-        HaxeTools.println(exp.first().toPrint());
-        cc(exp.first());
+    function quit(args: HValue, env: HValue, cc: Continuation) {
+        Sys.exit(0);
+    }
+
+    function _print(args: HValue, env: HValue, cc: Continuation) {
+        HaxeTools.println(args.first().toPrint());
+        cc(args.first());
     }
 
     function begin(exps: HValue, env: HValue, cc: Continuation) {
@@ -163,6 +167,17 @@ class CCInterp {
         cc(callable);
     }
 
+    function bound(args: HValue, env: HValue, cc: Continuation) {
+        var d = env.toDict();
+        var g = globals.toDict();
+        var name = args.first().symbolName();
+        cc(if (d.exists(name) || g.exists(name)) {
+            T;
+        } else {
+            Nil;
+        });
+    }
+
     function callCC(args: HValue, env: HValue, cc: Continuation) {
         // Convert the continuation to a hiss function accepting one argument
         var ccHFunction = Function((innerArgs: HValue, innerEnv: HValue, innerCC: Continuation) -> {
@@ -186,8 +201,6 @@ class CCInterp {
                 while (idx < copy.length) {
                     switch (copy[idx]) {
                         case UnquoteList(exp):
-                            //trace(expr.toPrint());
-
                             copy.splice(idx, 1);
                             eval(exp, env, (innerList: HValue) -> {
                                 for (exp in innerList.toList()) { 
@@ -224,7 +237,6 @@ class CCInterp {
             case Unquote(h):
                 eval(h, env, cc);
             default:
-                trace("first");
                 cc(args.first());
         };
     }
