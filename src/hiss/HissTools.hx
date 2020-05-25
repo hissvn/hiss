@@ -85,14 +85,27 @@ class HissTools {
 
         var l1 = names.toList();
         var l2 = values.toList();
-        if (l1.length != l2.length) {
+        
+        /*if (l1.length != l2.length) {
             throw 'Cannot bind ${l2.length} values to ${l1.length} names';
-        }
+        }*/
 
         for (idx in 0...l1.length) {
             switch (l1[idx]) {
                 case List(nestedList):
                     bindings = bindings.extend(destructuringBind(l1[idx], l2[idx]));
+                case Symbol("&optional"):
+                    var numOptionalValues = l1.length - idx - 1;
+                    var remainingValues = l2.slice(idx);
+                    while (remainingValues.length < numOptionalValues) {
+                        remainingValues.push(Nil);
+                    }
+                    bindings = bindings.extend(destructuringBind(List(l1.slice(idx+1)), List(remainingValues)));
+                    break;
+                case Symbol("&rest"):
+                    var remainingValues = l2.slice(idx);
+                    bindings.put(l1[idx+1].symbolName(), List(remainingValues));
+                    break;
                 case Symbol(name):
                     bindings.put(name, l2[idx]);
                 default:
