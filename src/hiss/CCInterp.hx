@@ -7,23 +7,29 @@ import hiss.HissTools;
 using hiss.HissTools;
 
 class CCInterp {
-    public static function main() {
-        var hReader = new HissReader();
-        var cReader = new ConsoleReader();
+    var globals: HValue = Dict([]);
 
-        var env = Dict([]);
-        env.put("print", Function(_print));
-        env.put("quote", SpecialForm(quote));
-        env.put("begin", SpecialForm(begin));
-        env.put("macroexpand", SpecialForm(specialForm));
-        env.put("set!", SpecialForm(set));
-        env.put("if", SpecialForm(_if));
-        env.put("lambda", SpecialForm(lambda));
-        env.put("call/cc", SpecialForm(callCC));
+    public function new() {
+        globals.put("print", Function(_print));
+        globals.put("quote", SpecialForm(quote));
+        globals.put("begin", SpecialForm(begin));
+        globals.put("macroexpand", SpecialForm(specialForm));
+        globals.put("setlocal", SpecialForm(set.bind(false)));
+        globals.put("defvar", SpecialForm(set.bind(true)));
+        globals.put("if", SpecialForm(_if));
+        globals.put("lambda", SpecialForm(lambda));
+        globals.put("call/cc", SpecialForm(callCC));
 
-        env.put("+", Function((args: HValue, env: HValue, cc: Continuation) -> {
+        globals.put("+", Function((args: HValue, env: HValue, cc: Continuation) -> {
             cc((args.first().value() + args.second().value()).toHValue());
         }));
+    }
+
+    public static function main() {
+        var hReader = new HissReader();
+        var interp = new CCInterp();
+        var cReader = new ConsoleReader();        
+        var locals = Dict([]);
 
         while (true) {
             HaxeTools.print(">>> ");
@@ -36,19 +42,19 @@ class CCInterp {
 
 
             try {
-                eval(exp, env, HissTools.print);
-            } /*catch (s: Dynamic) {
-                trace('psych lol $s');
-            }*/
+                interp.eval(exp, locals, HissTools.print);
+            } catch (s: Dynamic) {
+                HaxeTools.println('Error $s');
+            }
         }
     }
 
-    static function _print(exp: HValue, env: HValue, cc: Continuation) {
+    function _print(exp: HValue, env: HValue, cc: Continuation) {
         HaxeTools.println(exp.first().toPrint());
         cc(exp.first());
     }
 
-    static function begin(exps: HValue, env: HValue, cc: Continuation) {
+    function begin(exps: HValue, env: HValue, cc: Continuation) {
         eval(exps.first(), env, (result) -> {
             if (!exps.rest().truthy()) {
                 cc(result);
@@ -58,24 +64,24 @@ class CCInterp {
         });
     }
 
-    static function specialForm(args: HValue, env: HValue, cc: Continuation) {
+    function specialForm(args: HValue, env: HValue, cc: Continuation) {
         args.first().toFunction()(args.rest(), env, cc);
     }
 
-    static function macroCall(args: HValue, env: HValue, cc: Continuation) {
+    function macroCall(args: HValue, env: HValue, cc: Continuation) {
         specialForm(args, env, (expansion: HValue) -> {
             eval(expansion, env, cc);
         });
     }
 
-    static function funcall(args: HValue, env: HValue, cc: Continuation) {
+    function funcall(args: HValue, env: HValue, cc: Continuation) {
         //trace('funcall ${args.toPrint()}');
         evalAll(args, env, (values) -> {
-            values.first().toFunction()(values.rest(), env, cc);
+            values.first().toFunction()(values.rest(), Dict([]), cc);
         });
     }
 
-    static function evalAll(args: HValue, env: HValue, cc: Continuation) {
+    function evalAll(args: HValue, env: HValue, cc: Continuation) {
         if (!args.truthy()) {
             cc(Nil);
         } else {
@@ -88,19 +94,24 @@ class CCInterp {
         }
     }
 
-    static function quote(args: HValue, env: HValue, cc: Continuation) {
+    function quote(args: HValue, env: HValue, cc: Continuation) {
         cc(args.first());
     }
 
-    static function set(args: HValue, env: HValue, cc: Continuation) {
+    function set(global: Bool, args: HValue, env: HValue, cc: Continuation) {
         eval(HissTools.second(args),
             env, (val) -> {
-                env.put(args.first().symbolName(), val);
+                var scope = if (global) {
+                    globals;
+                } else {
+                    env;
+                }
+                scope.put(args.first().symbolName(), val);
                 cc(val);
             });
     }
 
-    static function _if(args: HValue, env: HValue, cc: Continuation) {
+    function _if(args: HValue, env: HValue, cc: Continuation) {
         eval(args.first(), env, (val) -> {
             eval(if (val.truthy()) {
                 args.second();
@@ -110,17 +121,20 @@ class CCInterp {
         });
     }
 
-    static function getVar(name: HValue, env: HValue, cc: Continuation) {
+    function getVar(name: HValue, env: HValue, cc: Continuation) {
         var d = env.toDict();
+        var g = globals.toDict();
         var name = name.symbolName();
         cc(if (d.exists(name)) {
             d[name];
+        } else if (g.exists(name)) {
+            g[name];
         } else {
             Nil;
         });
     }
 
-    static function lambda(args: HValue, env: HValue, cc: Continuation) {
+    function lambda(args: HValue, env: HValue, cc: Continuation) {
         var params = args.first();
         var body = Symbol('begin').cons(args.rest());
         cc(Function((fArgs, env, fCC) -> {
@@ -129,7 +143,7 @@ class CCInterp {
         }));
     }
 
-    static function callCC(args: HValue, env: HValue, cc: Continuation) {
+    function callCC(args: HValue, env: HValue, cc: Continuation) {
         // Convert the continuation to a hiss function accepting one argument
         var ccHFunction = Function((innerArgs: HValue, innerEnv: HValue, innerCC: Continuation) -> {
             cc(innerArgs.first());
@@ -143,7 +157,7 @@ class CCInterp {
             cc);
     }
 
-    public static function eval(exp: HValue, env: HValue, cc: Continuation) {
+    public function eval(exp: HValue, env: HValue, cc: Continuation) {
 
         switch (exp) {
             case Symbol(_):
