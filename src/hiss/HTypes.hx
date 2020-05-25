@@ -14,22 +14,17 @@ enum HValue {
     List(l: HList);
     Dict(n: HDict);
     Function(f: HFunction);
+    Macro(f: HFunction);
+    SpecialForm(f: HFunction);
     // If you're going to store arbitrary objects in Hiss variables, do yourself a favor and give them a descriptive label because Haxe runtime type info can be squirrely on different platforms
     Object(t: String, v: Dynamic);
 
     Quote(exp: HValue);
 
-    Error(m: String);
-
     // Backend-only types. These are used internally but never returned by the interpreter
     Quasiquote(exp: HValue);
     Unquote(exp: HValue);
     UnquoteList(exp: HValue);
-    VarInfo(i: HVarInfo);
-    
-    Return(v: HValue);
-    Break;
-    Continue;
 
     Comment;
 }

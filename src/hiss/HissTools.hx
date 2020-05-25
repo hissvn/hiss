@@ -20,7 +20,7 @@ class HissTools {
     }
 
     public static function toFunction(f: HValue, hint: String = "function"): HFunction {
-        return HaxeTools.extract(f, Function(haxeF) => haxeF, hint);
+        return HaxeTools.extract(f, Function(hf) | Macro(hf) | SpecialForm(hf) => hf, hint);
     }
 
     public static function toHaxeString(hv: HValue): String {
@@ -172,10 +172,10 @@ class HissTools {
                 '[$t: ${Std.string(o)}]';
             case Function(_):
                 '[hxfunction]';
-            /*case Function(Macro(e,f)):
-                '[${if (!e) "special " else ""}macro ${Function(f).toPrint(recursiveCall+1)}]';*/
-            case Error(m):
-                '!$m!';
+            case Macro(_):
+                '[macro]';
+            case SpecialForm(_):
+                '[special form]';
             case Nil:
                 'nil';
             case T:
@@ -186,18 +186,19 @@ class HissTools {
                 } else {
                     '${[for (k => v in hdict) '$k => ${v.toPrint(recursiveCall+1)}, ']}';
                 }
-            case VarInfo(hvi):
-                var container = if (hvi.container != null) Std.string(hvi.container) else "null";
-                '{name: ${hvi.name}, value: ${hvi.value.toPrint(recursiveCall+1)}, container: $container}';
             case Quasiquote(e):
                 return '`${e.toPrint(recursiveCall+1)}';
             case Unquote(e):
                 return ',${e.toPrint(recursiveCall+1)}';
             case UnquoteList(e):
                 return ',@${e.toPrint(recursiveCall+1)}';
-            default: 
+            default:
                 throw 'Not clear why $v is being converted to string';
         }
+    }
+
+    public static function print(exp: HValue) {
+        HaxeTools.println(exp.toPrint());
     }
 
     public static function toHValue(v: Dynamic, hint:String = "HValue"): HValue {
@@ -276,7 +277,6 @@ class HissTools {
             case Nil: false;
             //case Int(i) if (i == 0): false; /* 0 being falsy will be useful for Hank read-counts */
             case List(l) if (l.length == 0): false;
-            case Error(m): false;
             default: true;
         }
     }

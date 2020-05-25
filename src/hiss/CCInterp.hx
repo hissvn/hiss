@@ -12,7 +12,15 @@ class CCInterp {
         var cReader = new ConsoleReader();
 
         var env = Dict([]);
-        env.put("print", Function(print));
+        env.put("print", Function(_print));
+        env.put("quote", SpecialForm(quote));
+        env.put("begin", SpecialForm(begin));
+        env.put("macroexpand", SpecialForm(specialForm));
+        env.put("set!", SpecialForm(set));
+        env.put("if", SpecialForm(_if));
+        env.put("lambda", SpecialForm(lambda));
+        env.put("call/cc", SpecialForm(callCC));
+
         env.put("+", Function((args: HValue, env: HValue, cc: Continuation) -> {
             cc((args.first().value() + args.second().value()).toHValue());
         }));
@@ -28,16 +36,16 @@ class CCInterp {
 
 
             try {
-                eval(exp, env, (v) -> { print(v, env, (h) -> {}); });
+                eval(exp, env, HissTools.print);
             } /*catch (s: Dynamic) {
                 trace('psych lol $s');
             }*/
         }
     }
 
-    static function print(exp: HValue, env: HValue, cc: Continuation) {
-        HaxeTools.println(exp.toPrint());
-        cc(exp);
+    static function _print(exp: HValue, env: HValue, cc: Continuation) {
+        HaxeTools.println(exp.first().toPrint());
+        cc(exp.first());
     }
 
     static function begin(exps: HValue, env: HValue, cc: Continuation) {
@@ -50,8 +58,18 @@ class CCInterp {
         });
     }
 
+    static function specialForm(args: HValue, env: HValue, cc: Continuation) {
+        args.first().toFunction()(args.rest(), env, cc);
+    }
+
+    static function macroCall(args: HValue, env: HValue, cc: Continuation) {
+        specialForm(args, env, (expansion: HValue) -> {
+            eval(expansion, env, cc);
+        });
+    }
+
     static function funcall(args: HValue, env: HValue, cc: Continuation) {
-        trace('funcall ${args.toPrint()}');
+        //trace('funcall ${args.toPrint()}');
         evalAll(args, env, (values) -> {
             values.first().toFunction()(values.rest(), env, cc);
         });
@@ -62,12 +80,16 @@ class CCInterp {
             cc(Nil);
         } else {
             eval(args.first(), env, (value) -> {
-                trace(value);
+//                trace(value);
                 evalAll(args.rest(), env, (value2) -> {
                     cc(value.cons(value2));
                 });
             });
         }
+    }
+
+    static function quote(args: HValue, env: HValue, cc: Continuation) {
+        cc(args.first());
     }
 
     static function set(args: HValue, env: HValue, cc: Continuation) {
@@ -133,28 +155,21 @@ class CCInterp {
 
             case Quote(e):
                 cc(e);
-            case Function(_):
+            case Function(_) | SpecialForm(_) | Macro(_):
                 cc(exp);
 
-
             case List(_):
-                switch (exp.first()) {
-                    case Symbol("quote"):
-                        cc(exp.second());
-                    case Symbol("begin"):
-                        begin(exp.rest(), env, cc);
-                    case Symbol("set!"):
-                        set(exp.rest(), env, cc);
-                    case Symbol("if"):
-                        _if(exp.rest(), env, cc);
-                    case Symbol("lambda"):
-                        lambda(exp.rest(), env, cc);
-                    case Symbol("call/cc"):
-                        trace("what");
-                        callCC(exp.rest(), env, cc);
-                    default:
-                        funcall(exp, env, cc);
-                }
+                eval(exp.first(), env, (callable: HValue) -> {
+                    switch (callable) {
+                        case Function(_):
+                            funcall(exp, env, cc);
+                        case Macro(_):
+                            macroCall(callable.cons(exp.rest()), env, cc);
+                        case SpecialForm(_):
+                            specialForm(callable.cons(exp.rest()), env, cc);
+                        default: throw 'Cannot call $callable';
+                    }
+                });
             default:
                 throw 'Cannot evaluate $exp yet';
         }
