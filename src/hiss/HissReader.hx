@@ -1,48 +1,61 @@
 package hiss;
 
+import haxe.ds.Either;
+
 using hx.strings.Strings;
 
 using hiss.HissReader;
 
 import hiss.HTypes;
+import hiss.CCInterp;
 
 using hiss.HissTools;
 using hiss.HaxeTools;
 
 import hiss.HStream.HPosition;
 
+typedef HaxeReadFunction = (start: String, stream: HStream) -> HValue;
+
 class HissReader {
-    static var readTable: Map<String, Dynamic> = new Map();
-    static var defaultReadFunction: Dynamic;
+    var readTable: Map<String, HValue> = new Map();
+    var defaultReadFunction: HValue;
 
-    static var macroLengths = [];
+    var macroLengths = [];
+    var interp: CCInterp;
 
-    public static function setMacroString(s: HValue, f: Dynamic) {
-        var sk = s.toHaxeString();
-        readTable.set(sk, f);
-        if (macroLengths.indexOf(sk.length) == -1) {
-            macroLengths.push(sk.length);
+    public function setMacroString(s: String, f: HValue) {
+        readTable.set(s, f);
+        if (macroLengths.indexOf(s.length) == -1) {
+            macroLengths.push(s.length);
         }
-        // Sort macro lengths from longest to shortest so, for example, ,@ and , can both be operators.
         macroLengths.sort(function(a, b) { return b - a; });
-        //trace(macroLengths[0]);
         return f;
     }
 
-    public static function setDefaultReadFunction(f: Dynamic) {
+    public function setDefaultReadFunction(f: HValue) {
         defaultReadFunction = f;
     }
 
-    static function internalSetMacroString(s: String, f: Dynamic) {
-        readTable.set(s, f);
+    function hissReadFunction(f: HaxeReadFunction) {
+        return Function((args: HValue, env: HValue, cc: Continuation) -> {
+            var start = args.first().toHaxeString();
+            var str = toStream(args.second());
+            cc(f(start, str));
+        });
+    }
+
+    function internalSetMacroString(s: String, f: HaxeReadFunction) {
+        readTable.set(s, hissReadFunction(f));
         if (macroLengths.indexOf(s.length) == -1) {
             macroLengths.push(s.length);
         }
         macroLengths.sort(function(a, b) { return b - a; });
     }
 
-    public function new() {
-        defaultReadFunction = readSymbol;
+    public function new(interp: CCInterp) {
+        this.interp = interp;
+
+        defaultReadFunction = hissReadFunction(readSymbol);
 
         // Literals
         internalSetMacroString('"', readString);
@@ -55,7 +68,7 @@ class HissReader {
         internalSetMacroString(".", readSymbolOrSign);
 
         // Lists
-        internalSetMacroString("(", readDelimitedList.bind(String(")"), null));
+        internalSetMacroString("(", readDelimitedList.bind(")", null));
 
         // Quotes
         for (symbol in ["`", "'", ",", ",@"]) {
@@ -82,9 +95,9 @@ class HissReader {
         }
     }
 
-    public static function readQuoteExpression(start: HValue, str: HValue, terminators: HValue, position: HValue): HValue {
-        var expression = read(str, terminators, position);
-        return switch (start.toHaxeString()) {
+    function readQuoteExpression(start: String, stream: HStream): HValue {
+        var expression = read("", stream);
+        return switch (start) {
             case "`":
                 Quasiquote(expression);
             case "'":
@@ -98,11 +111,10 @@ class HissReader {
         }
     }
 
-    public static function readNumber(start: HValue, str: HValue, ?terminators: HValue, position: HValue): HValue {
-        var stream = toStream(str);
-        stream.putBack(start.toHaxeString());
+    function readNumber(start: String, stream: HStream): HValue {
+        stream.putBack(start);
 
-        var token = nextToken(str, terminators);
+        var token = nextToken(stream);
         return if (token.indexOf('.') != -1) {
             Float(Std.parseFloat(token));
         } else {
@@ -110,30 +122,30 @@ class HissReader {
         };
     }
 
-    public static function readSymbolOrSign(start: HValue, str: HValue, terminators: HValue, position: HValue): HValue {
-        // Hyphen could either be a symbol, or the start of a negative numeral
-        return if (toStream(str).nextIsWhitespace() || toStream(str).nextIsOneOf([for (term in terminators.toList()) term.toHaxeString()])) {
-            readSymbol(String(""), start, terminators, position);
+    function readSymbolOrSign(start: String, stream: HStream): HValue {
+        // Hyphen could either be a symbol (subraction), or the start of a negative numeral
+        return if (stream.nextIsWhitespace() || stream.nextIsOneOf(terminators)) {
+            stream.putBack(start);
+            readSymbol("", stream);
         } else {
-            readNumber(start, str, terminators, position);
+            trace('reading number from $start : $stream');
+            readNumber(start, stream);
         }
     }
 
-    public static function readBlockComment(start: String, str: HValue, _: HValue, position: HValue): HValue {
-        var text = toStream(str).takeUntil(["*/"]);
-
+    public function readBlockComment(start: String, stream: HStream): HValue {
+        stream.takeUntil(["*/"]);
         return Comment;
     }
 
-    public static function readLineComment(start: String, str: HValue, _: HValue, position: HValue): HValue {
-        var text = toStream(str).takeLine();
-
+    public function readLineComment(start: String, stream: HStream): HValue {
+        stream.takeLine();
         return Comment;
     }
 
-    public static function readString(start: String, str: HValue, _: HValue, position: HValue): HValue {
+    public static function readString(start: String, str: HStream): HValue {
         //trace(str);
-        switch (toStream(str).takeUntil(['"'])) {
+        switch (str.takeUntil(['"'])) {
             case Some(s): 
                 var escaped = s.output;
 
@@ -150,69 +162,59 @@ class HissReader {
         }
     }
 
-    static function nextToken(str: HValue, ?terminators: HValue): String {
-        var whitespaceOrTerminator = HStream.WHITESPACE.copy();
-        if (terminators != null) {
-            for (terminator in terminators.toList()) {
-                whitespaceOrTerminator.push(terminator.toHaxeString());
-            }
-        }
+    function nextToken(str: HStream): String {
+        var whitespaceOrTerminator = HStream.WHITESPACE.concat(terminators);
 
-        return HaxeTools.extract(toStream(str).takeUntil(whitespaceOrTerminator, true, false), Some(s) => s, "next token").output;
+        return HaxeTools.extract(str.takeUntil(whitespaceOrTerminator, true, false), Some(s) => s, "next token").output;
     }
 
-    public static function readSymbol(start: HValue, str: HValue, terminators: HValue, position: HValue): HValue {
-        var symbolName = nextToken(str, terminators);
+    function readSymbol(start: String, str: HStream): HValue {
+        var symbolName = nextToken(str);
         // We mustn't return Symbol(nil) because it creates a logical edge case
         if (symbolName == "nil") return Nil;
         if (symbolName == "t") return T;
         return Symbol(symbolName);
     }
 
-    public static function readDelimitedList(terminator: HValue, ?delimiters: HValue, start: HValue, str: HValue, terminators: HValue, position: HValue): HValue {
-        var stream = toStream(str, position);
-        /*trace('t: ${terminator.toHaxeString()}');
-        trace('s: $start');
-        trace('str: ${toStream(str).peekAll()}');
-        */
-
-        var delims = [];
-        if (delimiters == null || delimiters.match(Nil)) {
-            delims = HStream.WHITESPACE.copy();
+    function readDelimitedList(terminator: String, delimiters: Array<String>, start: String, stream: HStream): HValue {
+        // While reading a delimited list we will use different terminators
+        var oldTerminators = terminators.copy();
+        
+        if (delimiters == null) {
+            delimiters = HStream.WHITESPACE.copy();
         } else {
-            delims = [for (s in delimiters.toList()) s.toHaxeString()];
+            delimiters = delimiters.copy();
+            terminators = terminators.concat(delimiters);
         }
 
-        var delimsOrTerminator = [for (delim in delims) String(delim)];
-        delimsOrTerminator.push(terminator);
-        delimsOrTerminator.push(String("//"));
-        delimsOrTerminator.push(String("/*"));
-
-
-        var term = terminator.toHaxeString();
+        terminators.push(terminator);
 
         var values = [];
 
-        stream.dropWhile(delims);
-        //trace(stream.length());
-        while (stream.length() >= terminator.toHaxeString().length && stream.peek(term.length) != term) {
-            values.push(read(Object("HStream", stream), /*terminator*/ List(delimsOrTerminator)));
-            //trace(values);
-            stream.dropWhile(delims);
-            //trace(stream.peekAll());
-            //trace(stream.length());
+        stream.dropWhile(delimiters);
+        
+        while (stream.length() >= terminator.length && stream.peek(terminator.length) != terminator) {
+            values.push(read("", stream));
+            
+            stream.dropWhile(delimiters);
         }
 
-        //trace('made it');
-        stream.drop(terminator.toHaxeString());
+        stream.drop(terminator);
+
+        terminators = oldTerminators;
+
         return List(values);
     }
 
-    static function callReadFunction(func: Dynamic, start: String, stream: HStream, terminators: HValue): HValue {
+    function callReadFunction(func: HValue, start: String, stream: HStream): HValue {
         var pos = stream.position();
         try {
-            return func(String(start), Object("HStream", stream), terminators, Object("HPosition", pos));
-        } 
+            var result = null;
+            interp.eval(func.cons(List([String(start), Object("HStream", stream)])), Dict([]), (r) -> {
+                result = r;
+            });
+            return result;
+        }
         #if !throwErrors
         catch (s: Dynamic) {
             if (s.indexOf("Reader error") == 0) throw s;
@@ -221,13 +223,10 @@ class HissReader {
         #end
     }
 
-    public static function read(str: HValue, ?terminators: HValue, ?pos: HValue): HValue {
-        var stream: HStream = toStream(str, pos);
-        stream.dropWhitespace();
+    var terminators = [")", "/*", ";", "//"];
 
-        if (terminators == null || terminators == Nil) {
-            terminators = List([String(")"), String('/*'), String('//')]);
-        }
+    public function read(start: String, stream: HStream): HValue {
+        stream.dropWhitespace();
 
         for (length in macroLengths) {
             if (stream.length() < length) continue;
@@ -236,9 +235,8 @@ class HissReader {
                 stream.drop(couldBeAMacro);
                 var pos = stream.position();
                 var expression = null;
-                //trace('read called');
                 
-                expression = callReadFunction(readTable[couldBeAMacro], couldBeAMacro, stream, terminators);
+                expression = callReadFunction(readTable[couldBeAMacro], couldBeAMacro, stream);
 
                 // If the expression is a comment, try to read the next one
                 return switch (expression) {
@@ -246,26 +244,26 @@ class HissReader {
                         return if (stream.isEmpty()) {
                             Nil; // This is awkward but better than always erroring when the last expression is a comment
                         } else {
-                            read(Object("HStream", stream), terminators); 
+                            read("", stream); 
                         }
-                    default: 
+                    default:
                         expression;
                 }
             }
         }
 
         // Call default read function
-        return callReadFunction(defaultReadFunction, "", stream, terminators);
+        return callReadFunction(defaultReadFunction, "", stream);
     }
 
-    public static function readAll(str: HValue, ?dropWhitespace: HValue, ?terminators: HValue, ?pos: HValue): HValue {
+    public function readAll(str: HValue, ?dropWhitespace: HValue, ?terminators: HValue, ?pos: HValue): HValue {
         var stream: HStream = toStream(str, pos);
 
         if (dropWhitespace == null) dropWhitespace = T;
 
         var exprs = [];
         while (!stream.isEmpty()) {
-            exprs.push(read(Object("HStream", stream), terminators, pos));
+            exprs.push(read("", stream));
             if (dropWhitespace != Nil) {
                 stream.dropWhitespace();
             }

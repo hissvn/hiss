@@ -8,17 +8,15 @@ import ihx.ConsoleReader;
 import hiss.HissReader;
 import hiss.HissTools;
 using hiss.HissTools;
+import hiss.StaticFiles;
 
 class CCInterp {
     var globals: HValue = Dict([]);
-
+    var reader: HissReader;
     public function new() {
-        // Haxe interop
-        globals.put("Type", Object("Class", Type));
-        globals.put("Reflect", Object("Class", Reflect));
-        globals.put("get-property", Function(getProperty));
-        globals.put("call-haxe", Function(callHaxe));
+        reader = new HissReader(this);
 
+        // Primitives
         globals.put("begin", SpecialForm(begin));
         globals.put("setlocal", SpecialForm(set.bind(false)));
         globals.put("defvar", SpecialForm(set.bind(true)));
@@ -28,16 +26,26 @@ class CCInterp {
         globals.put("lambda", SpecialForm(lambda.bind(false)));
         globals.put("call/cc", SpecialForm(callCC));
         globals.put("eval", SpecialForm(_eval));
-        globals.put("quit", Function(quit));
         globals.put("bound?", SpecialForm(bound));
+        globals.put("load", Function(load));
+        globals.put("funcall", Function(funcall.bind(false)));
+        globals.put("funcall-inline", Function(funcall.bind(true)));
+
+        // Haxe interop -- We can bootstrap the rest from these:
+        globals.put("Type", Object("Class", Type));
+        globals.put("Hiss-Tools", Object("Class", HissTools));
+        globals.put("get-property", Function(getProperty));
+        globals.put("call-haxe", Function(callHaxe));
 
         globals.put("+", Function((args: HValue, env: HValue, cc: Continuation) -> {
             cc((args.first().value() + args.second().value()).toHValue());
         }));
+
+        StaticFiles.compileWith("stdlib2.hiss");
+        load(List([String("stdlib2.hiss")]), Dict([]), (hval) -> {});
     }
 
     public static function main() {
-        var hReader = new HissReader();
         var interp = new CCInterp();
         var cReader = new ConsoleReader();        
         var locals = Dict([]);
@@ -49,7 +57,7 @@ class CCInterp {
             var next = cReader.readLine();
 
             try {
-                var exp = HissReader.read(String(next));
+                var exp = interp.read(next);
 
                 interp.eval(exp, locals, HissTools.print);
             }
@@ -61,13 +69,8 @@ class CCInterp {
         }
     }
 
-    function quit(args: HValue, env: HValue, cc: Continuation) {
-        Sys.exit(0);
-    }
-
-    function _print(args: HValue, env: HValue, cc: Continuation) {
-        HaxeTools.println(args.first().toPrint());
-        cc(args.first());
+    function load(args: HValue, env: HValue, cc: Continuation) {
+        evalAll(reader.readAll(String(StaticFiles.getContent(args.first().value()))), env, cc);
     }
 
     function begin(exps: HValue, env: HValue, cc: Continuation) {
@@ -90,9 +93,9 @@ class CCInterp {
         });
     }
 
-    function funcall(args: HValue, env: HValue, cc: Continuation) {
+    function funcall(callInline: Bool, args: HValue, env: HValue, cc: Continuation) {
         evalAll(args, env, (values) -> {
-            values.first().toFunction()(values.rest(), Dict([]), cc);
+            values.first().toFunction()(values.rest(), if (callInline) env else Dict([]), cc);
         });
     }
 
@@ -204,12 +207,12 @@ class CCInterp {
         var callOnReference = if (args.length() < 4) {
             false;
         } else {
-            args.nth(Int(4)).truthy();
+            args.nth(Int(3)).truthy();
         };
         var keepArgsWrapped = if (args.length() < 5) {
             Nil;
         } else {
-            args.nth(Int(5));
+            args.nth(Int(4));
         };
 
         var caller = args.first().value(callOnReference);
@@ -226,7 +229,7 @@ class CCInterp {
             cc(innerArgs.first());
         });
 
-        funcall(
+        funcall(false,
             List([
                 args.first(),
                 ccHFunction]),
@@ -283,6 +286,10 @@ class CCInterp {
         };
     }
 
+    public function read(str: String) {
+        return reader.read("", HStream.FromString(str));
+    }
+
     public function eval(exp: HValue, env: HValue, cc: Continuation) {
         switch (exp) {
             case Symbol(_):
@@ -299,14 +306,14 @@ class CCInterp {
             case Quasiquote(e):
                 evalUnquotes(List([e]), env, cc);
 
-            case Function(_) | SpecialForm(_) | Macro(_) | T | Nil:
+            case Function(_) | SpecialForm(_) | Macro(_) | T | Nil | Object(_, _):
                 cc(exp);
 
             case List(_):
                 eval(exp.first(), env, (callable: HValue) -> {
                     switch (callable) {
                         case Function(_):
-                            funcall(exp, env, cc);
+                            funcall(false, exp, env, cc);
                         case Macro(_):
                             macroCall(callable.cons(exp.rest()), env, cc);
                         case SpecialForm(_):

@@ -51,6 +51,10 @@ class HissTools {
         return list.toList()[2];
     }
 
+    public static function fourth(list: HValue): HValue {
+        return list.toList()[3];
+    }
+
     public static function rest(list: HValue): HValue {
         return List(list.toList().slice(1));
     }
@@ -212,6 +216,7 @@ class HissTools {
 
     public static function print(exp: HValue) {
         HaxeTools.println(exp.toPrint());
+        return exp;
     }
 
     public static function toHValue(v: Dynamic, hint:String = "HValue"): HValue {
