@@ -25,11 +25,11 @@ class CCInterp {
         globals.put("if", SpecialForm(_if));
         globals.put("lambda", SpecialForm(lambda.bind(false)));
         globals.put("call/cc", SpecialForm(callCC));
-        globals.put("eval", SpecialForm(_eval));
+        globals.put("eval", Function(_eval));
         globals.put("bound?", SpecialForm(bound));
         globals.put("load", Function(load));
-        globals.put("funcall", Function(funcall.bind(false)));
-        globals.put("funcall-inline", Function(funcall.bind(true)));
+        globals.put("funcall", SpecialForm(funcall.bind(false)));
+        globals.put("funcall-inline", SpecialForm(funcall.bind(true)));
 
         // Haxe interop -- We can bootstrap the rest from these:
         globals.put("Type", Object("Class", Type));
@@ -56,16 +56,9 @@ class CCInterp {
 
             var next = cReader.readLine();
 
-            try {
-                var exp = interp.read(next);
+            var exp = interp.read(next);
 
-                interp.eval(exp, locals, HissTools.print);
-            }
-            #if !throwErrors
-            catch (s: Dynamic) {
-                HaxeTools.println('Error $s');
-            }
-            #end
+            interp.eval(exp, locals, HissTools.print);
         }
     }
 
@@ -144,7 +137,7 @@ class CCInterp {
         });
     }
 
-    /** Special form for eval **/
+    /** Callable form for eval **/
     function _eval(args: HValue, env: HValue, cc: Continuation) {
         eval(args.first(), env, cc);
     }
@@ -291,38 +284,45 @@ class CCInterp {
     }
 
     public function eval(exp: HValue, env: HValue, cc: Continuation) {
-        switch (exp) {
-            case Symbol(_):
-                getVar(exp, env, cc);
-            case Int(_) | Float(_) | String(_):
-                cc(exp);
-            
-            // TODO the macro case would go here, but hold your horses!
+        try {
+            switch (exp) {
+                case Symbol(_):
+                    getVar(exp, env, cc);
+                case Int(_) | Float(_) | String(_):
+                    cc(exp);
+                
+                // TODO the macro case would go here, but hold your horses!
 
-            case Quote(e):
-                cc(e);
-            case Unquote(e):
-                eval(e, env, cc);
-            case Quasiquote(e):
-                evalUnquotes(List([e]), env, cc);
+                case Quote(e):
+                    cc(e);
+                case Unquote(e):
+                    eval(e, env, cc);
+                case Quasiquote(e):
+                    evalUnquotes(List([e]), env, cc);
 
-            case Function(_) | SpecialForm(_) | Macro(_) | T | Nil | Object(_, _):
-                cc(exp);
+                case Function(_) | SpecialForm(_) | Macro(_) | T | Nil | Object(_, _):
+                    cc(exp);
 
-            case List(_):
-                eval(exp.first(), env, (callable: HValue) -> {
-                    switch (callable) {
-                        case Function(_):
-                            funcall(false, exp, env, cc);
-                        case Macro(_):
-                            macroCall(callable.cons(exp.rest()), env, cc);
-                        case SpecialForm(_):
-                            specialForm(callable.cons(exp.rest()), env, cc);
-                        default: throw 'Cannot call $callable';
-                    }
-                });
-            default:
-                throw 'Cannot evaluate $exp yet';
+                case List(_):
+                    eval(exp.first(), env, (callable: HValue) -> {
+                        switch (callable) {
+                            case Function(_):
+                                funcall(false, exp, env, cc);
+                            case Macro(_):
+                                macroCall(callable.cons(exp.rest()), env, cc);
+                            case SpecialForm(_):
+                                specialForm(callable.cons(exp.rest()), env, cc);
+                            default: throw 'Cannot call $callable';
+                        }
+                    });
+                default:
+                    throw 'Cannot evaluate $exp yet';
+            }
         }
+        #if !throwErrors
+        catch (s: Dynamic) {
+            HaxeTools.println('Error $s from `${exp.toPrint()}` or its continuation');
+        }
+        #end
     }
 }

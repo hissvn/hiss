@@ -1,9 +1,19 @@
 (defmacro register-function (class function name &optional keep-args-wrapped)
     `(defun ,name (&rest args)
         (call-haxe ,class ,function args nil ,keep-args-wrapped)))
+(defmacro register-method (method name &optional call-on-reference keep-args-wrapped)
+    `(defun ,name (instance &rest args)
+        (call-haxe instance ,method args call-on-reference keep-args-wrapped)))
 (register-function Hiss-Tools "print" print t)
+(register-function Hiss-Tools "length" length t)
 (register-function Hiss-Tools "first" first t)
 (register-function Hiss-Tools "rest" rest t)
+(register-function Hiss-Tools "eq" eq t)
+(register-function Hiss-Tools "nth" nth t)
+(register-function Hiss-Tools "cons" cons t)
+(register-method "concat" concat nil nil) ; TODO instead of this, have variadic (append) function
+(defun slice (l start &optional end)
+    (call-haxe l "slice" (list start (or end (length l)))))
 
 (defun not (arg)
     (if arg nil t))
@@ -22,3 +32,38 @@
 (defun quit () (exit 0))
 
 (defun list (&rest args) args)
+
+(defun alternates (start l)
+    (if (not l)
+            '()
+        (if start
+                (cons (first l) (alternates t (slice l 2)))
+            (alternates t (rest l)))))
+
+(defmacro let (bindings &rest body)
+    `(funcall-inline
+        (lambda ,(alternates t bindings)
+            ,@body)
+        (list ,@(alternates nil bindings))))
+
+(defmacro apply (f args)
+    (concat `(funcall ,f) args))
+
+/*
+(defmacro bind (f &rest args)
+    `(lambda (&rest missing-args) (apply ,f (concat ',args missing-args))))
+
+(defmacro rbind(f &rest args)
+    `(lambda (&rest missing-args) (apply ,f (concat missing-args ',args))))
+
+/*
+(defvar second (rbind nth 1))
+(defvar third (rbind nth 2))
+(defvar fourth (rbind nth 3))
+(defvar fifth (rbind nth 4))
+(defvar sixth (rbind nth 5))
+(defvar seventh (rbind nth 6))
+(defvar eighth (rbind nth 7))
+(defvar ninth (rbind nth 8))
+(defvar tenth (rbind nth 9))
+*/
