@@ -1,5 +1,8 @@
 package hiss;
 
+import Type;
+import Reflect;
+
 import hiss.HTypes;
 import ihx.ConsoleReader;
 import hiss.HissReader;
@@ -10,8 +13,12 @@ class CCInterp {
     var globals: HValue = Dict([]);
 
     public function new() {
-        globals.put("print", Function(_print));
-        globals.put("quote", SpecialForm(quote));
+        // Haxe interop
+        globals.put("Type", Object("Class", Type));
+        globals.put("Reflect", Object("Class", Reflect));
+        globals.put("get-property", Function(getProperty));
+        globals.put("call-haxe", Function(callHaxe));
+
         globals.put("begin", SpecialForm(begin));
         globals.put("setlocal", SpecialForm(set.bind(false)));
         globals.put("defvar", SpecialForm(set.bind(true)));
@@ -41,9 +48,9 @@ class CCInterp {
 
             var next = cReader.readLine();
 
-            var exp = HissReader.read(String(next));
-
             try {
+                var exp = HissReader.read(String(next));
+
                 interp.eval(exp, locals, HissTools.print);
             }
             #if !throwErrors
@@ -176,6 +183,41 @@ class CCInterp {
         } else {
             Nil;
         });
+    }
+
+    function getProperty(args: HValue, env: HValue, cc: Continuation) {
+        cc(Reflect.getProperty(args.first().value(true), args.second().toHaxeString()).toHValue());
+    }
+
+    /**
+        Special form for calling Haxe functions and methods from within Hiss.
+
+        args will be destructured like so:
+
+        1. caller - class or object
+        2. method - name of method or function on caller
+        3. args (default empty list) - list of function arguments
+        4. callOnReference (default Nil) - if T, a direct reference to caller will call the method, for when side-effects are desirable
+        5. keepArgsWrapped (default Nil) - list of argument indices that should be passed in HValue form, rather than as Haxe Dynamic values. Nil for none, T for all.
+    **/
+    function callHaxe(args: HValue, env: HValue, cc: Continuation) {
+        var callOnReference = if (args.length() < 4) {
+            false;
+        } else {
+            args.nth(Int(4)).truthy();
+        };
+        var keepArgsWrapped = if (args.length() < 5) {
+            Nil;
+        } else {
+            args.nth(Int(5));
+        };
+
+        var caller = args.first().value(callOnReference);
+
+        var method = Reflect.getProperty(caller, args.second().toHaxeString());
+        var haxeCallArgs = args.third().unwrapList(keepArgsWrapped);
+
+        cc(Reflect.callMethod(caller, method, haxeCallArgs).toHValue());
     }
 
     function callCC(args: HValue, env: HValue, cc: Continuation) {

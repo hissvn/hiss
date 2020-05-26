@@ -282,6 +282,17 @@ class HissTools {
         }];
     }
 
+    public static function length(v: HValue) {
+        switch (v) {
+            case List(l):
+                return l.length;
+            case String(s):
+                return s.length;            
+            default:
+                throw '$v has no length';
+        }
+    }
+
     /**
      * Behind the scenes, this function evaluates the truthiness of an HValue
      **/
