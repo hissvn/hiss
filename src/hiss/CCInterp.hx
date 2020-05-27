@@ -10,6 +10,11 @@ import hiss.HissTools;
 using hiss.HissTools;
 import hiss.StaticFiles;
 
+@:build(hiss.BinopsBuilder.build())
+class HaxeBinops {
+
+}
+
 class CCInterp {
     var globals: HValue = Dict([]);
     var reader: HissReader;
@@ -36,10 +41,6 @@ class CCInterp {
         globals.put("Hiss-Tools", Object("Class", HissTools));
         globals.put("get-property", Function(getProperty));
         globals.put("call-haxe", Function(callHaxe));
-
-        globals.put("+", Function((args: HValue, env: HValue, cc: Continuation) -> {
-            cc((args.first().value() + args.second().value()).toHValue());
-        }));
 
         StaticFiles.compileWith("stdlib2.hiss");
         load(List([String("stdlib2.hiss")]), Dict([]), (hval) -> {});
