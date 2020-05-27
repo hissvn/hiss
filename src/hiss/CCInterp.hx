@@ -284,34 +284,36 @@ class CCInterp {
     }
 
     public function eval(exp: HValue, env: HValue, cc: Continuation) {
+        var value = Nil;
+        var captureValue = (val) -> { value = val; };
         try {
             switch (exp) {
                 case Symbol(_):
-                    getVar(exp, env, cc);
+                    getVar(exp, env, captureValue);
                 case Int(_) | Float(_) | String(_):
-                    cc(exp);
+                    captureValue(exp);
                 
                 // TODO the macro case would go here, but hold your horses!
 
                 case Quote(e):
-                    cc(e);
+                    captureValue(e);
                 case Unquote(e):
-                    eval(e, env, cc);
+                    eval(e, env, captureValue);
                 case Quasiquote(e):
-                    evalUnquotes(List([e]), env, cc);
+                    evalUnquotes(List([e]), env, captureValue);
 
                 case Function(_) | SpecialForm(_) | Macro(_) | T | Nil | Object(_, _):
-                    cc(exp);
+                    captureValue(exp);
 
                 case List(_):
                     eval(exp.first(), env, (callable: HValue) -> {
                         switch (callable) {
                             case Function(_):
-                                funcall(false, exp, env, cc);
+                                funcall(false, exp, env, captureValue);
                             case Macro(_):
-                                macroCall(callable.cons(exp.rest()), env, cc);
+                                macroCall(callable.cons(exp.rest()), env, captureValue);
                             case SpecialForm(_):
-                                specialForm(callable.cons(exp.rest()), env, cc);
+                                specialForm(callable.cons(exp.rest()), env, captureValue);
                             default: throw 'Cannot call $callable';
                         }
                     });
@@ -321,8 +323,9 @@ class CCInterp {
         }
         #if !throwErrors
         catch (s: Dynamic) {
-            HaxeTools.println('Error $s from `${exp.toPrint()}` or its continuation');
+            HaxeTools.println('Error $s from `${exp.toPrint()}`');
         }
         #end
+        cc(value);
     }
 }
