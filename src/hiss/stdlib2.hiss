@@ -20,7 +20,10 @@
 (defmacro or (&rest args)
     `(if (not ',args) nil
         (if (not ,(first args)) (or ,@(rest args)) ,(first args))))
-
+(defmacro and (&rest args)
+    `(if (not ',args) t
+        (if (not ,(first args)) nil
+            (and ,@(rest args)))))
 
 (register-function Type "resolveClass" resolve-class)
 (register-function Type "resolveEnum" resolve-enum)
@@ -47,13 +50,13 @@
         (list ,@(alternates nil bindings))))
 
 (defmacro apply (f args)
-    (concat `(funcall ,f) args))
+    (cons f (eval args)))
 
 /*
 (defmacro bind (f &rest args)
     `(lambda (&rest missing-args) (apply ,f (concat ',args missing-args))))
 
-(defmacro rbind(f &rest args)
+(defmacro rbind (f &rest args)
     `(lambda (&rest missing-args) (apply ,f (concat missing-args ',args))))
 
 /*
