@@ -225,7 +225,7 @@ class CCInterp {
             cc(innerArgs.first());
         });
 
-        funcall(false,
+        funcall(true,
             List([
                 args.first(),
                 ccHFunction]),
