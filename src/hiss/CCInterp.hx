@@ -233,8 +233,9 @@ class CCInterp {
             cc);
     }
 
-    function evalUnquotes(args: HValue, env: HValue, cc: Continuation) {
-        switch (args.first()) {
+    // This breaks the continuation-based signature rules because I just want it to work.
+    public function evalUnquotes(expr: HValue, env: HValue): HValue {
+        switch (expr) {
             case List(exps):
                 var copy = exps.copy();
                 // If any of exps is an UnquoteList, expand it and insert the values at that index
@@ -243,42 +244,38 @@ class CCInterp {
                     switch (copy[idx]) {
                         case UnquoteList(exp):
                             copy.splice(idx, 1);
-                            eval(exp, env, (innerList: HValue) -> {
+
+                            eval(exp, env, (innerList) -> {
                                 for (exp in innerList.toList()) { 
                                     copy.insert(idx++, exp);
                                 }
                             });
-
                         // If an UnquoteList is quoted, apply the quote to each expression in the list
                         case Quote(UnquoteList(exp)):
                             copy.splice(idx, 1);
-                            eval(exp, env, (innerList: HValue) -> {
+                            eval(exp, env, (innerList) -> {
                                 for (exp in innerList.toList()) { 
                                     copy.insert(idx++, Quote(exp));
                                 }
                             });
-
                         default:
                             var exp = copy[idx];
                             copy.splice(idx, 1);
-                            evalUnquotes(List([exp]), env, (value: HValue) -> {
-                                copy.insert(idx, value);
-                            });
+                            copy.insert(idx, evalUnquotes(exp, env));
                     }
                     idx++;
  
                 }
-                cc(List(copy));
+                return List(copy);
             case Quote(exp):
-                evalUnquotes(List([exp]), env, (value: HValue) -> {
-                    cc(Quote(value));
-                });
-            case Quasiquote(exp):
-                evalUnquotes(List([exp]), env, cc);
+                return Quote(evalUnquotes(exp, env));
             case Unquote(h):
-                eval(h, env, cc);
-            default:
-                cc(args.first());
+                var val = Nil;
+                eval(h, env, (v) -> { val = v; });
+                return val;
+            case Quasiquote(exp):
+                return evalUnquotes(exp, env);
+            default: return expr;
         };
     }
 
@@ -303,7 +300,7 @@ class CCInterp {
                 case Unquote(e):
                     eval(e, env, captureValue);
                 case Quasiquote(e):
-                    evalUnquotes(List([e]), env, captureValue);
+                    value = evalUnquotes(e, env);
 
                 case Function(_) | SpecialForm(_) | Macro(_) | T | Nil | Object(_, _):
                     captureValue(exp);
