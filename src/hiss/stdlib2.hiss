@@ -86,6 +86,13 @@
 (defmacro for (var l &rest body)
     `(map ,l (lambda (,var) ,@body)))
 
+(defmacro while (cond &rest body)
+    (print `(call/cc (lambda (break)
+        (when ,cond
+            (call/cc (lambda (continue)
+                ,@body))
+            (while ,cond ,@body))))))
+
 (defun apply (f args)
     (eval `(,f ',@args)))
 
