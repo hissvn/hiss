@@ -130,11 +130,13 @@ class CCInterp {
 
     function _if(args: HValue, env: HValue, cc: Continuation) {
         eval(args.first(), env, (val) -> {
-            eval(if (val.truthy()) {
-                args.second();
+            if (val.truthy()) {
+                eval(args.second(), env, cc);
+            } else if (args.length() > 2) {
+                eval(args.third(), env, cc);
             } else {
-                args.third();
-            }, env, cc);
+                cc(Nil);
+            }
         });
     }
 
