@@ -87,7 +87,7 @@
     `(map ,l (lambda (,var) ,@body)))
 
 (defun apply (f args)
-    (eval (cons f args)))
+    (eval `(,f ',@args)))
 
 (import "hiss.HaxeBinops" Haxe-Binops)
 (defmacro variadic-binop (symbol op-name &optional zero-case one-case two-case)
@@ -124,15 +124,12 @@
 
 (variadic-binop = "equals" (error "can't check equality without an operand") t (if (fun val1 val2) val1 nil))
 
-
-/*
 (defmacro bind (f &rest args)
     `(lambda (&rest missing-args) (apply ,f (concat ',args missing-args))))
 
 (defmacro rbind (f &rest args)
     `(lambda (&rest missing-args) (apply ,f (concat missing-args ',args))))
 
-/*
 (defvar second (rbind nth 1))
 (defvar third (rbind nth 2))
 (defvar fourth (rbind nth 3))
@@ -142,4 +139,3 @@
 (defvar eighth (rbind nth 7))
 (defvar ninth (rbind nth 8))
 (defvar tenth (rbind nth 9))
-*/
