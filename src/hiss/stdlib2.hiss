@@ -18,6 +18,8 @@
 (defun take (l num)
     (slice l 0 num))
 
+(defmacro quote (arg) `',arg)
+
 (defun not (arg)
     (if arg nil t))
 (defmacro or (&rest args)
@@ -67,6 +69,22 @@
     `(and ',forms (if (eval (first (first ',forms)))
             (eval (cons 'begin (rest (first ',forms))))
         (eval (cons 'cond (rest ',forms))))))
+
+(defmacro when (cond &rest body)
+    `(if ,cond (begin ,@body)))
+
+(defun map (l function)
+    (if l
+            (cons (function (first l)) (map (rest l) function))
+        (list)))
+
+(defun dolist (l function)
+    (when l
+        (function (first l))
+        (dolist (rest l) function)))
+
+(defmacro for (var l &rest body)
+    `(map ,l (lambda (,var) ,@body)))
 
 (defun apply (f args)
     (eval (cons f args)))
