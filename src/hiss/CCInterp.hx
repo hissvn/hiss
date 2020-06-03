@@ -18,6 +18,19 @@ class HaxeBinops {
 class CCInterp {
     var globals: HValue = Dict([]);
     var reader: HissReader;
+
+    var t: Dynamic = null;
+
+    function disableTrace() {
+        t = haxe.Log.trace;
+        haxe.Log.trace = (str, ?posInfo) -> {};
+    }
+
+    function enableTrace() {
+        haxe.Log.trace = t;
+    }
+
+
     public function new() {
         reader = new HissReader(this);
 
@@ -43,7 +56,11 @@ class CCInterp {
         globals.put("call-haxe", Function(callHaxe));
 
         StaticFiles.compileWith("stdlib2.hiss");
+
+        var t = haxe.Log.trace;
+        haxe.Log.trace = (str, ?info) -> {};
         load(List([String("stdlib2.hiss")]), Dict([]), (hval) -> {});
+        haxe.Log.trace = t;
     }
 
     public static function main() {
@@ -57,7 +74,9 @@ class CCInterp {
 
             var next = cReader.readLine();
 
+            interp.disableTrace();
             var exp = interp.read(next);
+            interp.enableTrace();
 
             interp.eval(exp, locals, HissTools.print);
         }
@@ -71,7 +90,8 @@ class CCInterp {
         eval(exps.first(), env, (result) -> {
             if (!exps.rest().truthy()) {
                 cc(result);
-            } else {
+            } 
+            else {
                 begin(exps.rest(), env, cc);
             }
         });
@@ -89,6 +109,7 @@ class CCInterp {
 
     function funcall(callInline: Bool, args: HValue, env: HValue, cc: Continuation) {
         evalAll(args, env, (values) -> {
+            trace(values.toPrint());
             values.first().toFunction()(values.rest(), if (callInline) env else Dict([]), cc);
         });
     }
@@ -222,6 +243,7 @@ class CCInterp {
     function callCC(args: HValue, env: HValue, cc: Continuation) {
         // Convert the continuation to a hiss function accepting one argument
         var ccHFunction = Function((innerArgs: HValue, innerEnv: HValue, innerCC: Continuation) -> {
+            trace('cc was called with ${innerArgs.first().toPrint()}');
             cc(innerArgs.first());
         });
 
@@ -284,36 +306,35 @@ class CCInterp {
     }
 
     public function eval(exp: HValue, env: HValue, cc: Continuation) {
-        var value = Nil;
-        var captureValue = (val) -> { value = val; };
         try {
             switch (exp) {
                 case Symbol(_):
-                    getVar(exp, env, captureValue);
+                    getVar(exp, env, cc);
                 case Int(_) | Float(_) | String(_):
-                    captureValue(exp);
+                    cc(exp);
                 
                 // TODO the macro case would go here, but hold your horses!
 
                 case Quote(e):
-                    captureValue(e);
+                    cc(e);
                 case Unquote(e):
-                    eval(e, env, captureValue);
+                    eval(e, env, cc);
                 case Quasiquote(e):
-                    value = evalUnquotes(e, env);
+                    cc(evalUnquotes(e, env));
 
                 case Function(_) | SpecialForm(_) | Macro(_) | T | Nil | Object(_, _):
-                    captureValue(exp);
+                    cc(exp);
 
                 case List(_):
                     eval(exp.first(), env, (callable: HValue) -> {
                         switch (callable) {
                             case Function(_):
-                                funcall(false, exp, env, captureValue);
+                                funcall(false, exp, env, cc);
                             case Macro(_):
-                                macroCall(callable.cons(exp.rest()), env, captureValue);
+                                macroCall(callable.cons(exp.rest()), env, cc);
                             case SpecialForm(_):
-                                specialForm(callable.cons(exp.rest()), env, captureValue);
+                                trace('Calling special form ${exp.first().toPrint()}');
+                                specialForm(callable.cons(exp.rest()), env, cc);
                             default: throw 'Cannot call $callable';
                         }
                     });
@@ -326,6 +347,5 @@ class CCInterp {
             HaxeTools.println('Error $s from `${exp.toPrint()}`');
         }
         #end
-        cc(value);
     }
 }
