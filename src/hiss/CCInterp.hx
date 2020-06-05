@@ -86,6 +86,7 @@ class CCInterp {
         importFunction(HissTools.nth, "nth", T);
         importFunction(HissTools.cons, "cons", T);
 
+
         StaticFiles.compileWith("stdlib2.hiss");
 
         disableTrace();
@@ -98,7 +99,7 @@ class CCInterp {
         StaticFiles.compileWith("debug.hiss");
         #if sys
         var cReader = new ConsoleReader();        
-        var locals = List([]); // TODO why?
+        var locals = List([Dict([])]); // This allows for top-level setlocal
 
         while (true) {
             HaxeTools.print(">>> ");
