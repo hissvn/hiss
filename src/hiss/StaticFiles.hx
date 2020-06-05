@@ -2,7 +2,9 @@ package hiss;
 
 import haxe.io.Path;
 import haxe.macro.Context;
+#if sys
 import sys.FileSystem;
+#end
 using StringTools;
 
 class StaticFiles {
@@ -16,7 +18,11 @@ class StaticFiles {
         // Search for the file relative to module root.
         var posInfos = Context.getPosInfos(Context.currentPos());
         if (directory.length == 0) directory = FileSystem.absolutePath(Path.directory(posInfos.file));
+        #if sys
         var content = sys.io.File.getContent(Path.join([directory, file]));
+        #else
+        var content = "";
+        #end
         return macro StaticFiles.registerFileContent($v{file}, $v{content});
     }
 
@@ -45,7 +51,8 @@ class StaticFiles {
     **/
 	static function recursiveLoop(directory:String, ?files:Array<String>):Array<String> {
 		if (files == null)
-			files = [];
+            files = [];
+        #if sys
 		if (sys.FileSystem.exists(directory)) {
 			// trace("directory found: " + directory);
 			for (file in sys.FileSystem.readDirectory(directory)) {
@@ -62,8 +69,9 @@ class StaticFiles {
 				}
 			}
 		} else {
-			// trace('"$directory" does not exists');
+			// trace('"$directory" does not exist');
 		}
+        #end
 
 		return files;
 	}

@@ -65,9 +65,11 @@ class HStream {
 		}
 	}
 
+	#if sys
 	public static function FromFile(path: String): HStream {
 		return new HStream(path, sys.io.File.getContent(path));
 	}
+	#end
 
 	public function indexOf(s:String, start:Int = 0):Int {
 		return rawString.indexOf(s, start);

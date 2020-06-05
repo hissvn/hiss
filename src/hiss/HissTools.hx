@@ -161,7 +161,7 @@ class HissTools {
         }
     }
 
-    static var recursivePrintDepth = 5;
+    static var recursivePrintDepth = 6;
     public static function toPrint(v: HValue, recursiveCall: Int = 0): String {
         return switch (v) {
             case Int(i):
@@ -327,8 +327,10 @@ class HissTools {
                 v;
             case List(l):
                 if (reference) {
+                    HaxeTools.println('calling on reference of $l');
                     l;
                 } else {
+                    HaxeTools.println('calling on value of $l');
                     [for (hvv in l) HissTools.value(hvv, true)]; // So far it seems that nested list elements should stay wrapped
                 }
             case Dict(d):

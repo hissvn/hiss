@@ -4,7 +4,9 @@ import Type;
 import Reflect;
 
 import hiss.HTypes;
+#if sys
 import ihx.ConsoleReader;
+#end
 import hiss.HissReader;
 import hiss.HissTools;
 using hiss.HissTools;
@@ -22,12 +24,13 @@ class CCInterp {
     var t: Dynamic = null;
 
     function disableTrace() {
+        // On non-sys targets, trace is the only option
         t = haxe.Log.trace;
         haxe.Log.trace = (str, ?posInfo) -> {};
     }
 
     function enableTrace() {
-        haxe.Log.trace = t;
+        if (t != null) haxe.Log.trace = t;
     }
 
 
@@ -57,14 +60,15 @@ class CCInterp {
 
         StaticFiles.compileWith("stdlib2.hiss");
 
-        var t = haxe.Log.trace;
-        haxe.Log.trace = (str, ?info) -> {};
+        disableTrace();
         load(List([String("stdlib2.hiss")]), Dict([]), (hval) -> {});
-        haxe.Log.trace = t;
+        enableTrace();
     }
 
     public static function main() {
         var interp = new CCInterp();
+        StaticFiles.compileWith("debug.hiss");
+        #if sys
         var cReader = new ConsoleReader();        
         var locals = Dict([]);
 
@@ -80,10 +84,14 @@ class CCInterp {
 
             interp.eval(exp, locals, HissTools.print);
         }
+        #else
+        // An interactive repl isn't possible on non-sys platforms, so just run a test program.
+        interp.load(List([String("debug.hiss")]), Dict([]), (hval) -> {});
+        #end
     }
 
     function load(args: HValue, env: HValue, cc: Continuation) {
-        evalAll(reader.readAll(String(StaticFiles.getContent(args.first().value()))), env, cc);
+        begin(reader.readAll(String(StaticFiles.getContent(args.first().value()))), env, cc);
     }
 
     function begin(exps: HValue, env: HValue, cc: Continuation) {
@@ -103,13 +111,14 @@ class CCInterp {
 
     function macroCall(args: HValue, env: HValue, cc: Continuation) {
         specialForm(args, env, (expansion: HValue) -> {
+            HaxeTools.println(' ${expansion.toPrint()}');
             eval(expansion, env, cc);
         });
     }
 
     function funcall(callInline: Bool, args: HValue, env: HValue, cc: Continuation) {
         evalAll(args, env, (values) -> {
-            trace(values.toPrint());
+            // trace(values.toPrint());
             values.first().toFunction()(values.rest(), if (callInline) env else Dict([]), cc);
         });
     }
@@ -131,7 +140,7 @@ class CCInterp {
     }
 
     function set(global: Bool, args: HValue, env: HValue, cc: Continuation) {
-        eval(HissTools.second(args),
+        eval(args.second(),
             env, (val) -> {
                 var scope = if (global) {
                     globals;
@@ -232,6 +241,7 @@ class CCInterp {
             args.nth(Int(4));
         };
 
+        HaxeTools.println('calling haxe ${args.second().toHaxeString()} on ${args.first().toPrint()}');
         var caller = args.first().value(callOnReference);
 
         var method = Reflect.getProperty(caller, args.second().toHaxeString());
@@ -243,7 +253,7 @@ class CCInterp {
     function callCC(args: HValue, env: HValue, cc: Continuation) {
         // Convert the continuation to a hiss function accepting one argument
         var ccHFunction = Function((innerArgs: HValue, innerEnv: HValue, innerCC: Continuation) -> {
-            trace('cc was called with ${innerArgs.first().toPrint()}');
+            //trace('cc was called with ${innerArgs.first().toPrint()}');
             cc(innerArgs.first());
         });
 
@@ -331,9 +341,9 @@ class CCInterp {
                             case Function(_):
                                 funcall(false, exp, env, cc);
                             case Macro(_):
+                                HaxeTools.print('macroexpanding ${exp.toPrint()} -> ');
                                 macroCall(callable.cons(exp.rest()), env, cc);
                             case SpecialForm(_):
-                                trace('Calling special form ${exp.first().toPrint()}');
                                 specialForm(callable.cons(exp.rest()), env, cc);
                             default: throw 'Cannot call $callable';
                         }

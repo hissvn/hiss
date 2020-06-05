@@ -1,9 +1,10 @@
 (defmacro register-function (class function name &optional keep-args-wrapped)
     `(defun ,name (&rest args)
         (call-haxe ,class ,function args nil ,keep-args-wrapped)))
-(defmacro register-method (method name &optional call-on-reference keep-args-wrapped)
+(defmacro register-method (method name &optional call-on-reference keep-args-wrapped return-instance)
     `(defun ,name (instance &rest args)
-        (call-haxe instance ,method args call-on-reference keep-args-wrapped)))
+        (let (result (call-haxe instance ,method args ,call-on-reference ,keep-args-wrapped))
+            (if ,return-instance instance result))))
 (register-function Hiss-Tools "print" print t)
 (register-function Hiss-Tools "length" length t)
 (register-function Hiss-Tools "first" first t)
@@ -12,7 +13,11 @@
 (register-function Hiss-Tools "nth" nth t)
 (register-function Hiss-Tools "cons" cons t)
 (register-method "concat" concat nil nil) ; TODO instead of this, have variadic (append) function
+(register-method "push" push t nil t)
 
+(defun drop (l num)
+    (call-haxe l "splice" (list 0 num) t)
+    l)
 (defun slice (l start &optional end)
     (call-haxe l "slice" (list start (or end (length l)))))
 (defun take (l num)
@@ -43,12 +48,23 @@
 
 (defun list (&rest args) args)
 
+// This recursive implementation causes `let` to stack overflow with more than 2 bindings:
+/*
 (defun alternates (start l)
     (if (not l)
             '()
         (if start
                 (cons (first l) (alternates t (slice l 2)))
             (alternates t (rest l)))))
+*/
+// So here is a loop implementation
+(defun alternates (start l)
+    (when (not start) (drop l 1))
+    (setlocal r (list))
+    (while l 
+        (push r (first l))
+        (drop l 2))
+    r)
 
 (defmacro let (bindings &rest body)
     `(funcall-inline
