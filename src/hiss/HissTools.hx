@@ -76,13 +76,19 @@ class HissTools {
     /**
         Return the first argument HDict extended with the keys and values of the second.
     **/
-    public static function extend(env: HValue, extension: HValue) {
-        var extended = env.toDict().copy();
+    public static function dictExtend(dict: HValue, extension: HValue) {
+        var extended = dict.toDict().copy();
         for (pair in extension.toDict().keyValueIterator()) {
             extended.set(pair.key, pair.value);
         }
         return Dict(extended);
+    }    
+
+    public static function extend(env: HValue, extension: HValue) {
+        return cons(extension, env);
     }
+
+
 
     public static function destructuringBind(names: HValue, values: HValue) {
         var bindings = Dict([]);
@@ -97,14 +103,14 @@ class HissTools {
         for (idx in 0...l1.length) {
             switch (l1[idx]) {
                 case List(nestedList):
-                    bindings = bindings.extend(destructuringBind(l1[idx], l2[idx]));
+                    bindings = bindings.dictExtend(destructuringBind(l1[idx], l2[idx]));
                 case Symbol("&optional"):
                     var numOptionalValues = l1.length - idx - 1;
                     var remainingValues = l2.slice(idx);
                     while (remainingValues.length < numOptionalValues) {
                         remainingValues.push(Nil);
                     }
-                    bindings = bindings.extend(destructuringBind(List(l1.slice(idx+1)), List(remainingValues)));
+                    bindings = bindings.dictExtend(destructuringBind(List(l1.slice(idx+1)), List(remainingValues)));
                     break;
                 case Symbol("&rest"):
                     var remainingValues = l2.slice(idx);

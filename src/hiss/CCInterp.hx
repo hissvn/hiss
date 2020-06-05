@@ -2,6 +2,7 @@ package hiss;
 
 import Type;
 import Reflect;
+import haxe.CallStack;
 
 import hiss.HTypes;
 #if sys
@@ -19,7 +20,6 @@ class HaxeBinops {
 
 class CCInterp {
     var globals: HValue = Dict([]);
-    var stackFrames: HValue = List([]);
     var reader: HissReader;
 
     var tempTrace: Dynamic = null;
@@ -62,7 +62,7 @@ class CCInterp {
         StaticFiles.compileWith("stdlib2.hiss");
 
         disableTrace();
-        load(List([String("stdlib2.hiss")]), Dict([]), (hval) -> {});
+        load(List([String("stdlib2.hiss")]), List([]), (hval) -> {});
         enableTrace();
     }
 
@@ -71,7 +71,7 @@ class CCInterp {
         StaticFiles.compileWith("debug.hiss");
         #if sys
         var cReader = new ConsoleReader();        
-        var locals = Dict([]);
+        var locals = List([]); // TODO why?
 
         while (true) {
             HaxeTools.print(">>> ");
@@ -87,7 +87,7 @@ class CCInterp {
         }
         #else
         // An interactive repl isn't possible on non-sys platforms, so just run a test program.
-        interp.load(List([String("debug.hiss")]), Dict([]), (hval) -> {});
+        interp.load(List([String("debug.hiss")]), List([]), (hval) -> {});
         #end
     }
 
@@ -96,14 +96,16 @@ class CCInterp {
     }
 
     function begin(exps: HValue, env: HValue, cc: Continuation) {
+        var value = Nil;
         eval(exps.first(), env, (result) -> {
-            if (!exps.rest().truthy()) {
-                cc(result);
-            } 
-            else {
-                begin(exps.rest(), env, cc);
-            }
+            value = result;
         });
+        if (!exps.rest().truthy()) {
+            cc(value);
+        }
+        else {
+            begin(exps.rest(), env, cc);
+        }
     }
 
     function specialForm(args: HValue, env: HValue, cc: Continuation) {
@@ -120,7 +122,7 @@ class CCInterp {
     function funcall(callInline: Bool, args: HValue, env: HValue, cc: Continuation) {
         evalAll(args, env, (values) -> {
             // trace(values.toPrint());
-            values.first().toFunction()(values.rest(), if (callInline) env else Dict([]), cc);
+            values.first().toFunction()(values.rest(), if (callInline) env else List([]), cc);
         });
     }
 
@@ -146,7 +148,7 @@ class CCInterp {
                 var scope = if (global) {
                     globals;
                 } else {
-                    env;
+                    env.first();
                 }
                 scope.put(args.first().symbolName(), val);
                 cc(val);
@@ -177,12 +179,20 @@ class CCInterp {
     }
 
     function getVar(name: HValue, env: HValue, cc: Continuation) {
-        var d = env.toDict();
+        // Env is a list of dictionaries -- stack frames
+        var stackFrames = env.toList();
+
         var g = globals.toDict();
         var name = name.symbolName();
-        cc(if (d.exists(name)) {
-            d[name];
-        } else if (g.exists(name)) {
+
+        for (frame in stackFrames) {
+            var frameDict = frame.toDict();
+            if (frameDict.exists(name)) {
+                cc(frameDict[name]);
+                return;
+            }
+        }
+        cc(if (g.exists(name)) {
             g[name];
         } else {
             Nil;
@@ -205,10 +215,17 @@ class CCInterp {
     }
 
     function bound(args: HValue, env: HValue, cc: Continuation) {
-        var d = env.toDict();
+        var stackFrames = env.toList();
         var g = globals.toDict();
         var name = args.first().symbolName();
-        cc(if (d.exists(name) || g.exists(name)) {
+
+        for (frame in stackFrames) {
+            var frameDict = frame.toDict();
+            if (frameDict.exists(name)) {
+                cc(T);
+            }
+        }
+        cc(if (g.exists(name)) {
             T;
         } else {
             Nil;
@@ -317,6 +334,9 @@ class CCInterp {
     }
 
     public function eval(exp: HValue, env: HValue, cc: Continuation) {
+        //exp.print();
+        HaxeTools.println(' at Haxe Callstack depth ${CallStack.callStack().length}');
+
         try {
             switch (exp) {
                 case Symbol(_):
@@ -324,8 +344,6 @@ class CCInterp {
                 case Int(_) | Float(_) | String(_):
                     cc(exp);
                 
-                // TODO the macro case would go here, but hold your horses!
-
                 case Quote(e):
                     cc(e);
                 case Unquote(e):
@@ -356,6 +374,7 @@ class CCInterp {
         #if !throwErrors
         catch (s: Dynamic) {
             HaxeTools.println('Error $s from `${exp.toPrint()}`');
+            HaxeTools.println('Callstack depth ${CallStack.callStack().length}');
         }
         #end
     }
