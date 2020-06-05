@@ -42,7 +42,6 @@ class CCInterp {
         reader = new HissReader(this);
 
         // Primitives
-        globals.put("begin", SpecialForm(begin));
         globals.put("setlocal", SpecialForm(set.bind(false)));
         globals.put("defvar", SpecialForm(set.bind(true)));
         globals.put("defun", SpecialForm(setCallable.bind(false)));
@@ -55,6 +54,8 @@ class CCInterp {
         globals.put("load", Function(load, "load"));
         globals.put("funcall", SpecialForm(funcall.bind(false)));
         globals.put("funcall-inline", SpecialForm(funcall.bind(true)));
+        // Use tail-recursive begin for loading the prelude:
+        globals.put("begin", SpecialForm(trBegin));
 
         // Haxe interop -- We can bootstrap the rest from these:
         globals.put("Type", Object("Class", Type));
@@ -67,6 +68,9 @@ class CCInterp {
         disableTrace();
         load(List([String("stdlib2.hiss")]), List([]), (hval) -> {});
         enableTrace();
+
+        // Training wheels off. Give Hiss users the callCC-enabled, dangerous begin()
+        globals.put("begin", SpecialForm(begin));
     }
 
     public static function main() {
@@ -101,14 +105,14 @@ class CCInterp {
 
         // Use a tail-recursive begin() call because programs can be long
         // and we can't keep descending in the stack:
-        begin(exps, env, cc);
+        trBegin(exps, env, cc);
     }
 
     /**
         This tail-recursive implementation of begin breaks callCC,
         so it is only used internally.
     **/
-    function begin(exps: HValue, env: HValue, cc: Continuation) {
+    function trBegin(exps: HValue, env: HValue, cc: Continuation) {
         var value = Nil;
         eval(exps.first(), env, (result) -> {
             value = result;
@@ -118,11 +122,10 @@ class CCInterp {
             cc(value);
         }
         else {
-            begin(exps.rest(), env, cc);
+            trBegin(exps.rest(), env, cc);
         }
     }
 
-    /*
     function begin(exps: HValue, env: HValue, cc: Continuation) {
         eval(exps.first(), env, (result) -> {
             if (!exps.rest().truthy()) {
@@ -133,7 +136,6 @@ class CCInterp {
             }
         });
     }
-    */
 
     function specialForm(args: HValue, env: HValue, cc: Continuation) {
         args.first().toCallable()(args.rest(), env, cc);
@@ -294,7 +296,6 @@ class CCInterp {
 
         //HaxeTools.println('calling haxe ${args.second().toHaxeString()} on ${args.first().toPrint()}');
         var caller = args.first().value(callOnReference);
-
         var method = Reflect.getProperty(caller, args.second().toHaxeString());
         var haxeCallArgs = args.third().unwrapList(keepArgsWrapped);
 
@@ -388,7 +389,7 @@ class CCInterp {
 
                 case List(_):
                     if (!readingProgram) {
-                    //    HaxeTools.println('${CallStack.callStack().length}'.lpad(' ', 3) + '    ${exp.toPrint()}');
+                        //HaxeTools.println('${CallStack.callStack().length}'.lpad(' ', 3) + '    ${exp.toPrint()}');
                     }
 
                     eval(exp.first(), env, (callable: HValue) -> {
