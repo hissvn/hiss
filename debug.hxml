@@ -1,7 +1,6 @@
 -lib haxe-strings
 -lib uuid
 -lib ihx
--lib hxcpp-debug-server
 -cp src
 -debug
 -D hxcpp_debugger

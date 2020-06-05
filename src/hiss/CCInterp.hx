@@ -2,7 +2,9 @@ package hiss;
 
 import Type;
 import Reflect;
+using Reflect;
 import haxe.CallStack;
+import haxe.Constraints.Function;
 
 import hiss.HTypes;
 #if sys
@@ -37,6 +39,18 @@ class CCInterp {
         if (tempTrace != null) haxe.Log.trace = tempTrace;
     }
 
+    function importFunction(func: Function, name: String, keepArgsWrapped: HValue) {
+        globals.put(name, Function((args: HValue, env: HValue, cc: Continuation) -> {
+            cc(Reflect.callMethod(null, func, args.unwrapList(keepArgsWrapped)).toHValue());
+        }, name));
+    }
+
+    function importMethod(method: String, name: String, callOnReference: Bool, keepArgsWrapped: HValue, returnInstance: Bool) {
+        globals.put(name, Function((args: HValue, env: HValue, cc: Continuation) -> {
+            var instance = args.first().value(callOnReference);
+            cc(instance.callMethod(instance.getProperty(method), args.rest().unwrapList(keepArgsWrapped)).toHValue());
+        }, name));
+    }
 
     public function new() {
         reader = new HissReader(this);
@@ -57,11 +71,20 @@ class CCInterp {
         // Use tail-recursive begin for loading the prelude:
         globals.put("begin", SpecialForm(trBegin));
 
-        // Haxe interop -- We can bootstrap the rest from these:
+        // Haxe interop -- We could bootstrap the rest from these if we had unlimited stack frames:
         globals.put("Type", Object("Class", Type));
         globals.put("Hiss-Tools", Object("Class", HissTools));
         globals.put("get-property", Function(getProperty, "get-property"));
         globals.put("call-haxe", Function(callHaxe, "call-haxe"));
+
+        // Functions that could be bootstrapped with register-function, but save stack frames if not:
+        importFunction(HissTools.print, "print", T);
+        importFunction(HissTools.length, "length", T);
+        importFunction(HissTools.first, "first", T);
+        importFunction(HissTools.rest, "rest", T);
+        importFunction(HissTools.eq, "eq", T);
+        importFunction(HissTools.nth, "nth", T);
+        importFunction(HissTools.cons, "cons", T);
 
         StaticFiles.compileWith("stdlib2.hiss");
 
@@ -134,11 +157,11 @@ class CCInterp {
         });
     }
 
-    function specialForm(args: HValue, env: HValue, cc: Continuation) {
+    inline function specialForm(args: HValue, env: HValue, cc: Continuation) {
         args.first().toCallable()(args.rest(), env, cc);
     }
 
-    function macroCall(args: HValue, env: HValue, cc: Continuation) {
+    inline function macroCall(args: HValue, env: HValue, cc: Continuation) {
         specialForm(args, env, (expansion: HValue) -> {
             //HaxeTools.println(' ${expansion.toPrint()}');
             eval(expansion, env, cc);
@@ -152,7 +175,7 @@ class CCInterp {
         });
     }
 
-    function evalAll(args: HValue, env: HValue, cc: Continuation) {
+    inline function evalAll(args: HValue, env: HValue, cc: Continuation) {
         if (!args.truthy()) {
             cc(Nil);
         } else {
@@ -204,21 +227,24 @@ class CCInterp {
         eval(args.first(), env, cc);
     }
 
-    function getVar(name: HValue, env: HValue, cc: Continuation) {
+    inline function getVar(name: HValue, env: HValue, cc: Continuation) {
         // Env is a list of dictionaries -- stack frames
         var stackFrames = env.toList();
 
         var g = globals.toDict();
         var name = name.symbolName();
 
+        var v = Nil;
         for (frame in stackFrames) {
             var frameDict = frame.toDict();
             if (frameDict.exists(name)) {
-                cc(frameDict[name]);
-                return;
+                v = frameDict[name];
+                break;
             }
         }
-        cc(if (g.exists(name)) {
+        cc(if (v != Nil) {
+            v;
+        } else if (g.exists(name)) {
             g[name];
         } else {
             Nil;
@@ -299,6 +325,13 @@ class CCInterp {
         cc(Reflect.callMethod(caller, method, haxeCallArgs).toHValue());
     }
 
+    // 59 for 3 prints while imported
+    // 17 for 3 prints while like this:
+    function print(args: HValue, env: HValue, cc: Continuation) {
+        args.first().print();
+        cc(args.first());
+    }
+
     function callCC(args: HValue, env: HValue, cc: Continuation) {
         // Convert the continuation to a hiss function accepting one argument
         var ccHFunction = Function((innerArgs: HValue, innerEnv: HValue, innerCC: Continuation) -> {
@@ -321,7 +354,7 @@ class CCInterp {
     }
 
     // This breaks the continuation-based signature rules because I just want it to work.
-    public function evalUnquotes(expr: HValue, env: HValue): HValue {
+    public inline function evalUnquotes(expr: HValue, env: HValue): HValue {
         switch (expr) {
             case List(exps):
                 var copy = exps.copy();
