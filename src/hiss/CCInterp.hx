@@ -98,14 +98,22 @@ class CCInterp {
         readingProgram = true;
         var exps = reader.readAll(String(StaticFiles.getContent(args.first().value())));
         readingProgram = false;
+
+        // Use a tail-recursive begin() call because programs can be long
+        // and we can't keep descending in the stack:
         begin(exps, env, cc);
     }
 
+    /**
+        This tail-recursive implementation of begin breaks callCC,
+        so it is only used internally.
+    **/
     function begin(exps: HValue, env: HValue, cc: Continuation) {
         var value = Nil;
         eval(exps.first(), env, (result) -> {
             value = result;
         });
+
         if (!exps.rest().truthy()) {
             cc(value);
         }
@@ -113,6 +121,19 @@ class CCInterp {
             begin(exps.rest(), env, cc);
         }
     }
+
+    /*
+    function begin(exps: HValue, env: HValue, cc: Continuation) {
+        eval(exps.first(), env, (result) -> {
+            if (!exps.rest().truthy()) {
+                cc(result);
+            }
+            else {
+                begin(exps.rest(), env, cc);
+            }
+        });
+    }
+    */
 
     function specialForm(args: HValue, env: HValue, cc: Continuation) {
         args.first().toCallable()(args.rest(), env, cc);
@@ -207,6 +228,12 @@ class CCInterp {
 
     function lambda(isMacro: Bool, args: HValue, env: HValue, cc: Continuation, name = "[anonymous lambda]") {
         var params = args.first();
+
+        // TODO do I need a switch here to decide whether to use tail-recursive begin or not?!
+
+        // like, lambda vs. tr-lambda
+
+
         var body = Symbol('begin').cons(args.rest());
         var hFun: HFunction = (fArgs, env, fCC) -> {
             var callEnv = env.extend(params.destructuringBind(fArgs)); // extending the outer env is how lambdas capture values
@@ -278,7 +305,9 @@ class CCInterp {
         // Convert the continuation to a hiss function accepting one argument
         var ccHFunction = Function((innerArgs: HValue, innerEnv: HValue, innerCC: Continuation) -> {
             //trace('cc was called with ${innerArgs.first().toPrint()}');
-            cc(innerArgs.first());
+            // It's typical to JUST want to break out of a sequence, not return a value to it.
+            if (!innerArgs.truthy()) cc(Nil);
+            else cc(innerArgs.first());
         }, "cc");
 
         funcall(true,
@@ -359,7 +388,7 @@ class CCInterp {
 
                 case List(_):
                     if (!readingProgram) {
-                        HaxeTools.println('${CallStack.callStack().length}'.lpad(' ', 3) + '    ${exp.toPrint()}');
+                    //    HaxeTools.println('${CallStack.callStack().length}'.lpad(' ', 3) + '    ${exp.toPrint()}');
                     }
 
                     eval(exp.first(), env, (callable: HValue) -> {
