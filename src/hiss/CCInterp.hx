@@ -19,18 +19,19 @@ class HaxeBinops {
 
 class CCInterp {
     var globals: HValue = Dict([]);
+    var stackFrames: HValue = List([]);
     var reader: HissReader;
 
-    var t: Dynamic = null;
+    var tempTrace: Dynamic = null;
 
     function disableTrace() {
         // On non-sys targets, trace is the only option
-        t = haxe.Log.trace;
+        tempTrace = haxe.Log.trace;
         haxe.Log.trace = (str, ?posInfo) -> {};
     }
 
     function enableTrace() {
-        if (t != null) haxe.Log.trace = t;
+        if (tempTrace != null) haxe.Log.trace = tempTrace;
     }
 
 

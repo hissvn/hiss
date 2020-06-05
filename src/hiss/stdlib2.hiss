@@ -49,22 +49,20 @@
 (defun list (&rest args) args)
 
 // This recursive implementation causes `let` to stack overflow with more than 2 bindings:
-/*
 (defun alternates (start l)
     (if (not l)
             '()
         (if start
                 (cons (first l) (alternates t (slice l 2)))
             (alternates t (rest l)))))
-*/
 // So here is a loop implementation
-(defun alternates (start l)
+/*(defun alternates (start l)
     (when (not start) (drop l 1))
     (setlocal r (list))
     (while l 
         (push r (first l))
         (drop l 2))
-    r)
+    r)*/
 
 (defmacro let (bindings &rest body)
     `(funcall-inline
@@ -103,11 +101,11 @@
     `(map ,l (lambda (,var) ,@body)))
 
 (defmacro while (cond &rest body)
-    (print `(call/cc (lambda (break)
+    `(call/cc (lambda (break)
         (when ,cond
             (call/cc (lambda (continue)
                 ,@body))
-            (while ,cond ,@body))))))
+            (while ,cond ,@body)))))
 
 (defun apply (f args)
     (eval `(,f ',@args)))
