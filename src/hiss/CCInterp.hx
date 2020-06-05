@@ -68,9 +68,6 @@ class CCInterp {
         disableTrace();
         load(List([String("stdlib2.hiss")]), List([]), (hval) -> {});
         enableTrace();
-
-        // Training wheels off. Give Hiss users the callCC-enabled, dangerous begin()
-        globals.put("begin", SpecialForm(begin));
     }
 
     public static function main() {
@@ -305,12 +302,16 @@ class CCInterp {
     function callCC(args: HValue, env: HValue, cc: Continuation) {
         // Convert the continuation to a hiss function accepting one argument
         var ccHFunction = Function((innerArgs: HValue, innerEnv: HValue, innerCC: Continuation) -> {
+            globals.put("begin", SpecialForm(trBegin));
+            
             //trace('cc was called with ${innerArgs.first().toPrint()}');
             // It's typical to JUST want to break out of a sequence, not return a value to it.
             if (!innerArgs.truthy()) cc(Nil);
             else cc(innerArgs.first());
         }, "cc");
 
+        // Training wheels off. Give Hiss users the callCC-enabled, dangerous begin()
+        globals.put("begin", SpecialForm(begin));
         funcall(true,
             List([
                 args.first(),
@@ -389,7 +390,7 @@ class CCInterp {
 
                 case List(_):
                     if (!readingProgram) {
-                        //HaxeTools.println('${CallStack.callStack().length}'.lpad(' ', 3) + '    ${exp.toPrint()}');
+                        HaxeTools.println('${CallStack.callStack().length}'.lpad(' ', 3) + '    ${exp.toPrint()}');
                     }
 
                     eval(exp.first(), env, (callable: HValue) -> {

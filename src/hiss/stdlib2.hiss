@@ -3,8 +3,8 @@
         (call-haxe ,class ,function args nil ,keep-args-wrapped)))
 (defmacro register-method (method name &optional call-on-reference keep-args-wrapped return-instance)
     `(defun ,name (instance &rest args)
-        (let (result (call-haxe instance ,method args ,call-on-reference ,keep-args-wrapped))
-            (if ,return-instance instance result))))
+        (setlocal result (call-haxe instance ,method args ,call-on-reference ,keep-args-wrapped))
+        (if ,return-instance instance result)))
 (register-function Hiss-Tools "print" print t)
 (register-function Hiss-Tools "length" length t)
 (register-function Hiss-Tools "first" first t)
@@ -13,7 +13,7 @@
 (register-function Hiss-Tools "nth" nth t)
 (register-function Hiss-Tools "cons" cons t)
 (register-method "concat" concat nil nil) ; TODO instead of this, have variadic (append) function
-(register-method "push" push t nil t)
+(register-method "push" push t t t)
 
 (defun drop (l num)
     (call-haxe l "splice" (list 0 num) t)
