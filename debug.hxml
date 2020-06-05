@@ -1,0 +1,11 @@
+-lib haxe-strings
+-lib uuid
+-lib ihx
+-lib hxcpp-debug-server
+-cp src
+-debug
+-D hxcpp_debugger
+-D analyzer-optimize
+-D no-deprecation-warnings
+-main hiss.CCInterp
+--js index.js
