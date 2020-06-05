@@ -36,16 +36,16 @@ class HissReader {
         defaultReadFunction = f;
     }
 
-    function hissReadFunction(f: HaxeReadFunction) {
+    function hissReadFunction(f: HaxeReadFunction, s: String) {
         return Function((args: HValue, env: HValue, cc: Continuation) -> {
             var start = args.first().toHaxeString();
             var str = toStream(args.second());
             cc(f(start, str));
-        });
+        }, s);
     }
 
     function internalSetMacroString(s: String, f: HaxeReadFunction) {
-        readTable.set(s, hissReadFunction(f));
+        readTable.set(s, hissReadFunction(f, 'read-$s'));
         if (macroLengths.indexOf(s.length) == -1) {
             macroLengths.push(s.length);
         }
@@ -55,7 +55,7 @@ class HissReader {
     public function new(interp: CCInterp) {
         this.interp = interp;
 
-        defaultReadFunction = hissReadFunction(readSymbol);
+        defaultReadFunction = hissReadFunction(readSymbol, "read-symbol");
 
         // Literals
         internalSetMacroString('"', readString);

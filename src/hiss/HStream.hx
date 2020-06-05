@@ -127,7 +127,8 @@ class HStream {
 	}
 
 	public function toString() {
-		return '`$rawString`';
+		var snip = rawString.substr(0, 50);
+		return '`$snip...`';
 	}
 
 	public function drop(s:String) {

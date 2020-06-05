@@ -13,7 +13,7 @@ enum HValue {
 
     List(l: HList);
     Dict(n: HDict);
-    Function(f: HFunction);
+    Function(f: HFunction, name: String);
     Macro(f: HFunction);
     SpecialForm(f: HFunction);
     // If you're going to store arbitrary objects in Hiss variables, do yourself a favor and give them a descriptive label because Haxe runtime type info can be squirrely on different platforms

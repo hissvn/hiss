@@ -13,6 +13,8 @@ import hiss.HissTools;
 using hiss.HissTools;
 import hiss.StaticFiles;
 
+using StringTools;
+
 @:build(hiss.BinopsBuilder.build())
 class HaxeBinops {
 
@@ -23,6 +25,7 @@ class CCInterp {
     var reader: HissReader;
 
     var tempTrace: Dynamic = null;
+    var readingProgram = false;
 
     function disableTrace() {
         // On non-sys targets, trace is the only option
@@ -47,17 +50,17 @@ class CCInterp {
         globals.put("if", SpecialForm(_if));
         globals.put("lambda", SpecialForm(lambda.bind(false)));
         globals.put("call/cc", SpecialForm(callCC));
-        globals.put("eval", Function(_eval));
+        globals.put("eval", Function(_eval, "eval"));
         globals.put("bound?", SpecialForm(bound));
-        globals.put("load", Function(load));
+        globals.put("load", Function(load, "load"));
         globals.put("funcall", SpecialForm(funcall.bind(false)));
         globals.put("funcall-inline", SpecialForm(funcall.bind(true)));
 
         // Haxe interop -- We can bootstrap the rest from these:
         globals.put("Type", Object("Class", Type));
         globals.put("Hiss-Tools", Object("Class", HissTools));
-        globals.put("get-property", Function(getProperty));
-        globals.put("call-haxe", Function(callHaxe));
+        globals.put("get-property", Function(getProperty, "get-property"));
+        globals.put("call-haxe", Function(callHaxe, "call-haxe"));
 
         StaticFiles.compileWith("stdlib2.hiss");
 
@@ -92,7 +95,10 @@ class CCInterp {
     }
 
     function load(args: HValue, env: HValue, cc: Continuation) {
-        begin(reader.readAll(String(StaticFiles.getContent(args.first().value()))), env, cc);
+        readingProgram = true;
+        var exps = reader.readAll(String(StaticFiles.getContent(args.first().value())));
+        readingProgram = false;
+        begin(exps, env, cc);
     }
 
     function begin(exps: HValue, env: HValue, cc: Continuation) {
@@ -109,12 +115,12 @@ class CCInterp {
     }
 
     function specialForm(args: HValue, env: HValue, cc: Continuation) {
-        args.first().toFunction()(args.rest(), env, cc);
+        args.first().toCallable()(args.rest(), env, cc);
     }
 
     function macroCall(args: HValue, env: HValue, cc: Continuation) {
         specialForm(args, env, (expansion: HValue) -> {
-            HaxeTools.println(' ${expansion.toPrint()}');
+            //HaxeTools.println(' ${expansion.toPrint()}');
             eval(expansion, env, cc);
         });
     }
@@ -122,7 +128,7 @@ class CCInterp {
     function funcall(callInline: Bool, args: HValue, env: HValue, cc: Continuation) {
         evalAll(args, env, (values) -> {
             // trace(values.toPrint());
-            values.first().toFunction()(values.rest(), if (callInline) env else List([]), cc);
+            values.first().toHFunction()(values.rest(), if (callInline) env else List([]), cc);
         });
     }
 
@@ -158,7 +164,7 @@ class CCInterp {
     function setCallable(isMacro: Bool, args: HValue, env: HValue, cc: Continuation) {
         lambda(isMacro, args.rest(), env, (fun: HValue) -> {
             set(true, args.first().cons(List([fun])), env, cc);
-        });
+        }, args.first().symbolName());
     }
 
     function _if(args: HValue, env: HValue, cc: Continuation) {
@@ -199,7 +205,7 @@ class CCInterp {
         });
     }
 
-    function lambda(isMacro: Bool, args: HValue, env: HValue, cc: Continuation) {
+    function lambda(isMacro: Bool, args: HValue, env: HValue, cc: Continuation, name = "[anonymous lambda]") {
         var params = args.first();
         var body = Symbol('begin').cons(args.rest());
         var hFun: HFunction = (fArgs, env, fCC) -> {
@@ -209,7 +215,7 @@ class CCInterp {
         var callable = if (isMacro) {
             Macro(hFun);
         } else {
-            Function(hFun);
+            Function(hFun, "[anonymous lambda]");
         };
         cc(callable);
     }
@@ -259,7 +265,7 @@ class CCInterp {
             args.nth(Int(4));
         };
 
-        HaxeTools.println('calling haxe ${args.second().toHaxeString()} on ${args.first().toPrint()}');
+        //HaxeTools.println('calling haxe ${args.second().toHaxeString()} on ${args.first().toPrint()}');
         var caller = args.first().value(callOnReference);
 
         var method = Reflect.getProperty(caller, args.second().toHaxeString());
@@ -273,7 +279,7 @@ class CCInterp {
         var ccHFunction = Function((innerArgs: HValue, innerEnv: HValue, innerCC: Continuation) -> {
             //trace('cc was called with ${innerArgs.first().toPrint()}');
             cc(innerArgs.first());
-        });
+        }, "cc");
 
         funcall(true,
             List([
@@ -334,9 +340,6 @@ class CCInterp {
     }
 
     public function eval(exp: HValue, env: HValue, cc: Continuation) {
-        //exp.print();
-        HaxeTools.println(' at Haxe Callstack depth ${CallStack.callStack().length}');
-
         try {
             switch (exp) {
                 case Symbol(_):
@@ -355,12 +358,16 @@ class CCInterp {
                     cc(exp);
 
                 case List(_):
+                    if (!readingProgram) {
+                        HaxeTools.println('${CallStack.callStack().length}'.lpad(' ', 3) + '    ${exp.toPrint()}');
+                    }
+
                     eval(exp.first(), env, (callable: HValue) -> {
                         switch (callable) {
                             case Function(_):
                                 funcall(false, exp, env, cc);
                             case Macro(_):
-                                HaxeTools.print('macroexpanding ${exp.toPrint()} -> ');
+                                //HaxeTools.print('macroexpanding ${exp.toPrint()} -> ');
                                 macroCall(callable.cons(exp.rest()), env, cc);
                             case SpecialForm(_):
                                 specialForm(callable.cons(exp.rest()), env, cc);

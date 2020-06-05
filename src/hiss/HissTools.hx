@@ -19,8 +19,8 @@ class HissTools {
         return HaxeTools.extract(obj, Object(_, o) => o, "object");
     }
 
-    public static function toFunction(f: HValue, hint: String = "function"): HFunction {
-        return HaxeTools.extract(f, Function(hf) | Macro(hf) | SpecialForm(hf) => hf, hint);
+    public static function toCallable(f: HValue, hint: String = "function"): HFunction {
+        return HaxeTools.extract(f, Function(hf, _) | Macro(hf) | SpecialForm(hf) => hf, hint);
     }
 
     public static function toHaxeString(hv: HValue): String {
@@ -32,7 +32,7 @@ class HissTools {
     }
 
     public static function toHFunction(hv: HValue): HFunction {
-        return HaxeTools.extract(hv, Function(f) => f, "function");
+        return HaxeTools.extract(hv, Function(f, _) => f, "function");
     }
 
     public static function toDict(dict: HValue): HDict {
@@ -167,7 +167,8 @@ class HissTools {
         }
     }
 
-    static var recursivePrintDepth = 6;
+    static var recursivePrintDepth = 100;
+    static var maxObjectRepLength = 50;
     public static function toPrint(v: HValue, recursiveCall: Int = 0): String {
         return switch (v) {
             case Int(i):
@@ -193,8 +194,8 @@ class HissTools {
                 "'" + e.toPrint(recursiveCall+1);
             case Object(t, o):
                 '[$t: ${Std.string(o)}]';
-            case Function(_):
-                '[hxfunction]';
+            case Function(_, name):
+                '$name()';
             case Macro(_):
                 '[macro]';
             case SpecialForm(_):
@@ -264,7 +265,7 @@ class HissTools {
             case TObject:
                 Object("!ANONYMOUS!", v);
             case TFunction:
-                Function(v);//Haxe(Fixed, v, "[wrapped-function]"));
+                Function(v, "[rewrapped-function]");//Haxe(Fixed, v, "[wrapped-function]"));
             
             default:
                 throw 'value $v of type $t cannot be wrapped as $hint';
@@ -333,10 +334,8 @@ class HissTools {
                 v;
             case List(l):
                 if (reference) {
-                    HaxeTools.println('calling on reference of $l');
                     l;
                 } else {
-                    HaxeTools.println('calling on value of $l');
                     [for (hvv in l) HissTools.value(hvv, true)]; // So far it seems that nested list elements should stay wrapped
                 }
             case Dict(d):
