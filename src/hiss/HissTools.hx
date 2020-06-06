@@ -167,6 +167,10 @@ class HissTools {
         }
     }
 
+    public static function not(v: HValue) {
+        return if (v.truthy()) Nil else T;
+    }
+
     static var recursivePrintDepth = 100;
     static var maxObjectRepLength = 50;
     public static function toPrint(v: HValue, recursiveCall: Int = 0): String {

@@ -17,11 +17,7 @@
 (defun take (l num)
     (slice l 0 num))
 
-(defmacro quote (arg) `',arg)
-
-(defun not (arg)
-    (if arg nil t))
-(defmacro or (&rest args)
+'(defmacro or (&rest args)
     `(if (not ',args) nil
         (if (not ,(first args)) (or ,@(rest args)) ,(first args))))
 (defmacro and (&rest args)

@@ -77,7 +77,7 @@ class CCInterp {
         globals.put("get-property", Function(getProperty, "get-property"));
         globals.put("call-haxe", Function(callHaxe, "call-haxe"));
 
-        // Functions that could be bootstrapped with register-function, but save stack frames if not:
+        // Functions/forms that could be bootstrapped with register-function, but save stack frames if not:
         importFunction(HissTools.print, "print", T);
         importFunction(HissTools.length, "length", T);
         importFunction(HissTools.first, "first", T);
@@ -85,7 +85,9 @@ class CCInterp {
         importFunction(HissTools.eq, "eq", T);
         importFunction(HissTools.nth, "nth", T);
         importFunction(HissTools.cons, "cons", T);
-
+        importFunction(HissTools.not, "not", T);
+        globals.put("quote", SpecialForm(quote));
+        
 
         StaticFiles.compileWith("stdlib2.hiss");
 
@@ -186,6 +188,10 @@ class CCInterp {
                 });
             });
         }
+    }
+
+    function or(args: HValue, env: HValue, cc: Continuation) {
+
     }
 
     function quote(args: HValue, env: HValue, cc: Continuation) {
