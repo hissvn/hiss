@@ -28,6 +28,7 @@ class CCInterp {
 
     var tempTrace: Dynamic = null;
     var readingProgram = false;
+    var maxStackDepth = 0;
 
     function disableTrace() {
         // On non-sys targets, trace is the only option
@@ -87,7 +88,7 @@ class CCInterp {
         importFunction(HissTools.cons, "cons", T);
         importFunction(HissTools.not, "not", T);
         globals.put("quote", SpecialForm(quote));
-        
+
 
         StaticFiles.compileWith("stdlib2.hiss");
 
@@ -429,8 +430,9 @@ class CCInterp {
                     cc(exp);
 
                 case List(_):
+                    maxStackDepth = Math.floor(Math.max(maxStackDepth, CallStack.callStack().length));
                     if (!readingProgram) {
-                        HaxeTools.println('${CallStack.callStack().length}'.lpad(' ', 3) + '    ${exp.toPrint()}');
+                        HaxeTools.println('${CallStack.callStack().length}'.lpad(' ', 3) + '/' + '$maxStackDepth'.rpad(' ', 3) + '    ${exp.toPrint()}');
                     }
 
                     eval(exp.first(), env, (callable: HValue) -> {
