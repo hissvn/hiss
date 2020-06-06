@@ -3,6 +3,7 @@ package hiss;
 import haxe.macro.Expr;
 
 import hiss.HaxeTools;
+using hiss.HaxeTools;
 import hiss.HTypes;
 import Type;
 
@@ -29,6 +30,10 @@ class HissTools {
 
     public static function toInt(v: HValue): Int {
         return HaxeTools.extract(v, Int(i) => i, "int");
+    }
+
+    public static function toFloat(v: HValue): Float {
+        return HaxeTools.extract(v, Float(f) => f, "float");
     }
 
     public static function toHFunction(hv: HValue): HFunction {

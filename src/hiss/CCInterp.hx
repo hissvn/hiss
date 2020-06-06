@@ -14,13 +14,9 @@ import hiss.HissReader;
 import hiss.HissTools;
 using hiss.HissTools;
 import hiss.StaticFiles;
+import hiss.HissMath;
 
 using StringTools;
-
-@:build(hiss.BinopsBuilder.build())
-class HaxeBinops {
-
-}
 
 class CCInterp {
     var globals: HValue = Dict([]);
@@ -89,7 +85,15 @@ class CCInterp {
         importFunction(HissTools.not, "not", T);
         globals.put("quote", SpecialForm(quote));
 
-
+        globals.put("+", Function(HissMath.add, "+"));
+        globals.put("-", Function(HissMath.subtract, "-"));
+        globals.put("/", Function(HissMath.divide, "/"));
+        globals.put("*", Function(HissMath.multiply, "/"));
+        globals.put("<", Function(HissMath.numCompare.bind(Lesser), "<"));
+        globals.put("<=", Function(HissMath.numCompare.bind(LesserEqual), "<="));
+        globals.put(">", Function(HissMath.numCompare.bind(Greater), ">"));
+        globals.put(">=", Function(HissMath.numCompare.bind(GreaterEqual), ">="));
+        globals.put("=", Function(HissMath.numCompare.bind(Equal), "="));
         StaticFiles.compileWith("stdlib2.hiss");
 
         disableTrace();
@@ -161,11 +165,11 @@ class CCInterp {
         });
     }
 
-    inline function specialForm(args: HValue, env: HValue, cc: Continuation) {
+    function specialForm(args: HValue, env: HValue, cc: Continuation) {
         args.first().toCallable()(args.rest(), env, cc);
     }
 
-    inline function macroCall(args: HValue, env: HValue, cc: Continuation) {
+    function macroCall(args: HValue, env: HValue, cc: Continuation) {
         specialForm(args, env, (expansion: HValue) -> {
             //HaxeTools.println(' ${expansion.toPrint()}');
             eval(expansion, env, cc);
@@ -179,7 +183,7 @@ class CCInterp {
         });
     }
 
-    inline function evalAll(args: HValue, env: HValue, cc: Continuation) {
+    function evalAll(args: HValue, env: HValue, cc: Continuation) {
         if (!args.truthy()) {
             cc(Nil);
         } else {
@@ -189,10 +193,6 @@ class CCInterp {
                 });
             });
         }
-    }
-
-    function or(args: HValue, env: HValue, cc: Continuation) {
-
     }
 
     function quote(args: HValue, env: HValue, cc: Continuation) {
@@ -235,7 +235,7 @@ class CCInterp {
         eval(args.first(), env, cc);
     }
 
-    inline function getVar(name: HValue, env: HValue, cc: Continuation) {
+    function getVar(name: HValue, env: HValue, cc: Continuation) {
         // Env is a list of dictionaries -- stack frames
         var stackFrames = env.toList();
 
@@ -362,7 +362,7 @@ class CCInterp {
     }
 
     // This breaks the continuation-based signature rules because I just want it to work.
-    public inline function evalUnquotes(expr: HValue, env: HValue): HValue {
+    public function evalUnquotes(expr: HValue, env: HValue): HValue {
         switch (expr) {
             case List(exps):
                 var copy = exps.copy();
@@ -415,7 +415,7 @@ class CCInterp {
         try {
             switch (exp) {
                 case Symbol(_):
-                    getVar(exp, env, cc);
+                    inline getVar(exp, env, cc);
                 case Int(_) | Float(_) | String(_):
                     cc(exp);
                 
@@ -424,7 +424,7 @@ class CCInterp {
                 case Unquote(e):
                     eval(e, env, cc);
                 case Quasiquote(e):
-                    cc(evalUnquotes(e, env));
+                    cc(inline evalUnquotes(e, env));
 
                 case Function(_) | SpecialForm(_) | Macro(_) | T | Nil | Object(_, _):
                     cc(exp);
@@ -438,12 +438,12 @@ class CCInterp {
                     eval(exp.first(), env, (callable: HValue) -> {
                         switch (callable) {
                             case Function(_):
-                                funcall(false, exp, env, cc);
+                                inline funcall(false, exp, env, cc);
                             case Macro(_):
                                 //HaxeTools.print('macroexpanding ${exp.toPrint()} -> ');
-                                macroCall(callable.cons(exp.rest()), env, cc);
+                                inline macroCall(callable.cons(exp.rest()), env, cc);
                             case SpecialForm(_):
-                                specialForm(callable.cons(exp.rest()), env, cc);
+                                inline specialForm(callable.cons(exp.rest()), env, cc);
                             default: throw 'Cannot call $callable';
                         }
                     });

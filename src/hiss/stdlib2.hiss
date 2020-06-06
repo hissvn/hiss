@@ -17,7 +17,7 @@
 (defun take (l num)
     (slice l 0 num))
 
-'(defmacro or (&rest args)
+(defmacro or (&rest args)
     `(if (not ',args) nil
         (if (not ,(first args)) (or ,@(rest args)) ,(first args))))
 (defmacro and (&rest args)
@@ -99,41 +99,6 @@
 
 (defun apply (f args)
     (eval `(,f ',@args)))
-
-(import "hiss.HaxeBinops" Haxe-Binops)
-(defmacro variadic-binop (symbol op-name &optional zero-case one-case two-case)
-    (let (c0 (or zero-case 0)
-            c1 (or one-case 'val)
-            c2 (or two-case '(fun val1 val2)))
-
-        `(defun ,symbol (&rest args)
-            (let (fun (lambda (a b) (call-haxe Haxe-Binops ,op-name (list a b))))
-                (case (length args)
-                    (0 ,c0)
-                    (1 (let (val (first args)) ,c1))
-                    (2 (let (val1 (nth args 0)
-                            val2 (nth args 1))
-                        ,c2))
-                    (t
-                        (apply ,symbol
-                            (cons (apply ,symbol (take args 2))
-                                (slice args 2)))))))))
-
-(variadic-binop - "subtract" 0 (fun 0 val))
-(variadic-binop + "add")
-(variadic-binop / "divide" (error "can't divide without an operand") (fun 1 val))
-(variadic-binop * "multiply" 1)
-
-(variadic-binop < "lesser" (error "cannot evaluate less-than without operands") t (if (fun val1 val2) val2))
-(variadic-binop <= "lesserEqual" (error "cannot evaluate less-than-equal without operands") t (if (fun val1 val2) val2))
-(variadic-binop > "greater" (error "cannot evaluate greater-than without operands") t (if (fun val1 val2) val2))
-(variadic-binop >= "greaterEqual" (error "cannot evaluate greater-than-equal without operands") t (if (fun val1 val2) val2))
-
-
-(variadic-binop min "lesser" (error "cannot find min of 0 elements") val (if (fun val1 val2) val1 val2))
-(variadic-binop max "greater" (error "cannot find min of 0 elements") val (if (fun val1 val2) val1 val2))
-
-(variadic-binop = "equals" (error "can't check equality without an operand") t (if (fun val1 val2) val1 nil))
 
 (defmacro bind (f &rest args)
     `(lambda (&rest missing-args) (apply ,f (concat ',args missing-args))))
