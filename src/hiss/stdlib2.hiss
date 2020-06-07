@@ -76,10 +76,11 @@
 
 (defmacro while (cond &rest body)
     `(call/cc (lambda (break)
-        (when ,cond
-            (call/cc (lambda (continue)
-                ,@body))
-            (while ,cond ,@body)))))
+        (loop ()
+            (when ,cond
+                (call/cc (lambda (continue)
+                    ,@body))
+                (if ,cond (recur)))))))
 
 (defun apply (f args)
     (eval `(,f ',@args)))

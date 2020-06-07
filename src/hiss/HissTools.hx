@@ -331,8 +331,8 @@ class HissTools {
      public static function truthy(cond: HValue): Bool {
         return switch (cond) {
             case Nil: false;
-            //case Int(i) if (i == 0): false; /* 0 being falsy will be useful for Hank read-counts */
-            case List(l) if (l.length == 0): false;
+            //case Int(i) if (i == 0): false; /* 0 being falsy would be useful for Hank read-counts */
+            case List([]): false;
             default: true;
         }
     }
