@@ -290,20 +290,22 @@ class CCInterp {
         var firstValues = bindings.alternates(false);
         evalAll(firstValues, env, (firstValues) -> {
             var nextValues = Nil;
+            var recurCalled = false;
             var recur: HFunction = (values, env, cc) -> {
                 nextValues = values;
+                recurCalled = true;
             }
             var values = firstValues;
             var result = Nil;
             do {
-                if (nextValues.truthy()) {
+                if (recurCalled) {
                     values = nextValues;
-                    nextValues = Nil;
+                    recurCalled = false;
                 }
 
                 eval(Symbol("begin").cons(body), env.extend(names.destructuringBind(Function(recur, "recur").cons(values))), (value) -> {result = value;});
                 
-            } while (nextValues.truthy());
+            } while (recurCalled);
             cc(result);
         });
     }
@@ -361,8 +363,6 @@ class CCInterp {
         cc(Reflect.callMethod(caller, method, haxeCallArgs).toHValue());
     }
 
-    // 59 for 3 prints while imported
-    // 17 for 3 prints while like this:
     function print(args: HValue, env: HValue, cc: Continuation) {
         args.first().print();
         cc(args.first());
@@ -460,7 +460,9 @@ class CCInterp {
                 case List(_):
                     maxStackDepth = Math.floor(Math.max(maxStackDepth, CallStack.callStack().length));
                     if (!readingProgram) {
-                        HaxeTools.println('${CallStack.callStack().length}'.lpad(' ', 3) + '/' + '$maxStackDepth'.rpad(' ', 3) + '    ${exp.toPrint()}');
+                        // For debugging stack overflows, use this:
+
+                        // HaxeTools.println('${CallStack.callStack().length}'.lpad(' ', 3) + '/' + '$maxStackDepth'.rpad(' ', 3) + '    ${exp.toPrint()}');
                     }
 
                     eval(exp.first(), env, (callable: HValue) -> {
