@@ -244,7 +244,7 @@ class CCInterp {
         var g = globals.toDict();
         var name = name.symbolName();
 
-        var v = Nil;
+        var v = null;
         for (frame in stackFrames) {
             var frameDict = frame.toDict();
             if (frameDict.exists(name)) {
@@ -252,7 +252,7 @@ class CCInterp {
                 break;
             }
         }
-        cc(if (v != Nil) {
+        cc(if (v != null) {
             v;
         } else if (g.exists(name)) {
             g[name];
