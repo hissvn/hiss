@@ -65,6 +65,7 @@ class CCInterp {
         globals.put("load", Function(load, "load"));
         globals.put("funcall", SpecialForm(funcall.bind(false)));
         globals.put("funcall-inline", SpecialForm(funcall.bind(true)));
+        globals.put("loop", SpecialForm(loop));
         // Use tail-recursive begin for loading the prelude:
         globals.put("begin", SpecialForm(trBegin));
 
@@ -83,6 +84,7 @@ class CCInterp {
         importFunction(HissTools.nth, "nth", T);
         importFunction(HissTools.cons, "cons", T);
         importFunction(HissTools.not, "not", T);
+        importFunction(HissTools.alternates, "alternates", List([Int(0)]));
         globals.put("quote", SpecialForm(quote));
 
         globals.put("+", Function(HissMath.add, "+"));
@@ -278,6 +280,32 @@ class CCInterp {
             Function(hFun, "[anonymous lambda]");
         };
         cc(callable);
+    }
+
+    function loop(args: HValue, env: HValue, cc: Continuation) {
+        var bindings = args.first();
+        var body = args.rest();
+
+        var names = Symbol("recur").cons(bindings.alternates(true));
+        var firstValues = bindings.alternates(false);
+        evalAll(firstValues, env, (firstValues) -> {
+            var nextValues = Nil;
+            var recur: HFunction = (values, env, cc) -> {
+                nextValues = values;
+            }
+            var values = firstValues;
+            var result = Nil;
+            do {
+                if (nextValues.truthy()) {
+                    values = nextValues;
+                    nextValues = Nil;
+                }
+
+                eval(Symbol("begin").cons(body), env.extend(names.destructuringBind(Function(recur, "recur").cons(values))), (value) -> {result = value;});
+                
+            } while (nextValues.truthy());
+            cc(result);
+        });
     }
 
     function bound(args: HValue, env: HValue, cc: Continuation) {

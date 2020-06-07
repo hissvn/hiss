@@ -38,27 +38,11 @@
 
 (defun list (&rest args) args)
 
-// This recursive implementation causes `let` to stack overflow with more than 2 bindings:
-(defun alternates (start l)
-    (if (not l)
-            '()
-        (if start
-                (cons (first l) (alternates t (slice l 2)))
-            (alternates t (rest l)))))
-// So here is a loop implementation
-/*(defun alternates (start l)
-    (when (not start) (drop l 1))
-    (setlocal r (list))
-    (while l 
-        (push r (first l))
-        (drop l 2))
-    r)*/
-
 (defmacro let (bindings &rest body)
     `(funcall-inline
-        (lambda ,(alternates t bindings)
+        (lambda ,(alternates bindings t)
             ,@body)
-        ,@(alternates nil bindings)))
+        ,@(alternates bindings nil)))
 
 (defmacro case (form &rest case-list)
     (let (case-first (first case-list)

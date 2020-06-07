@@ -64,7 +64,18 @@ class HissTools {
         return List(list.toList().slice(1));
     }
 
-    // Can't be ported because the Haxe reflection API allows array indexing
+    public static function alternates(list: HValue, start: Bool) {
+        var result = new Array<HValue>();
+        var l = list.toList().copy();
+        while (l.length > 0) {
+            var next = l.shift();
+            if (start) result.push(next);
+            start = !start;
+        }
+        return List(result);
+    }
+
+    // Can't be ported to Hiss the Haxe reflection API doesn't allow array indexing
     public static function nth(list: HValue, idx: HValue):HValue {
         return list.toList()[idx.toInt()];
     }
