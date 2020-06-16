@@ -8,6 +8,7 @@
 
 (register-method "concat" concat nil nil) ; TODO instead of this, have variadic (append) function
 (register-method "push" push t t t)
+(register-method "shift" shift t)
 
 (defun drop (l num)
     (call-haxe l "splice" (list 0 num) t)
