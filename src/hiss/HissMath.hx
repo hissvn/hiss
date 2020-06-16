@@ -17,7 +17,12 @@ enum Comparison {
 **/
 class HissMath {
     public static function add(args: HValue, env: HValue, cc: Continuation) {
-        var sum:Dynamic = 0;
+        var sum:Dynamic = switch (args.first()) {
+            case Int(_): 0;
+            case Float(_): 0;
+            case String(_): "";
+            default: throw 'Cannot perform addition with operands: ${args.toPrint()}';
+        };
         for (i in args.unwrapList()) {
             sum += i;
         }
