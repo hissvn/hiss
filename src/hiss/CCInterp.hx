@@ -84,7 +84,8 @@ class CCInterp {
         importFunction(HissTools.nth, "nth", T);
         importFunction(HissTools.cons, "cons", T);
         importFunction(HissTools.not, "not", T);
-        importFunction(HissTools.alternates, "alternates", List([Int(0)]));
+        importFunction(HissTools.alternates.bind(_, true), "even-alternates", T);
+        importFunction(HissTools.alternates.bind(_, false), "odd-alternates", T);
         globals.put("quote", SpecialForm(quote));
 
         globals.put("+", Function(HissMath.add, "+"));

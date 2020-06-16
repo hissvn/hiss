@@ -104,8 +104,6 @@ class HissTools {
         return cons(extension, env);
     }
 
-
-
     public static function destructuringBind(names: HValue, values: HValue) {
         var bindings = Dict([]);
 
@@ -309,7 +307,7 @@ class HissTools {
             if (indices.indexOf(idx++) != -1) {
                 v;
             } else {
-                HissTools.value(v);
+                v.value();
             }
         }];
     }

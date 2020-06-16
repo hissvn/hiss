@@ -40,9 +40,9 @@
 
 (defmacro let (bindings &rest body)
     `(funcall-inline
-        (lambda ,(alternates bindings t)
+        (lambda ,(even-alternates bindings)
             ,@body)
-        ,@(alternates bindings nil)))
+        ,@(odd-alternates bindings)))
 
 (defmacro case (form &rest case-list)
     (let (case-first (first case-list)
