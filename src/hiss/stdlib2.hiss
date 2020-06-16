@@ -9,6 +9,7 @@
 (register-method "concat" concat nil nil) ; TODO instead of this, have variadic (append) function
 (register-method "push" push t t t)
 (register-method "shift" shift t)
+(register-method "pop" pop t)
 
 (defun drop (l num)
     (call-haxe l "splice" (list 0 num) t)
@@ -82,11 +83,15 @@
 (defun apply (f args)
     (eval `(,f ',@args)))
 
-(defmacro bind (f &rest args)
-    `(lambda (&rest missing-args) (apply ,f (concat ',args missing-args))))
+(defmacro bind (f &rest bind-args)
+    `(lambda (&rest call-args) 
+        (setlocal args (for arg ',bind-args (if (eq '_ arg) (shift call-args) arg)))
+        (apply ,f (concat args call-args))))
 
-(defmacro rbind (f &rest args)
-    `(lambda (&rest missing-args) (apply ,f (concat missing-args ',args))))
+(defmacro rbind (f &rest bind-args)
+    `(lambda (&rest call-args) 
+        (setlocal args (for arg ',bind-args (if (eq '_ arg) (pop call-args) arg)))
+        (apply ,f (concat call-args args))))
 
 (defvar second (rbind nth 1))
 (defvar third (rbind nth 2))
