@@ -63,6 +63,9 @@
 (defmacro when (cond &rest body)
     `(if ,cond (begin ,@body)))
 
+(defmacro unless (cond &rest body)
+    `(when (not ,cond) ,@body))
+
 (defmacro while (cond &rest body)
     `(call/cc (lambda (break)
         (loop ()
