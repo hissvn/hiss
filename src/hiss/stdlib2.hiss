@@ -62,19 +62,6 @@
 (defmacro when (cond &rest body)
     `(if ,cond (begin ,@body)))
 
-(defun map (l function)
-    (if l
-            (cons (function (first l)) (map (rest l) function))
-        (list)))
-
-(defun dolist (l function)
-    (when l
-        (function (first l))
-        (dolist (rest l) function)))
-
-(defmacro for (var l &rest body)
-    `(map ,l (lambda (,var) ,@body)))
-
 (defmacro while (cond &rest body)
     `(call/cc (lambda (break)
         (loop ()
@@ -82,6 +69,15 @@
                 (call/cc (lambda (continue)
                     ,@body))
                 (if ,cond (recur)))))))
+
+(defun map (l function)
+    (setlocal collection (list))
+    (while l
+        (push collection (funcall-inline function (shift l))))
+    collection)
+
+(defmacro for (var l &rest body)
+    `(funcall-inline map ,l (lambda (,var) ,@body)))
 
 (defun apply (f args)
     (eval `(,f ',@args)))
