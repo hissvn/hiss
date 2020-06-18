@@ -193,6 +193,16 @@ class HissTools {
 
     static var recursivePrintDepth = 100;
     static var maxObjectRepLength = 50;
+
+    // Convert values to strings for user consumption
+    public static function toMessage(v: HValue) {
+        return switch (v) {
+            case String(s): s;
+            default: toPrint(v);
+        }
+    }
+
+    // Convert values to strings for REPL printing
     public static function toPrint(v: HValue, recursiveCall: Int = 0): String {
         return switch (v) {
             case Int(i):

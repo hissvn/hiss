@@ -6,6 +6,9 @@ enum HValue {
     Int(value: Int);
     Float(value: Float);
     Symbol(name: String);
+    
+    // Internal type for a string literal that hasn't been interpolated yet
+    InterpString(value: String);
     String(value: String);
 
     Nil;

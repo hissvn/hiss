@@ -28,12 +28,18 @@ class CCInterp {
 
     function disableTrace() {
         // On non-sys targets, trace is the only option
-        tempTrace = haxe.Log.trace;
-        haxe.Log.trace = (str, ?posInfo) -> {};
+        if (tempTrace == null) {
+            trace("Disabling trace");
+            tempTrace = haxe.Log.trace;
+            haxe.Log.trace = (str, ?posInfo) -> {};
+        }
     }
 
     function enableTrace() {
-        if (tempTrace != null) haxe.Log.trace = tempTrace;
+        if (tempTrace != null) {
+            trace("Enabling trace");
+            haxe.Log.trace = tempTrace;
+        }
     }
 
     function importFunction(func: Function, name: String, keepArgsWrapped: HValue = Nil) {
@@ -102,9 +108,9 @@ class CCInterp {
         globals.put("=", Function(HissMath.numCompare.bind(Equal), "="));
         StaticFiles.compileWith("stdlib2.hiss");
 
-        disableTrace();
+        //disableTrace();
         load(List([String("stdlib2.hiss")]), List([]), (hval) -> {});
-        enableTrace();
+        //enableTrace();
     }
 
     public static function main() {
@@ -120,9 +126,9 @@ class CCInterp {
 
             var next = cReader.readLine();
 
-            interp.disableTrace();
+            //interp.disableTrace();
             var exp = interp.read(next);
-            interp.enableTrace();
+            //interp.enableTrace();
 
             interp.eval(exp, locals, HissTools.print);
         }
@@ -450,6 +456,33 @@ class CCInterp {
                     inline getVar(exp, env, cc);
                 case Int(_) | Float(_) | String(_):
                     cc(exp);
+
+                case InterpString(raw):
+                    // Handle expression interpolation
+                    var interpolated = raw;
+
+                    var idx = 0;
+                    while (interpolated.indexOf("$", idx) != -1) {
+                        idx = interpolated.indexOf("$", idx);
+                        // Allow \$ for putting $ in string.
+                        if (interpolated.charAt(idx-1) == '\\') {
+                            ++idx;
+                            continue;
+                        }
+
+                        var expStream = HStream.FromString(interpolated.substr(idx+1));
+                        var startingLength = expStream.length();
+                        var exp = reader.read("", expStream);
+                        trace(exp);
+                        var expLength = startingLength - expStream.length();
+                        trace(expLength);
+                        eval(exp, env, (val) -> {
+                            interpolated = interpolated.substr(0, idx) + val.toMessage() + interpolated.substr(idx+1+expLength);
+                            idx = idx + 1 + val.toMessage().length;
+                        });
+                    }
+                    
+                    cc(String(interpolated));
                 
                 case Quote(e):
                     cc(e);

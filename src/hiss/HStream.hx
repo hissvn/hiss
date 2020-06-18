@@ -131,6 +131,10 @@ class HStream {
 		return '`$snip...`';
 	}
 
+	public function copy() {
+		return HStream.FromString(rawString, pos);
+	}
+
 	public function drop(s:String) {
 		//trace('dropping $s');
 		var next = peek(s.length);

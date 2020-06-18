@@ -134,17 +134,17 @@ class HissReader {
         }
     }
 
-    public function readBlockComment(start: String, stream: HStream): HValue {
+    function readBlockComment(start: String, stream: HStream): HValue {
         stream.takeUntil(["*/"]);
         return Comment;
     }
 
-    public function readLineComment(start: String, stream: HStream): HValue {
+    function readLineComment(start: String, stream: HStream): HValue {
         stream.takeLine();
         return Comment;
     }
 
-    public static function readRawString(start: String, str: HStream): HValue {
+    function readRawString(start: String, str: HStream): HValue {
         var pounds = "#";
         while (str.peek(1) == "#") {
             pounds += str.take(1);
@@ -160,23 +160,48 @@ class HissReader {
         }
     }
 
-    public static function readString(start: String, str: HStream): HValue {
-        //trace(str);
-        switch (str.takeUntil(['"'])) {
-            case Some(s): 
-                var escaped = s.output;
+    function readString(start: String, str: HStream): HValue {
+        // Quotes inside Interpolated expressions shouldn't terminate the literal
+        var literal = "";
+        while (true) {
+            var outputInfo = HaxeTools.extract(str.takeUntil(['"', '\\$', '$'], false, false), Some(o) => o); // don't drop the terminator
+            trace(outputInfo.terminator);
+            switch (outputInfo.terminator) {
+                case '"':
+                    literal += outputInfo.output;
+                    str.drop(outputInfo.terminator);
+                    break;
+                case "\\$":
+                    literal += outputInfo.output + outputInfo.terminator;
+                    str.drop(outputInfo.terminator);
+                case '$':
+                    literal += outputInfo.output + outputInfo.terminator;
+                    str.drop(outputInfo.terminator);
 
-                // Via https://haxe.org/manual/std-String-literals.html, missing ASCII and Unicode code point support:
-                escaped = escaped.replaceAll("\\t", "\t");
-                escaped = escaped.replaceAll("\\n", "\n");
-                escaped = escaped.replaceAll("\\r", "\r");
-                escaped = escaped.replaceAll('\\"', '"');
-                // Single quotes are not a thing in Hiss
-
-                return String(escaped);
-            case None:
-                throw 'Expected close quote for read-string of $str';
+                    var strCopy = str.copy();
+                    var startingLength = strCopy.length();
+                    var v = read("", strCopy);
+                    var expLength = startingLength - strCopy.length();
+                    switch (v) {
+                        case Symbol(name) if (name.charAt(name.length - 1) == '"'):
+                            expLength -= 1;
+                        default:
+                    }
+                    literal += str.take(expLength);
+            }
         }
+
+        var escaped = literal;
+
+        // Via https://haxe.org/manual/std-String-literals.html, missing ASCII and Unicode code point support:
+        escaped = escaped.replaceAll("\\t", "\t");
+        escaped = escaped.replaceAll("\\n", "\n");
+        escaped = escaped.replaceAll("\\r", "\r");
+        escaped = escaped.replaceAll('\\"', '"');
+        // Single quotes are not a thing in Hiss                
+
+        // Strings with regular quotes need to be interpolated at eval-time
+        return InterpString(escaped);
     }
 
     function nextToken(str: HStream): String {
