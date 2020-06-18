@@ -1,13 +1,19 @@
 package hiss;
 
-import haxe.macro.Expr;
-
 import hiss.HaxeTools;
 using hiss.HaxeTools;
 import hiss.HTypes;
+import hiss.CompileInfo;
 import Type;
 
 class HissTools {
+
+    // The version macro can't be passed directly as a function object.
+    // It has to be wrapped in a regular function.
+    public static function version() {
+        return String(CompileInfo.version());
+    }
+
     public static function put(dict: HValue, key: String, v: HValue) {
         dict.toDict()[key] = v;
     }

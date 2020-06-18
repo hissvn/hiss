@@ -36,7 +36,7 @@ class CCInterp {
         if (tempTrace != null) haxe.Log.trace = tempTrace;
     }
 
-    function importFunction(func: Function, name: String, keepArgsWrapped: HValue) {
+    function importFunction(func: Function, name: String, keepArgsWrapped: HValue = Nil) {
         globals.put(name, Function((args: HValue, env: HValue, cc: Continuation) -> {
             cc(Reflect.callMethod(null, func, args.unwrapList(keepArgsWrapped)).toHValue());
         }, name));
@@ -74,6 +74,9 @@ class CCInterp {
         globals.put("Hiss-Tools", Object("Class", HissTools));
         globals.put("get-property", Function(getProperty, "get-property"));
         globals.put("call-haxe", Function(callHaxe, "call-haxe"));
+
+        // Debug info
+        importFunction(HissTools.version, "version");
 
         // Functions/forms that could be bootstrapped with register-function, but save stack frames if not:
         importFunction(HissTools.print, "print", T);
