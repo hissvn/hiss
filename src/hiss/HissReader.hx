@@ -59,6 +59,7 @@ class HissReader {
 
         // Literals
         internalSetMacroString('"', readString);
+        internalSetMacroString("#", readRawString);
         var numberChars = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"];
         for (s in numberChars) {
             internalSetMacroString(s, readNumber);
@@ -141,6 +142,22 @@ class HissReader {
     public function readLineComment(start: String, stream: HStream): HValue {
         stream.takeLine();
         return Comment;
+    }
+
+    public static function readRawString(start: String, str: HStream): HValue {
+        var pounds = "#";
+        while (str.peek(1) == "#") {
+            pounds += str.take(1);
+        }
+        str.drop('"');
+        var terminator = '"$pounds';
+
+        switch (str.takeUntil([terminator])) {
+            case Some(s): 
+                return String(s.output);
+            case None:
+                throw 'Expected closing $terminator for read-raw-string of $str';
+        }
     }
 
     public static function readString(start: String, str: HStream): HValue {
