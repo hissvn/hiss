@@ -5,6 +5,7 @@ import Reflect;
 using Reflect;
 import haxe.CallStack;
 import haxe.Constraints.Function;
+import haxe.io.Path;
 
 import hiss.HTypes;
 #if sys
@@ -120,9 +121,15 @@ class CCInterp {
 
     public static function main() {
         var interp = new CCInterp();
+
         StaticFiles.compileWith("debug.hiss");
         #if sys
-        var cReader = new ConsoleReader(-1, HissTools.homeDir() + "/.hisstory");    
+        var cReader = new ConsoleReader(-1, Path.join([HissTools.homeDir(), ".hisstory"]));  
+        // The REPL needs to make sure its ConsoleReader actually saves the history on exit :)
+        interp.importFunction((args, env, cc) -> {
+            cReader.saveHistory();
+            Sys.exit(0);
+        }, "quit");  
         var locals = List([Dict([])]); // This allows for top-level setlocal
 
         while (true) {
