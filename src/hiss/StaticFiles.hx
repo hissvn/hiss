@@ -3,6 +3,7 @@ package hiss;
 import haxe.io.Path;
 import haxe.macro.Context;
 #if sys
+import sys.io.File;
 import sys.FileSystem;
 #end
 using StringTools;
@@ -19,7 +20,7 @@ class StaticFiles {
         var posInfos = Context.getPosInfos(Context.currentPos());
         if (directory.length == 0) directory = FileSystem.absolutePath(Path.directory(posInfos.file));
         #if sys
-        var content = sys.io.File.getContent(Path.join([directory, file]));
+        var content = File.getContent(Path.join([directory, file]));
         #else
         var content = "";
         #end
@@ -41,7 +42,14 @@ class StaticFiles {
     }
 
     public static function getContent(path: String) {
-        return files[path];
+        if (files.exists(path)) {
+            return files[path];
+        } else {
+            #if sys
+                return File.getContent(path);
+            #end
+            throw 'File was not compiled into the program: $path';
+        }
     }
 
     /** 

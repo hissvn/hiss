@@ -14,6 +14,14 @@ class HissTools {
         return String(CompileInfo.version());
     }
 
+    public static function homeDir() {
+        #if sys
+            return Sys.getEnv(if (Sys.systemName() == "Windows") "UserProfile" else "HOME");
+        #else
+            throw "Can't get home directory on this target.";
+        #end
+    }
+
     public static function put(dict: HValue, key: String, v: HValue) {
         dict.toDict()[key] = v;
     }

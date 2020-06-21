@@ -165,7 +165,7 @@ class HissReader {
         var literal = "";
         while (true) {
             var outputInfo = HaxeTools.extract(str.takeUntil(['"', '\\$', '$'], false, false), Some(o) => o); // don't drop the terminator
-            trace(outputInfo.terminator);
+            //trace(outputInfo.terminator);
             switch (outputInfo.terminator) {
                 case '"':
                     literal += outputInfo.output;

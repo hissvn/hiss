@@ -106,6 +106,11 @@ class CCInterp {
         globals.put(">", Function(HissMath.numCompare.bind(Greater), ">"));
         globals.put(">=", Function(HissMath.numCompare.bind(GreaterEqual), ">="));
         globals.put("=", Function(HissMath.numCompare.bind(Equal), "="));
+
+        // Operating system
+        importFunction(HissTools.homeDir, "home-dir");
+        importFunction(StaticFiles.getContent, "get-content");
+
         StaticFiles.compileWith("stdlib2.hiss");
 
         //disableTrace();
