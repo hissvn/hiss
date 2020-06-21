@@ -122,7 +122,7 @@ class CCInterp {
         var interp = new CCInterp();
         StaticFiles.compileWith("debug.hiss");
         #if sys
-        var cReader = new ConsoleReader();        
+        var cReader = new ConsoleReader(-1, HissTools.homeDir() + "/.hisstory");    
         var locals = List([Dict([])]); // This allows for top-level setlocal
 
         while (true) {
