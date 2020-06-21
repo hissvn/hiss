@@ -5,6 +5,7 @@ using hiss.HaxeTools;
 import hiss.HTypes;
 import hiss.CompileInfo;
 import Type;
+import haxe.io.Path;
 
 class HissTools {
 
@@ -16,7 +17,7 @@ class HissTools {
 
     public static function homeDir() {
         #if sys
-            return Sys.getEnv(if (Sys.systemName() == "Windows") "UserProfile" else "HOME");
+            return Path.normalize(Sys.getEnv(if (Sys.systemName() == "Windows") "UserProfile" else "HOME"));
         #else
             throw "Can't get home directory on this target.";
         #end
