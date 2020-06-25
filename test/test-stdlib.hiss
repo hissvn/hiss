@@ -1,3 +1,8 @@
+/*
+The first version of the Standard Library formatted tests as an entire file of Hiss expressions which
+must evaluate as truthy.
+*/
+
 t
 true
 (not nil)

@@ -1,13 +1,13 @@
 package test;
 
 import hiss.StaticFiles;
+import test.HissTestCase;
 
 class TestAll {
   public static function main() {
-    StaticFiles.compileWith("test-std.hiss");
-    StaticFiles.compileWith("module.hiss");
+    StaticFiles.compileWith("test-stdlib2.hiss");
     utest.UTest.run([
-      new test.HissTestCase("test-std.hiss"),
+      new HissTestCase("test-stdlib2.hiss"),
       
       // Internal Tests. These were helpful while implementing and re-implementing core components,
       // but they're slow and not really worth it now.

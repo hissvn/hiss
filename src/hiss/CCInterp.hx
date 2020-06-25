@@ -20,7 +20,7 @@ import hiss.HissMath;
 using StringTools;
 
 class CCInterp {
-    var globals: HValue = Dict([]);
+    public var globals: HValue = Dict([]);
     var reader: HissReader;
 
     var tempTrace: Dynamic = null;
@@ -56,6 +56,9 @@ class CCInterp {
         }, name));
     }
 
+    public static function noOp (args: HValue, env: HValue, cc: Continuation) { }
+    public static function noCC (arg: HValue) { }
+
     public function new() {
         reader = new HissReader(this);
 
@@ -69,7 +72,7 @@ class CCInterp {
         globals.put("call/cc", SpecialForm(callCC));
         globals.put("eval", Function(_eval, "eval"));
         globals.put("bound?", SpecialForm(bound));
-        globals.put("load", Function(load, "load"));
+        globals.put("load", Function(_load, "load"));
         globals.put("funcall", SpecialForm(funcall.bind(false)));
         globals.put("funcall-inline", SpecialForm(funcall.bind(true)));
         globals.put("loop", SpecialForm(loop));
@@ -112,10 +115,13 @@ class CCInterp {
         importFunction(HissTools.homeDir, "home-dir");
         importFunction(StaticFiles.getContent, "get-content");
 
+        // (test) is a no-op in production:
+        globals.put("test", SpecialForm(noOp));
+
         StaticFiles.compileWith("stdlib2.hiss");
 
         //disableTrace();
-        load(List([String("stdlib2.hiss")]), List([]), (hval) -> {});
+        load("stdlib2.hiss");
         //enableTrace();
     }
 
@@ -149,11 +155,15 @@ class CCInterp {
         }
         #else
         // An interactive repl isn't possible on non-sys platforms, so just run a test program.
-        interp.load(List([String("debug.hiss")]), List([]), (hval) -> {});
+        interp.load("debug.hiss");
         #end
     }
 
-    function load(args: HValue, env: HValue, cc: Continuation) {
+    public function load(file: String) {
+        _load(List([String(file)]), List([]), noCC);
+    }
+
+    function _load(args: HValue, env: HValue, cc: Continuation) {
         readingProgram = true;
         var exps = reader.readAll(String(StaticFiles.getContent(args.first().value())));
         readingProgram = false;

@@ -6,53 +6,67 @@ using hx.strings.Strings;
 import utest.Assert;
 
 import hiss.HTypes;
-import hiss.HissRepl;
-import hiss.HissInterp;
-import hiss.HissReader;
+import hiss.CCInterp;
 import hiss.HissTools;
+using hiss.HissTools;
 import hiss.StaticFiles;
 
 class HissTestCase extends utest.Test {
 
-    var repl: HissRepl;
+    var interp: CCInterp;
     var file: String;
 
-    public function new(hissFile: String) {
+    var functionsTested: Map<String, Bool> = [];
+    var ignoreFunctions: Array<String> = [];
+
+    public function new(hissFile: String, ?ignoreFunctions: Array<String>) {
         super();
         file = hissFile;
+
+        // Some functions just don't wanna be tested
+        if (ignoreFunctions != null) this.ignoreFunctions = ignoreFunctions;
+    }
+
+    function hissTest(args: HValue, env: HValue, cc: Continuation) {
+        var fun = args.first().symbolName();
+        var assertions = args.rest();
+        var env = List([Dict([])]);
+        for (ass in assertions.toList()) {
+            interp.eval(ass, env, (val) -> {
+                Assert.isTrue(val.truthy(), 'Failure testing $fun: ${ass.toPrint()} evaluated to ${val.toPrint()}');
+            });
+        }
+        
+        functionsTested[fun] = true;
     }
 
     function testFile() {
         trace("Measuring time to construct the Hiss environment:");
-        repl = Timer.measure(function () { return new HissRepl(); });
-        
-        trace("Measuring time taken to read the unit tests:");
-        var expressions = Timer.measure(function() { return HissReader.readAll(String(StaticFiles.getContent(file))); });
+        interp = Timer.measure(function () { return new CCInterp(); });
+
+        interp.globals.put("test", SpecialForm(hissTest));
+
+        for (f in ignoreFunctions) {
+            functionsTested[f] = true;
+        }
 
         trace("Measuring time taken to run the unit tests:");
 
-        var num = expressions.toList().length;
-        var count = 0;
         Timer.measure(function() {
-            for (e in expressions.toList()) {
-                trace('testing expression #$count: ${e.toPrint()}');
-                Timer.measure(function () {
-                    try {
-                        var v = repl.interp.eval(e);
-                        Assert.isTrue(HissTools.truthy(v), 'Failure: ${HissTools.toPrint(e)} evaluated to ${HissTools.toPrint(v)}');
-                    } catch (s: Dynamic) {
-                        trace('uncaught error $s from test expression ${HissTools.toPrint(e)}');
-                    }
-                });
-
-                count++;
-            }
+            interp.load(file);
             trace("Total time to run tests:");
         });
 
-        for (fun => callCount in repl.interp.functionStats) {
-            if (fun != "read-line" && fun != "test-std" && fun != "lp" && fun != "lstd" && fun != "compare-by-even-odd" && fun != "what")
-                Assert.isTrue(callCount > 0, 'Failure: $fun was never called in testing');
+        for (v => val in interp.globals.toDict()) {
+            switch (val) {
+                case Function(_, _) | SpecialForm(_) | Macro(_):
+                    if (!functionsTested.exists(v)) functionsTested[v] = false;
+                default:
+            }
+        }
+
+        for (fun => tested in functionsTested) {
+            Assert.isTrue(tested, 'Failure: $fun was never tested');
         }
     }
 

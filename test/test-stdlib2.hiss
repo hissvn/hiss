@@ -1,0 +1,7 @@
+(test pop
+    (eq 4 (pop (list 1 2 3 4)))
+    (eq nil (pop (list))) // TODO is this desirable?
+    (setlocal l (list 1 2 3 4))
+    (eq 4 (pop l))
+    (eq (list 1 2 3) l)
+    (eq 3 (pop l)))
