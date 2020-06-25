@@ -6,6 +6,7 @@
 -cp test
 -D analyzer-optimize
 -D test
+-D throwErrors
 -D no-deprecation-warnings
 -main test.TestAll
 --interp

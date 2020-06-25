@@ -32,9 +32,15 @@ class HissTestCase extends utest.Test {
         var assertions = args.rest();
         var env = List([Dict([])]);
         for (ass in assertions.toList()) {
-            interp.eval(ass, env, (val) -> {
-                Assert.isTrue(val.truthy(), 'Failure testing $fun: ${ass.toPrint()} evaluated to ${val.toPrint()}');
-            });
+            var failureMessage = 'Failure testing $fun: ${ass.toPrint()} evaluated to: ';
+            var errorMessage = 'Error testing $fun: ${ass.toPrint()}: ';
+            try {
+                interp.eval(ass, env, (val) -> {
+                    Assert.isTrue(val.truthy(), failureMessage + val.toPrint());
+                });
+            } catch (err: Dynamic) {
+                Assert.fail(errorMessage + err.toString());
+            }
         }
         
         functionsTested[fun] = true;
