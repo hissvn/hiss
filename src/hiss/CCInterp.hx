@@ -132,6 +132,9 @@ class CCInterp {
         }, "quit");  
         var locals = List([Dict([])]); // This allows for top-level setlocal
 
+        HaxeTools.println('Hiss version ${CompileInfo.version()}');
+        HaxeTools.println("Type (quit) to quit the REPL");
+
         while (true) {
             HaxeTools.print(">>> ");
             cReader.cmd.prompt = ">>> ";
