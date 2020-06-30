@@ -160,7 +160,7 @@ class CCInterp {
     }
 
     public function load(file: String) {
-        _load(List([String(file)]), List([]), noCC);
+        _load(List([String(file)]), List([Dict([])]), noCC);
     }
 
     function _load(args: HValue, env: HValue, cc: Continuation) {
@@ -216,7 +216,7 @@ class CCInterp {
     function funcall(callInline: Bool, args: HValue, env: HValue, cc: Continuation) {
         evalAll(args, env, (values) -> {
             // trace(values.toPrint());
-            values.first().toHFunction()(values.rest(), if (callInline) env else List([]), cc);
+            values.first().toHFunction()(values.rest(), if (callInline) env else List([Dict([])]), cc);
         });
     }
 
