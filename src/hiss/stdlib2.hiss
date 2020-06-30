@@ -20,13 +20,6 @@
 (defun take (l num)
     (slice l 0 num))
 
-(defmacro and (&rest args)
-    `(if (not ',args) t
-        (if (not ',(rest args))
-            ,(first args)
-            (if (not ,(first args)) nil
-                (and ,@(rest args))))))
-
 (register-function Type "resolveClass" resolve-class)
 (register-function Type "resolveEnum" resolve-enum)
 (defmacro import (type-path name)

@@ -77,6 +77,7 @@ class CCInterp {
         globals.put("funcall-inline", SpecialForm(funcall.bind(true)));
         globals.put("loop", SpecialForm(loop));
         globals.put("or", SpecialForm(or));
+        globals.put("and", SpecialForm(and));
 
         // Use tail-recursive begin for loading the prelude:
         globals.put("begin", SpecialForm(trBegin));
@@ -487,6 +488,18 @@ class CCInterp {
             }
         }
         cc(Nil);
+    }
+
+    function and(args: HValue, env: HValue, cc: Continuation) {
+        var argVal = T;
+        for (arg in args.toList()) {
+            eval(arg, env, (val) -> {argVal = val;});
+            if (!argVal.truthy()) {
+                cc(Nil);
+                return;
+            }
+        }
+        cc(argVal);
     }
 
     public function eval(exp: HValue, env: HValue, cc: Continuation) {
