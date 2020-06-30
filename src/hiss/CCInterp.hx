@@ -128,14 +128,12 @@ class CCInterp {
         //enableTrace();
     }
 
-    public static function main() {
-        var interp = new CCInterp();
-
-        StaticFiles.compileWith("debug.hiss");
+    /** Run a Hiss REPL from this interpreter instance **/
+    public function repl() {
         #if sys
         var cReader = new ConsoleReader(-1, Path.join([HissTools.homeDir(), ".hisstory"]));  
         // The REPL needs to make sure its ConsoleReader actually saves the history on exit :)
-        interp.importFunction((args, env, cc) -> {
+        importFunction((args, env, cc) -> {
             cReader.saveHistory();
             Sys.exit(0);
         }, "quit");  
@@ -151,13 +149,24 @@ class CCInterp {
             var next = cReader.readLine();
 
             //interp.disableTrace();
-            var exp = interp.read(next);
+            var exp = read(next);
             //interp.enableTrace();
 
-            interp.eval(exp, locals, HissTools.print);
+            eval(exp, locals, HissTools.print);
         }
         #else
+        throw "Can't run a Hiss REPL on this platform.";
+        #end
+    }
+
+    public static function main() {
+        var interp = new CCInterp();
+
+        #if sys
+        interp.repl();
+        #else
         // An interactive repl isn't possible on non-sys platforms, so just run a test program.
+        StaticFiles.compileWith("debug.hiss");
         interp.load("debug.hiss");
         #end
     }
