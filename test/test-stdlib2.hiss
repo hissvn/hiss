@@ -41,10 +41,6 @@
     // Test against stack overflows:
     (eq t (and t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t)))
 
-(test case
-    (eq t (case 5 (5 t) (t nil)))
-    (eq nil (case 6 (5 t) (t nil))))
-
 (test pop
     (eq 4 (pop (list 1 2 3 4)))
     (eq nil (pop (list))) // TODO is this desirable?
