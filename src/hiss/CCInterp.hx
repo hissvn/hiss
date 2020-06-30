@@ -292,7 +292,7 @@ class CCInterp {
         } else if (g.exists(name)) {
             g[name];
         } else {
-            Nil;
+            throw '$name is undefined';
         });
     }
 
