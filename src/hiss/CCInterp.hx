@@ -76,6 +76,8 @@ class CCInterp {
         globals.put("funcall", SpecialForm(funcall.bind(false)));
         globals.put("funcall-inline", SpecialForm(funcall.bind(true)));
         globals.put("loop", SpecialForm(loop));
+        globals.put("or", SpecialForm(or));
+
         // Use tail-recursive begin for loading the prelude:
         globals.put("begin", SpecialForm(trBegin));
 
@@ -475,6 +477,18 @@ class CCInterp {
         return reader.read("", HStream.FromString(str));
     }
 
+    function or(args: HValue, env: HValue, cc: Continuation) {
+        for (arg in args.toList()) {
+            var argVal = Nil;
+            eval(arg, env, (val) -> {argVal = val;});
+            if (argVal.truthy()) {
+                cc(argVal);
+                return;
+            }
+        }
+        cc(Nil);
+    }
+
     public function eval(exp: HValue, env: HValue, cc: Continuation) {
         try {
             switch (exp) {
@@ -499,9 +513,7 @@ class CCInterp {
                         var expStream = HStream.FromString(interpolated.substr(idx+1));
                         var startingLength = expStream.length();
                         var exp = reader.read("", expStream);
-                        trace(exp);
                         var expLength = startingLength - expStream.length();
-                        trace(expLength);
                         eval(exp, env, (val) -> {
                             interpolated = interpolated.substr(0, idx) + val.toMessage() + interpolated.substr(idx+1+expLength);
                             idx = idx + 1 + val.toMessage().length;

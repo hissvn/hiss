@@ -20,9 +20,6 @@
 (defun take (l num)
     (slice l 0 num))
 
-(defmacro or (&rest args)
-    `(if (not ',args) nil
-        (if (not ,(first args)) (or ,@(rest args)) ,(first args))))
 (defmacro and (&rest args)
     `(if (not ',args) t
         (if (not ',(rest args))
