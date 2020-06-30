@@ -322,12 +322,12 @@ class CCInterp {
         var body = args.rest();
 
         var names = Symbol("recur").cons(bindings.alternates(true));
-        var firstValues = bindings.alternates(false);
-        evalAll(firstValues, env, (firstValues) -> {
+        var firstValueExps = bindings.alternates(false);
+        evalAll(firstValueExps, env, (firstValues) -> {
             var nextValues = Nil;
             var recurCalled = false;
-            var recur: HFunction = (values, env, cc) -> {
-                nextValues = values;
+            var recur: HFunction = (nextValueExps, env, cc) -> {
+                evalAll(nextValueExps, env, (nextVals) -> {nextValues = nextVals;});
                 recurCalled = true;
             }
             var values = firstValues;
@@ -338,7 +338,8 @@ class CCInterp {
                     recurCalled = false;
                 }
 
-                eval(Symbol("begin").cons(body), env.extend(names.destructuringBind(Function(recur, "recur").cons(values))), (value) -> {result = value;});
+                // Recur has to be a special form so it retains the environment of the original loop call
+                eval(Symbol("begin").cons(body), env.extend(names.destructuringBind(SpecialForm(recur).cons(values))), (value) -> {result = value;});
                 
             } while (recurCalled);
             cc(result);
