@@ -7,7 +7,13 @@ class TestAll {
   public static function main() {
     StaticFiles.compileWith("test-stdlib2.hiss");
     utest.UTest.run([
-      new HissTestCase("test-stdlib2.hiss"),
+      new HissTestCase("test-stdlib2.hiss", [
+        // Functions to ignore in testing:
+        "version",
+        "home-dir",
+        "exit",
+        "quit",
+      ]),
       
       // Internal Tests. These were helpful while implementing and re-implementing core components,
       // but they're slow and not really worth it now.

@@ -1,8 +1,49 @@
 (test or
+    // Test with booleans:
     (eq nil (or))
     (eq t (or t))
     (eq t (or nil t))
+    (eq nil (or nil nil))
+
+    // Test with other values:
+    (eq 5 (or nil 5))
+    (eq nil (or nil (> 5 6)))
+    (or (> 6 5) (> 5 6))
+    (or (> 5 6) (> 6 5))
+
+    // Test short-circuiting:
+    (setlocal short-circuit t)
+    (eq t (or t (setlocal short-circuit nil)))
+    short-circuit
+
+    // Test against stack overflows:
     (eq t (or nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil t)))
+
+(test and
+    // Test with booleans:
+    (eq t (and))
+    (eq t (and t))
+    (eq nil (and nil t))
+    (eq nil (and t nil))
+
+    // Test with other values:
+    (eq 5 (and 6 5))
+    (eq nil (and t (> 5 6)))
+    (eq nil (and (> 6 5) (> 5 6)))
+    (eq nil (and (> 5 6) (> 6 5)))
+    (eq t (and (> 6 5) (> 7 5)))
+
+    // Test short-circuiting:
+    (setlocal short-circuit t)
+    (eq nil (and nil (setlocal short-circuit nil)))
+    short-circuit
+
+    // Test against stack overflows:
+    (eq t (and t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t)))
+
+(test case
+    (eq t (case 5 (5 t) (t nil)))
+    (eq nil (case 6 (5 t) (t nil))))
 
 (test pop
     (eq 4 (pop (list 1 2 3 4)))
