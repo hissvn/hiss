@@ -48,3 +48,17 @@
     (eq 4 (pop l))
     (eq (list 1 2 3) l)
     (eq 3 (pop l)))
+
+(test for
+    (eq (list 7 8 9) (for i (list 1 2 3) (+ i 6))))
+
+(test for-drop
+    (not (for-drop i (list 1 2 3) i))
+    (prints "1\n2\n3\n" (for-drop i (list 1 2 3) (print i))))
+
+(test map
+    (eq (list 7 8 9) (map (list 1 2 3) (lambda (i) (+ i 6)))))
+
+(test map-drop
+    (not (map-drop (list 1 2 3) (lambda (i) i)))
+    (prints "1\n2\n3\n" (map-drop (list 1 2 3) print)))

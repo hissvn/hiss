@@ -13,6 +13,8 @@ class TestAll {
         "home-dir",
         "exit",
         "quit",
+        "print",
+        "prints",
       ]),
       
       // Internal Tests. These were helpful while implementing and re-implementing core components,
