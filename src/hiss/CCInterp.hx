@@ -329,6 +329,9 @@ class CCInterp {
         cc(callable);
     }
 
+    /**
+        Special form for performing Hiss operations tail-recursively
+    **/
     function loop(args: HValue, env: HValue, cc: Continuation) {
         var bindings = args.first();
         var body = args.rest();
