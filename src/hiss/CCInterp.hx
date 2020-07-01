@@ -79,6 +79,11 @@ class CCInterp {
         globals.put("or", SpecialForm(or));
         globals.put("and", SpecialForm(and));
 
+        globals.put("for", SpecialForm(iterate.bind(true, true)));
+        globals.put("for-drop", SpecialForm(iterate.bind(false, true)));
+        globals.put("map", SpecialForm(iterate.bind(true, false)));
+        globals.put("map-drop", SpecialForm(iterate.bind(false, false)));
+
         // Use tail-recursive begin for loading the prelude:
         globals.put("begin", SpecialForm(trBegin));
 
@@ -327,6 +332,52 @@ class CCInterp {
             Function(hFun, "[anonymous lambda]");
         };
         cc(callable);
+    }
+
+    /**
+        Implementation behind (for), (drop-for), (map), and (drop-map)
+    **/
+    function iterate(collect: Bool, bodyForm: Bool, args: HValue, env: HValue, cc: Continuation) {
+        var iterable: HValue = Nil;
+        eval(if (bodyForm) {
+            args.second();
+        } else {
+            args.first();
+        }, env, (_iterable) -> { iterable = _iterable; });
+
+        var operation: HFunction = null;
+        if (bodyForm) {
+            var varName = args.first().symbolName();
+            var body = List(args.toList().slice(2));
+            operation = (innerArgs, env, cc) -> {
+                var bodyEnv = env.extend(Dict([varName => innerArgs.first()]));
+                eval(Symbol("begin").cons(body), bodyEnv, cc);
+            };
+        } else {
+            eval(args.second(), env, (fun) -> {operation = fun.toHFunction();});
+        }
+
+        var iterator: Iterator<HValue> = switch (iterable) {
+            case List(l):
+                l.iterator();
+            case Dict(d):
+                d.iterator();
+            default:
+                throw 'Cannot iterate on ${iterable.toPrint()}';
+        }
+
+        var results = [];
+        var iterationCC = if (collect) {
+            (result) -> { results.push(result); };
+        } else {
+            noCC;
+        }
+
+        for (value in iterator) {
+            operation(List([value]), if (bodyForm) { env; } else { List([Dict([])]); }, iterationCC);
+        }
+
+        cc(List(results));
     }
 
     /**

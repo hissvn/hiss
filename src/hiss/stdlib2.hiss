@@ -51,15 +51,6 @@
                     ,@body))
                 (if ,cond (recur)))))))
 
-(defun map (l function)
-    (setlocal collection (list))
-    (while l
-        (push collection (funcall-inline function (shift l))))
-    collection)
-
-(defmacro for (var l &rest body)
-    `(funcall-inline map ,l (lambda (,var) ,@body)))
-
 (defun apply (f args)
     (eval `(,f ',@args)))
 
