@@ -338,12 +338,13 @@ class CCInterp {
         Implementation behind (for), (drop-for), (map), and (drop-map)
     **/
     function iterate(collect: Bool, bodyForm: Bool, args: HValue, env: HValue, cc: Continuation) {
-        var iterable: HValue = Nil;
+        var it: HValue = Nil;
         eval(if (bodyForm) {
             args.second();
         } else {
             args.first();
-        }, env, (_iterable) -> { iterable = _iterable; });
+        }, env, (_iterable) -> { it = _iterable; });
+        var iterable: Iterable<HValue> = it.value(true);
 
         var operation: HFunction = null;
         if (bodyForm) {
@@ -357,15 +358,6 @@ class CCInterp {
             eval(args.second(), env, (fun) -> {operation = fun.toHFunction();});
         }
 
-        var iterator: Iterator<HValue> = switch (iterable) {
-            case List(l):
-                l.iterator();
-            case Dict(d):
-                d.iterator();
-            default:
-                throw 'Cannot iterate on ${iterable.toPrint()}';
-        }
-
         var results = [];
         var iterationCC = if (collect) {
             (result) -> { results.push(result); };
@@ -373,7 +365,7 @@ class CCInterp {
             noCC;
         }
 
-        for (value in iterator) {
+        for (value in iterable) {
             operation(List([value]), if (bodyForm) { env; } else { List([Dict([])]); }, iterationCC);
         }
 
