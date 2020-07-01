@@ -220,7 +220,7 @@ class HissTools {
                 Std.string(f);
             case Symbol(name):
                 name;
-            case String(str):
+            case String(str) | InterpString(str):
                 '"$str"';
             case List(l):
                 if (recursiveCall > recursivePrintDepth) {

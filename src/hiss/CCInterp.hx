@@ -284,7 +284,7 @@ class CCInterp {
         });
     }
 
-    /** Callable form for eval **/
+    /** Hiss-callable form for eval **/
     function _eval(args: HValue, env: HValue, cc: Continuation) {
         eval(args.first(), env, cc);
     }

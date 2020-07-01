@@ -46,11 +46,38 @@ class HissTestCase extends utest.Test {
         functionsTested[fun] = true;
     }
 
+    /**
+        Function for asserting that a given expression prints what it's supposed to
+    **/
+    function hissPrints(interp: CCInterp, args: HValue, env: HValue, cc: Continuation) {
+        var expectedPrint = "";
+        interp.eval(args.first(), env, (_expectedPrint) -> { expectedPrint = _expectedPrint.toHaxeString(); });
+        var expression = args.second();
+
+        var actualPrint = "";
+        var testEnv = env.extend(Dict(["print" => Function((innerArgs, innerEnv, innerCC) -> {
+            actualPrint += innerArgs.first().toPrint() + "\n";
+        }, "print")]));
+
+        interp.eval(expression, testEnv, (result) -> {
+            Assert.equals(expectedPrint, actualPrint);
+        });
+    }
+
+    /**
+        Any unnecessary printing is a bug, so replace print() with this function while running tests.
+    **/
+    function hissPrint(args: HValue, env: HValue, cc: Continuation) {
+        throw 'Tried to print unnecessarily';
+    }
+
     function testFile() {
         trace("Measuring time to construct the Hiss environment:");
         interp = Timer.measure(function () { return new CCInterp(); });
 
         interp.globals.put("test", SpecialForm(hissTest));
+        interp.globals.put("prints", SpecialForm(hissPrints.bind(interp)));
+        interp.globals.put("print", SpecialForm(hissPrint));
 
         for (f in ignoreFunctions) {
             functionsTested[f] = true;
