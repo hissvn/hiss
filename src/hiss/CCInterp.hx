@@ -167,7 +167,7 @@ class CCInterp {
             }
             //interp.enableTrace();
 
-            eval(exp, locals, HissTools.print);
+            internalEval(exp, locals, HissTools.print);
         }
         #else
         throw "Can't run a Hiss REPL on this platform.";
@@ -206,7 +206,7 @@ class CCInterp {
     **/
     function trBegin(exps: HValue, env: HValue, cc: Continuation) {
         var value = Nil;
-        eval(exps.first(), env, (result) -> {
+        internalEval(exps.first(), env, (result) -> {
             value = result;
         });
 
@@ -225,7 +225,7 @@ class CCInterp {
             cc(args.first());
         }, "return")]));
 
-        eval(exps.first(), bodyEnv, (result) -> {
+        internalEval(exps.first(), bodyEnv, (result) -> {
             if (returnCalled || !exps.rest().truthy()) {
                 cc(result);
             }
@@ -242,7 +242,7 @@ class CCInterp {
     function macroCall(args: HValue, env: HValue, cc: Continuation) {
         specialForm(args, env, (expansion: HValue) -> {
             //HaxeTools.println(' ${expansion.toPrint()}');
-            eval(expansion, env, cc);
+            internalEval(expansion, env, cc);
         });
     }
 
@@ -257,7 +257,7 @@ class CCInterp {
         if (!args.truthy()) {
             cc(Nil);
         } else {
-            eval(args.first(), env, (value) -> {
+            internalEval(args.first(), env, (value) -> {
                 evalAll(args.rest(), env, (value2) -> {
                     cc(value.cons(value2));
                 });
@@ -270,7 +270,7 @@ class CCInterp {
     }
 
     function set(global: Bool, args: HValue, env: HValue, cc: Continuation) {
-        eval(args.second(),
+        internalEval(args.second(),
             env, (val) -> {
                 var scope = if (global) {
                     globals;
@@ -289,20 +289,15 @@ class CCInterp {
     }
 
     function _if(args: HValue, env: HValue, cc: Continuation) {
-        eval(args.first(), env, (val) -> {
+        internalEval(args.first(), env, (val) -> {
             if (val.truthy()) {
-                eval(args.second(), env, cc);
+                internalEval(args.second(), env, cc);
             } else if (args.length() > 2) {
-                eval(args.third(), env, cc);
+                internalEval(args.third(), env, cc);
             } else {
                 cc(Nil);
             }
         });
-    }
-
-    /** Hiss-callable form for eval **/
-    function _eval(args: HValue, env: HValue, cc: Continuation) {
-        eval(args.first(), env, cc);
     }
 
     function getVar(name: HValue, env: HValue, cc: Continuation) {
@@ -341,7 +336,7 @@ class CCInterp {
         var body = Symbol('begin').cons(args.rest());
         var hFun: HFunction = (fArgs, env, fCC) -> {
             var callEnv = env.extend(params.destructuringBind(fArgs)); // extending the outer env is how lambdas capture values
-            eval(body, callEnv, fCC);
+            internalEval(body, callEnv, fCC);
         };
         var callable = if (isMacro) {
             Macro(hFun);
@@ -356,7 +351,7 @@ class CCInterp {
     **/
     function iterate(collect: Bool, bodyForm: Bool, args: HValue, env: HValue, cc: Continuation) {
         var it: HValue = Nil;
-        eval(if (bodyForm) {
+        internalEval(if (bodyForm) {
             args.second();
         } else {
             args.first();
@@ -369,10 +364,10 @@ class CCInterp {
             var body = List(args.toList().slice(2));
             operation = (innerArgs, env, cc) -> {
                 var bodyEnv = env.extend(Dict([varName => innerArgs.first()]));
-                eval(Symbol("begin").cons(body), bodyEnv, cc);
+                internalEval(Symbol("begin").cons(body), bodyEnv, cc);
             };
         } else {
-            eval(args.second(), env, (fun) -> {operation = fun.toHFunction();});
+            internalEval(args.second(), env, (fun) -> {operation = fun.toHFunction();});
         }
 
         var results = [];
@@ -414,7 +409,7 @@ class CCInterp {
                 }
 
                 // Recur has to be a special form so it retains the environment of the original loop call
-                eval(Symbol("begin").cons(body), env.extend(names.destructuringBind(SpecialForm(recur).cons(values))), (value) -> {result = value;});
+                internalEval(Symbol("begin").cons(body), env.extend(names.destructuringBind(SpecialForm(recur).cons(values))), (value) -> {result = value;});
                 
             } while (recurCalled);
             cc(result);
@@ -510,7 +505,7 @@ class CCInterp {
                         case UnquoteList(exp):
                             copy.splice(idx, 1);
 
-                            eval(exp, env, (innerList) -> {
+                            internalEval(exp, env, (innerList) -> {
                                 for (exp in innerList.toList()) { 
                                     copy.insert(idx++, exp);
                                 }
@@ -518,7 +513,7 @@ class CCInterp {
                         // If an UnquoteList is quoted, apply the quote to each expression in the list
                         case Quote(UnquoteList(exp)):
                             copy.splice(idx, 1);
-                            eval(exp, env, (innerList) -> {
+                            internalEval(exp, env, (innerList) -> {
                                 for (exp in innerList.toList()) { 
                                     copy.insert(idx++, Quote(exp));
                                 }
@@ -536,7 +531,7 @@ class CCInterp {
                 return Quote(evalUnquotes(exp, env));
             case Unquote(h):
                 var val = Nil;
-                eval(h, env, (v) -> { val = v; });
+                internalEval(h, env, (v) -> { val = v; });
                 return val;
             case Quasiquote(exp):
                 return evalUnquotes(exp, env);
@@ -551,7 +546,7 @@ class CCInterp {
     function or(args: HValue, env: HValue, cc: Continuation) {
         for (arg in args.toList()) {
             var argVal = Nil;
-            eval(arg, env, (val) -> {argVal = val;});
+            internalEval(arg, env, (val) -> {argVal = val;});
             if (argVal.truthy()) {
                 cc(argVal);
                 return;
@@ -563,7 +558,7 @@ class CCInterp {
     function and(args: HValue, env: HValue, cc: Continuation) {
         var argVal = T;
         for (arg in args.toList()) {
-            eval(arg, env, (val) -> {argVal = val;});
+            internalEval(arg, env, (val) -> {argVal = val;});
             if (!argVal.truthy()) {
                 cc(Nil);
                 return;
@@ -572,7 +567,23 @@ class CCInterp {
         cc(argVal);
     }
 
-    public function eval(exp: HValue, env: HValue, cc: Continuation) {
+    /** Hiss-callable form for eval **/
+    function _eval(args: HValue, env: HValue, cc: Continuation) {
+        internalEval(args.first(), env, cc);
+    }
+
+    /** Public, synchronous form of eval **/
+    public function eval(arg: HValue, ?env: HValue) {
+        var value = null;
+        if (env == null) env = List([Dict([])]);
+        internalEval(arg, env, (_value) -> {
+            value = _value;
+        });
+        return value;
+    }
+
+    /** Core form of eval -- continuation-based, takes one expression **/
+    private function internalEval(exp: HValue, env: HValue, cc: Continuation) {
         try {
             switch (exp) {
                 case Symbol(_):
@@ -597,7 +608,7 @@ class CCInterp {
                         var startingLength = expStream.length();
                         var exp = reader.read("", expStream);
                         var expLength = startingLength - expStream.length();
-                        eval(exp, env, (val) -> {
+                        internalEval(exp, env, (val) -> {
                             interpolated = interpolated.substr(0, idx) + val.toMessage() + interpolated.substr(idx+1+expLength);
                             idx = idx + 1 + val.toMessage().length;
                         });
@@ -608,7 +619,7 @@ class CCInterp {
                 case Quote(e):
                     cc(e);
                 case Unquote(e):
-                    eval(e, env, cc);
+                    internalEval(e, env, cc);
                 case Quasiquote(e):
                     cc(inline evalUnquotes(e, env));
 
@@ -623,7 +634,7 @@ class CCInterp {
                         // HaxeTools.println('${CallStack.callStack().length}'.lpad(' ', 3) + '/' + '$maxStackDepth'.rpad(' ', 3) + '    ${exp.toPrint()}');
                     }
 
-                    eval(exp.first(), env, (callable: HValue) -> {
+                    internalEval(exp.first(), env, (callable: HValue) -> {
                         switch (callable) {
                             case Function(_):
                                 inline funcall(false, exp, env, cc);

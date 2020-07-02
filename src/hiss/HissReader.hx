@@ -251,11 +251,7 @@ class HissReader {
     function callReadFunction(func: HValue, start: String, stream: HStream): HValue {
         var pos = stream.position();
         try {
-            var result = null;
-            interp.eval(func.cons(List([String(start), Object("HStream", stream)])), Dict([]), (r) -> {
-                result = r;
-            });
-            return result;
+            return interp.eval(func.cons(List([String(start), Object("HStream", stream)])));
         }
         #if !throwErrors
         catch (s: Dynamic) {
