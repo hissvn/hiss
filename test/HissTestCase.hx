@@ -68,12 +68,32 @@ class HissTestCase extends utest.Test {
         Any unnecessary printing is a bug, so replace print() with this function while running tests.
     **/
     function hissPrint(args: HValue, env: HValue, cc: Continuation) {
-        throw 'Tried to print unnecessarily';
+        Assert.fail('Tried to print ${args.first().toPrint()} unnecessarily');
+    }
+
+    var tempTrace = null;
+    function failOnTrace() {
+        // Make trace() a test failure :)
+        tempTrace = haxe.Log.trace;
+        haxe.Log.trace = (str, ?posInfo) -> {
+            Assert.fail('Traced $str to console');
+        };
+    }
+
+    function enableTrace() {
+        haxe.Log.trace = tempTrace;
     }
 
     function testFile() {
+        
+
         trace("Measuring time to construct the Hiss environment:");
-        interp = Timer.measure(function () { return new CCInterp(); });
+        interp = Timer.measure(function () { 
+            failOnTrace();
+            var i = new CCInterp();
+            enableTrace();
+            return i;
+        });
 
         interp.globals.put("test", SpecialForm(hissTest));
         interp.globals.put("prints", SpecialForm(hissPrints.bind(interp)));
@@ -86,7 +106,9 @@ class HissTestCase extends utest.Test {
         trace("Measuring time taken to run the unit tests:");
 
         Timer.measure(function() {
+            failOnTrace();
             interp.load(file);
+            enableTrace();
             trace("Total time to run tests:");
         });
 
