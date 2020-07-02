@@ -17,7 +17,8 @@ class HissTools {
 
     public static function homeDir() {
         #if sys
-            return Path.normalize(Sys.getEnv(if (Sys.systemName() == "Windows") "UserProfile" else "HOME"));
+            var path = Sys.getEnv(if (Sys.systemName() == "Windows") "UserProfile" else "HOME");
+            return if (path != null) Path.normalize(path) else "";
         #else
             throw "Can't get home directory on this target.";
         #end
