@@ -107,6 +107,7 @@ class CCInterp {
         importFunction(HissTools.not, "not", T);
         importFunction(HissTools.alternates.bind(_, true), "even-alternates", T);
         importFunction(HissTools.alternates.bind(_, false), "odd-alternates", T);
+        importFunction(HaxeTools.shellCommand, "shell-command", Nil);
         globals.put("quote", SpecialForm(quote));
 
         globals.put("+", Function(HissMath.add, "+"));

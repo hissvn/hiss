@@ -3,6 +3,12 @@ package hiss;
 import haxe.macro.Expr;
 import haxe.macro.ExprTools;
 
+using StringTools;
+
+#if sys
+import sys.io.Process;
+#end
+
 class HaxeTools {
     public static macro function extract(value:ExprOf<EnumValue>, pattern:Expr, ?hint: ExprOf<String>):Expr {
         switch (pattern) {
@@ -31,6 +37,23 @@ class HaxeTools {
             Sys.println(str);
         #else
             trace(str);
+        #end
+    }
+
+    public static function shellCommand(cmd: String) {
+        #if sys
+            var process = new Process(cmd);
+            if (process.exitCode() != 0) {
+                var message = process.stderr.readAll().toString();
+                throw 'Shell command error from `$cmd`: $message';
+            }
+
+            var result = process.stdout.readAll();
+            process.close();
+
+            return result.getString(0, result.length).trim();
+        #else
+            return "Can't run shell command on non-sys platform.";
         #end
     }
 }
