@@ -157,7 +157,13 @@ class CCInterp {
             var next = cReader.readLine();
 
             //interp.disableTrace();
-            var exp = read(next);
+            var exp = null;
+            try {
+                exp = read(next);
+            } catch (err: Dynamic) {
+                HaxeTools.println('Reader error: $err');
+                continue;
+            }
             //interp.enableTrace();
 
             eval(exp, locals, HissTools.print);
