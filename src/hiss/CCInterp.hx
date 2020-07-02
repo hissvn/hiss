@@ -141,10 +141,10 @@ class CCInterp {
         #if sys
         var cReader = new ConsoleReader(-1, Path.join([HissTools.homeDir(), ".hisstory"]));  
         // The REPL needs to make sure its ConsoleReader actually saves the history on exit :)
-        importFunction((args, env, cc) -> {
+        importFunction(() -> {
             cReader.saveHistory();
             Sys.exit(0);
-        }, "quit");  
+        }, "quit");
         var locals = List([Dict([])]); // This allows for top-level setlocal
 
         HaxeTools.println('Hiss version ${CompileInfo.version()}');
