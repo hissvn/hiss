@@ -131,6 +131,9 @@ class CCInterp {
         //disableTrace();
         load("stdlib2.hiss");
         //enableTrace();
+
+        // Training wheels off. Give Hiss users the callCC-enabled, dangerous begin()
+        globals.put("begin", SpecialForm(begin));
     }
 
     /** Run a Hiss REPL from this interpreter instance **/
@@ -209,12 +212,18 @@ class CCInterp {
     }
 
     function begin(exps: HValue, env: HValue, cc: Continuation) {
-        eval(exps.first(), env, (result) -> {
-            if (!exps.rest().truthy()) {
+        var returnCalled = false;
+        var bodyEnv = env.extend(Dict(["return" => Function((args, env, cc) -> {
+            returnCalled = true;
+            cc(args.first());
+        }, "return")]));
+
+        eval(exps.first(), bodyEnv, (result) -> {
+            if (returnCalled || !exps.rest().truthy()) {
                 cc(result);
             }
             else {
-                begin(exps.rest(), env, cc);
+                begin(exps.rest(), bodyEnv, cc);
             }
         });
     }
@@ -318,8 +327,9 @@ class CCInterp {
 
         // TODO do I need a switch here to decide whether to use tail-recursive begin or not?!
 
-        // like, lambda vs. tr-lambda
+        // like, exposing lambda vs. tr-lambda to Hiss programs
 
+        // something like... `big-lambda` XD
 
         var body = Symbol('begin').cons(args.rest());
         var hFun: HFunction = (fArgs, env, fCC) -> {
@@ -473,8 +483,6 @@ class CCInterp {
             else cc(innerArgs.first());
         }, "cc");
 
-        // Training wheels off. Give Hiss users the callCC-enabled, dangerous begin()
-        globals.put("begin", SpecialForm(begin));
         funcall(true,
             List([
                 args.first(),
