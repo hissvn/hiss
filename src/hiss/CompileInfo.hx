@@ -36,7 +36,7 @@ class CompileInfo {
             try {
                 var branch = shellCommand("git branch --show-current");
                 var untrackedFiles = shellCommand("git ls-files -o --exclude-standard");
-                var diff = shellCommand("git diff");
+                var diff = shellCommand("git diff | head -c1");
                 var revision = shellCommand("git rev-list --count HEAD");
                 var hissVersion = '$branch-$revision';
                 if ((diff + untrackedFiles).length > 0) {
