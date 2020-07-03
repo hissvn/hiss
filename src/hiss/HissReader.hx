@@ -207,7 +207,11 @@ class HissReader {
     function nextToken(str: HStream): String {
         var whitespaceOrTerminator = HStream.WHITESPACE.concat(terminators);
 
-        return HaxeTools.extract(str.takeUntil(whitespaceOrTerminator, true, false), Some(s) => s, "next token").output;
+        try {
+            return HaxeTools.extract(str.takeUntil(whitespaceOrTerminator, true, false), Some(s) => s, "next token").output;
+        } catch (s: Dynamic) {
+            return "";
+        }
     }
 
     function readSymbol(start: String, str: HStream): HValue {
