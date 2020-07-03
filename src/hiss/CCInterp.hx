@@ -207,10 +207,7 @@ class CCInterp {
         so it is only used internally.
     **/
     function trBegin(exps: HValue, env: HValue, cc: Continuation) {
-        var value = Nil;
-        internalEval(exps.first(), env, (result) -> {
-            value = result;
-        });
+        var value = eval(exps.first(), env);
 
         if (!exps.rest().truthy()) {
             cc(value);
