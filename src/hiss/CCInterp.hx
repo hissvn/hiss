@@ -476,8 +476,6 @@ class CCInterp {
     function callCC(args: HValue, env: HValue, cc: Continuation) {
         // Convert the continuation to a hiss function accepting one argument
         var ccHFunction = Function((innerArgs: HValue, innerEnv: HValue, innerCC: Continuation) -> {
-            globals.put("begin", SpecialForm(trBegin));
-            
             //trace('cc was called with ${innerArgs.first().toPrint()}');
             // It's typical to JUST want to break out of a sequence, not return a value to it.
             if (!innerArgs.truthy()) cc(Nil);
