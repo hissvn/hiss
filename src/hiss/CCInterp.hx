@@ -43,7 +43,7 @@ class CCInterp {
         }
     }
 
-    function importFunction(func: Function, name: String, keepArgsWrapped: HValue = Nil) {
+    public function importFunction(func: Function, name: String, keepArgsWrapped: HValue = Nil) {
         globals.put(name, Function((args: HValue, env: HValue, cc: Continuation) -> {
             cc(Reflect.callMethod(null, func, args.unwrapList(keepArgsWrapped)).toHValue());
         }, name));
