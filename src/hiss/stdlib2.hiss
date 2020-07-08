@@ -73,3 +73,12 @@
 (defvar eighth (rbind nth 7))
 (defvar ninth (rbind nth 8))
 (defvar tenth (rbind nth 9))
+
+(defun current-continuation ()
+    (call/cc (lambda (cc) 
+        (cc cc))))
+
+(defmacro yield (value)
+    `(let (ret return cc (current-continuation))
+        (defvar continue cc)
+        (ret ,value)))

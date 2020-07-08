@@ -221,17 +221,17 @@ class CCInterp {
 
     function begin(exps: HValue, env: HValue, cc: Continuation) {
         var returnCalled = false;
-        var bodyEnv = env.extend(Dict(["return" => Function((args, env, cc) -> {
+        env = env.extend(Dict(["return" => Function((args, env, cc) -> {
             returnCalled = true;
             cc(args.first());
         }, "return")]));
 
-        internalEval(exps.first(), bodyEnv, (result) -> {
+        internalEval(exps.first(), env, (result) -> {
             if (returnCalled || !exps.rest().truthy()) {
                 cc(result);
             }
             else {
-                begin(exps.rest(), bodyEnv, cc);
+                begin(exps.rest(), env, cc);
             }
         });
     }
