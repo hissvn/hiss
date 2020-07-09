@@ -380,7 +380,7 @@ class HissTools {
                 if (reference) {
                     l;
                 } else {
-                    [for (hvv in l) HissTools.value(hvv, true)]; // So far it seems that nested list elements should stay wrapped
+                    [for (hvv in l) value(hvv, true)]; // So far it seems that nested list elements should stay wrapped
                 }
             case Dict(d):
                 d;
