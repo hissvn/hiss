@@ -17,8 +17,9 @@ class TestAll {
         "prints",
       ]),
       
-      // Internal Tests. These were helpful while implementing and re-implementing core components,
-      // but they're slow and not really worth it now.
+      // Internal Tests. These are/were helpful while implementing and re-implementing core components,
+      // but eventually they will lose their usefulness as things become testable within Hiss scripts
+      new test.NativeFunctionTestCase(),
       //new test.HStreamTestCase(),
       //new test.HissReaderTestCase(),
       //new test.NativeObjectTestCase(),

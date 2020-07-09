@@ -16,9 +16,11 @@ import hiss.HissTools;
 using hiss.HissTools;
 import hiss.StaticFiles;
 import hiss.HissMath;
+import hiss.NativeFunctions;
 
 using StringTools;
 
+@:build(hiss.NativeFunctions.build(3))
 class CCInterp {
     public var globals: HValue = Dict([]);
     var reader: HissReader;
