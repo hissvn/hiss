@@ -35,12 +35,14 @@ class HissTestCase extends utest.Test {
             var failureMessage = 'Failure testing $fun: ${ass.toPrint()} evaluated to: ';
             var errorMessage = 'Error testing $fun: ${ass.toPrint()}: ';
             try {
-                interp.eval(ass, env, (val) -> {
-                    Assert.isTrue(val.truthy(), failureMessage + val.toPrint());
-                });
-            } catch (err: Dynamic) {
+                var val = interp.eval(ass, env);
+                Assert.isTrue(val.truthy(), failureMessage + val.toPrint());
+            }
+            #if !throwErrors
+            catch (err: Dynamic) {
                 Assert.fail(errorMessage + err.toString());
             }
+            #end
         }
         
         functionsTested[fun] = true;
@@ -50,8 +52,7 @@ class HissTestCase extends utest.Test {
         Function for asserting that a given expression prints what it's supposed to
     **/
     function hissPrints(interp: CCInterp, args: HValue, env: HValue, cc: Continuation) {
-        var expectedPrint = "";
-        interp.eval(args.first(), env, (_expectedPrint) -> { expectedPrint = _expectedPrint.toHaxeString(); });
+        var expectedPrint = interp.eval(args.first(), env).toHaxeString();
         var expression = args.second();
 
         var actualPrint = "";
@@ -59,9 +60,8 @@ class HissTestCase extends utest.Test {
             actualPrint += innerArgs.first().toPrint() + "\n";
         }, "print")]));
 
-        interp.eval(expression, testEnv, (result) -> {
-            Assert.equals(expectedPrint, actualPrint);
-        });
+        interp.eval(expression, testEnv);
+        Assert.equals(expectedPrint, actualPrint);
     }
 
     /**
@@ -75,9 +75,12 @@ class HissTestCase extends utest.Test {
     function failOnTrace() {
         // Make trace() a test failure :)
         tempTrace = haxe.Log.trace;
+        #if !throwErrors
         haxe.Log.trace = (str, ?posInfo) -> {
+            tempTrace(str);
             Assert.fail('Traced $str to console');
         };
+        #end
     }
 
     function enableTrace() {
