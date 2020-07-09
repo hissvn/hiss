@@ -38,11 +38,9 @@ class HissTestCase extends utest.Test {
                 var val = interp.eval(ass, env);
                 Assert.isTrue(val.truthy(), failureMessage + val.toPrint());
             }
-            #if !throwErrors
             catch (err: Dynamic) {
                 Assert.fail(errorMessage + err.toString());
             }
-            #end
         }
         
         functionsTested[fun] = true;
@@ -61,7 +59,11 @@ class HissTestCase extends utest.Test {
         }, "print")]));
 
         interp.eval(expression, testEnv);
-        Assert.equals(expectedPrint, actualPrint);
+        cc(if (expectedPrint == actualPrint) {
+            T;
+        } else {
+            Nil;
+        });
     }
 
     /**
@@ -77,7 +79,6 @@ class HissTestCase extends utest.Test {
         tempTrace = haxe.Log.trace;
         #if !throwErrors
         haxe.Log.trace = (str, ?posInfo) -> {
-            tempTrace(str);
             Assert.fail('Traced $str to console');
         };
         #end
