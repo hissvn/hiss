@@ -2,6 +2,8 @@ package test;
 
 import haxe.Timer;
 
+import utest.Test;
+import utest.Async;
 import utest.Assert;
 
 import hiss.HTypes;
@@ -10,18 +12,22 @@ import hiss.HissTools;
 import hiss.CompileInfo;
 using hiss.HissTools;
 import hiss.StaticFiles;
+import hiss.HaxeTools;
 
-class HissTestCase extends utest.Test {
+class HissTestCase extends Test {
 
     var interp: CCInterp;
     var file: String;
 
     var functionsTested: Map<String, Bool> = [];
     var ignoreFunctions: Array<String> = [];
+    var useTimeout: Bool;
 
-    public function new(hissFile: String, ?ignoreFunctions: Array<String>) {
+    public function new(hissFile: String, useTimeout: Bool = false, ?ignoreFunctions: Array<String>) {
         super();
         file = hissFile;
+
+        this.useTimeout = useTimeout;
 
         // Some functions just don't wanna be tested
         if (ignoreFunctions != null) this.ignoreFunctions = ignoreFunctions;
@@ -113,9 +119,20 @@ class HissTestCase extends utest.Test {
         interp.importFunction(HissTools.print, "print", T);
     }
 
-    function testFile() {
-        trace('Running tests in $file for ${CompileInfo.version()}');
+    function testWithoutTimeout() {
+        if (!useTimeout) runTests();
+        else Assert.pass();
+    }
 
+    @:timeout(1)
+    function testWithTimeout(async: Async) {
+        HaxeTools.shellCommand('echo "running timeout test"');
+        if (useTimeout) runTests();
+        else Assert.pass();
+        async.done();
+    }
+
+    function runTests() {
         trace("Measuring time to construct the Hiss environment:");
         interp = Timer.measure(function () { 
             failOnTrace();
