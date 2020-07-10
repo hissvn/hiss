@@ -20,7 +20,7 @@ import hiss.NativeFunctions;
 
 using StringTools;
 
-@:build(hiss.NativeFunctions.build(3))
+@:build(hiss.NativeFunctions.build())
 class CCInterp {
     public var globals: HValue = Dict([]);
     var reader: HissReader;
