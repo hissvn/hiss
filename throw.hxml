@@ -1,9 +1,0 @@
--lib uuid
--lib haxe-strings
--lib ihx
--cp src
--D analyzer-optimize
--D no-deprecation-warnings
--D throwErrors
--main hiss.CCInterp
---interp

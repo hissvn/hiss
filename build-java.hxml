@@ -1,4 +1,0 @@
--lib haxe-strings
--lib uuid
--cp src
--java build/java

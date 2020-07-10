@@ -10,7 +10,6 @@
     "classPath": "src/",
     "main": "hiss.CCInterp",
     "dependencies": {
-        "uuid": "",
         "utest": "",
         "haxe-strings": "",
         "ihx": ""

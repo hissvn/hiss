@@ -1,0 +1,5 @@
+-lib ihx
+-lib haxe-strings
+-cp src
+-D analyzer-optimize
+-D no-deprecation-warnings
