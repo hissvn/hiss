@@ -51,7 +51,7 @@ class NativeFunctions {
             funcallExpr += "]), List([Dict([])]), (_val) -> {val = _val;})";
 
             var fullBodyExpr = '{ return $argListExpr -> { var val = null; $funcallExpr; return val.value(true);}; }';
-            trace(fullBodyExpr);
+            //trace(fullBodyExpr);
 
             var newField = {
                 name: "toNativeFunction" + argCount,

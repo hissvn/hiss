@@ -24,6 +24,10 @@ class HissTools {
         #end
     }
 
+    public static function exists(dict: HValue, key: String) {
+        return dict.toDict().exists(key);
+    }
+
     public static function put(dict: HValue, key: String, v: HValue) {
         dict.toDict()[key] = v;
     }
@@ -267,6 +271,11 @@ class HissTools {
 
     public static function print(exp: HValue) {
         HaxeTools.println(exp.toPrint());
+        return exp;
+    }
+
+    public static function message(exp: HValue) {
+        HaxeTools.println(exp.toMessage());
         return exp;
     }
 

@@ -1,3 +1,5 @@
+(message "Testing Hiss standard library for version $(version)")
+
 (test or
     // Test with booleans:
     (eq nil (or))

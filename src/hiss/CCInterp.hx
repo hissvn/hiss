@@ -61,7 +61,7 @@ class CCInterp {
     public static function noOp (args: HValue, env: HValue, cc: Continuation) { }
     public static function noCC (arg: HValue) { }
 
-    public function new() {
+    public function new(?printFunction: (Dynamic) -> Dynamic) {
         reader = new HissReader(this);
 
         // Primitives
@@ -98,8 +98,18 @@ class CCInterp {
         // Debug info
         importFunction(HissTools.version, "version");
 
+        // Sometimes it's useful to provide the interpreter with your own target-native print function
+        // so they will be used while the standard library is being loaded.
+        if (printFunction != null) {
+            importFunction(printFunction, "print", Nil);
+        }
+        else {
+            importFunction(HissTools.print, "print", T);
+        }
+
+        importFunction(HissTools.message, "message", T);
+
         // Functions/forms that could be bootstrapped with register-function, but save stack frames if not:
-        importFunction(HissTools.print, "print", T);
         importFunction(HissTools.length, "length", T);
         importFunction(HissTools.first, "first", T);
         importFunction(HissTools.rest, "rest", T);
@@ -145,7 +155,8 @@ class CCInterp {
     public function repl() {
         #if sys
         var cReader = new ConsoleReader(-1, Path.join([HissTools.homeDir(), ".hisstory"]));  
-        // The REPL needs to make sure its ConsoleReader actually saves the history on exit :)
+        // The REPL needs to make sure its ConsoleReader actually saves the history on exit, so quit() is provided here
+        // differently than the version in stdlib2.hiss :)
         importFunction(() -> {
             cReader.saveHistory();
             Sys.exit(0);
@@ -174,7 +185,7 @@ class CCInterp {
             internalEval(exp, locals, HissTools.print);
         }
         #else
-        throw "Can't run a Hiss REPL on this platform.";
+        throw "This Hiss interpreter is not compiled with REPL support.";
         #end
     }
 
@@ -468,11 +479,6 @@ class CCInterp {
         var haxeCallArgs = args.third().unwrapList(keepArgsWrapped);
 
         cc(Reflect.callMethod(caller, method, haxeCallArgs).toHValue());
-    }
-
-    function print(args: HValue, env: HValue, cc: Continuation) {
-        args.first().print();
-        cc(args.first());
     }
 
     function callCC(args: HValue, env: HValue, cc: Continuation) {

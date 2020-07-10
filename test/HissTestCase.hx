@@ -28,9 +28,11 @@ class HissTestCase extends utest.Test {
     }
 
     function hissTest(args: HValue, env: HValue, cc: Continuation) {
+        failOnTrace(interp);
+
         var fun = args.first().symbolName();
         var assertions = args.rest();
-        var env = List([Dict([])]);
+
         for (ass in assertions.toList()) {
             var failureMessage = 'Failure testing $fun: ${ass.toPrint()} evaluated to: ';
             var errorMessage = 'Error testing $fun: ${ass.toPrint()}: ';
@@ -42,8 +44,12 @@ class HissTestCase extends utest.Test {
                 Assert.fail(errorMessage + err.toString());
             }
         }
-        
+
         functionsTested[fun] = true;
+
+        enableTrace(interp);
+
+        cc(Nil);
     }
 
     /**
@@ -69,23 +75,42 @@ class HissTestCase extends utest.Test {
     /**
         Any unnecessary printing is a bug, so replace print() with this function while running tests.
     **/
-    function hissPrint(args: HValue, env: HValue, cc: Continuation) {
-        Assert.fail('Tried to print ${args.first().toPrint()} unnecessarily');
+    function hissPrintFail(v: Dynamic) {
+        Assert.fail('Tried to print $v unnecessarily');
+        return v;
     }
 
     var tempTrace = null;
-    function failOnTrace() {
-        // Make trace() a test failure :)
+    /**
+        Make all forms of unnecessary printing into test failures :)
+    **/
+    function failOnTrace(?interp: CCInterp) {
         tempTrace = haxe.Log.trace;
+        
+        // When running Hiss to throw errors, this whole situation gets untenable because `throw` relies on trace()
         #if !throwErrors
         haxe.Log.trace = (str, ?posInfo) -> {
-            Assert.fail('Traced $str to console');
+            try {
+                Assert.fail('Traced $str to console');
+            } catch (_: Dynamic) {
+                // Because of asynchronous nonsense, this might be called out of context sometimes. When that happens,
+                // assume that things were SUPPOSED to trace normally.
+                tempTrace(str, posInfo);
+            }
         };
         #end
+
+        if (interp != null) {
+            interp.importFunction(hissPrintFail, "print");
+        }
     }
 
-    function enableTrace() {
+    function enableTrace(interp: CCInterp) {
+        #if !throwErrors
         haxe.Log.trace = tempTrace;
+        #end
+
+        interp.importFunction(HissTools.print, "print", T);
     }
 
     function testFile() {
@@ -94,14 +119,13 @@ class HissTestCase extends utest.Test {
         trace("Measuring time to construct the Hiss environment:");
         interp = Timer.measure(function () { 
             failOnTrace();
-            var i = new CCInterp();
-            enableTrace();
+            var i = new CCInterp(hissPrintFail);
+            enableTrace(i);
             return i;
         });
 
         interp.globals.put("test", SpecialForm(hissTest));
         interp.globals.put("prints", SpecialForm(hissPrints.bind(interp)));
-        interp.globals.put("print", SpecialForm(hissPrint));
 
         for (f in ignoreFunctions) {
             functionsTested[f] = true;
@@ -110,9 +134,7 @@ class HissTestCase extends utest.Test {
         trace("Measuring time taken to run the unit tests:");
 
         Timer.measure(function() {
-            failOnTrace();
             interp.load(file);
-            enableTrace();
             trace("Total time to run tests:");
         });
 
