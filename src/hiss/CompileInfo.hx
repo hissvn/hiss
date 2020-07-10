@@ -19,7 +19,8 @@ class CompileInfo {
                 var untrackedFiles = HaxeTools.shellCommand("git ls-files -o --exclude-standard");
                 var diff = HaxeTools.shellCommand("git diff | head -c1");
                 var revision = HaxeTools.shellCommand("git rev-list --count HEAD");
-                var hissVersion = '$branch-$revision';
+                var target = Context.definedValue("target.name");
+                var hissVersion = '$branch-$revision (target: $target)';
                 if ((diff + untrackedFiles).length > 0) {
                     hissVersion += '*';
                 }
