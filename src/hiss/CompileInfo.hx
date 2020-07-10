@@ -16,14 +16,11 @@ class CompileInfo {
             var hissVersion = "";
             try {
                 var branch = HaxeTools.shellCommand("git branch --show-current");
-                var untrackedFiles = HaxeTools.shellCommand("git ls-files -o --exclude-standard");
-                var diff = HaxeTools.shellCommand("git diff | head -c1");
                 var revision = HaxeTools.shellCommand("git rev-list --count HEAD");
+                var modified = HaxeTools.shellCommand("git status -s");
+                if (modified.length > 0) modified = "*";
                 var target = Context.definedValue("target.name");
-                var hissVersion = '$branch-$revision (target: $target)';
-                if ((diff + untrackedFiles).length > 0) {
-                    hissVersion += '*';
-                }
+                var hissVersion = '$branch-$revision$modified (target: $target)';
                 return macro $v{hissVersion};
             } catch (err: Dynamic) {
                 trace(err);
