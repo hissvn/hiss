@@ -2,12 +2,12 @@ package test;
 
 import haxe.Timer;
 
-using hx.strings.Strings;
 import utest.Assert;
 
 import hiss.HTypes;
 import hiss.CCInterp;
 import hiss.HissTools;
+import hiss.CompileInfo;
 using hiss.HissTools;
 import hiss.StaticFiles;
 
@@ -89,7 +89,7 @@ class HissTestCase extends utest.Test {
     }
 
     function testFile() {
-        
+        trace('Running tests in $file for ${CompileInfo.version()}');
 
         trace("Measuring time to construct the Hiss environment:");
         interp = Timer.measure(function () { 
