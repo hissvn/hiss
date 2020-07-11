@@ -1,6 +1,10 @@
 package test;
 
 import haxe.Timer;
+import haxe.Log;
+#if target.threaded
+import sys.thread.Thread;
+#end
 
 import utest.Test;
 import utest.Async;
@@ -91,11 +95,11 @@ class HissTestCase extends Test {
         Make all forms of unnecessary printing into test failures :)
     **/
     function failOnTrace(?interp: CCInterp) {
-        tempTrace = haxe.Log.trace;
+        tempTrace = Log.trace;
         
         // When running Hiss to throw errors, this whole situation gets untenable because `throw` relies on trace()
         #if !throwErrors
-        haxe.Log.trace = (str, ?posInfo) -> {
+        Log.trace = (str, ?posInfo) -> {
             try {
                 Assert.fail('Traced $str to console');
             } catch (_: Dynamic) {
@@ -113,7 +117,7 @@ class HissTestCase extends Test {
 
     function enableTrace(interp: CCInterp) {
         #if !throwErrors
-        haxe.Log.trace = tempTrace;
+        Log.trace = tempTrace;
         #end
 
         interp.importFunction(HissTools.print, "print", T);
@@ -124,15 +128,20 @@ class HissTestCase extends Test {
         else Assert.pass();
     }
 
-    @:timeout(1)
+    @:timeout(5000)
     function testWithTimeout(async: Async) {
-        HaxeTools.shellCommand('echo "running timeout test"');
-        if (useTimeout) runTests();
+        if (useTimeout) {
+            #if target.threaded
+            Thread.create(runTests.bind(async));
+            #else
+            TestAll.reallyTrace("Warning! On single-threaded target, an infinite loop will cause tests to hang.");
+            runTests(async);
+            #end
+        }
         else Assert.pass();
-        async.done();
     }
 
-    function runTests() {
+    function runTests(?async: Async) {
         trace("Measuring time to construct the Hiss environment:");
         interp = Timer.measure(function () { 
             failOnTrace();
@@ -165,6 +174,10 @@ class HissTestCase extends Test {
 
         for (fun => tested in functionsTested) {
             Assert.isTrue(tested, 'Failure: $fun was never tested');
+        }
+
+        if (async != null) {
+            async.done();
         }
     }
 

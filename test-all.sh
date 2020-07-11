@@ -1,4 +1,4 @@
 #! /bin/bash
 
-haxe hxml/test-py.hxml
+timeout 5 haxe hxml/test-py.hxml
 haxe hxml/test-interp.hxml

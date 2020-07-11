@@ -6,6 +6,7 @@ using Reflect;
 import haxe.CallStack;
 import haxe.Constraints.Function;
 import haxe.io.Path;
+import haxe.Log;
 
 import hiss.HTypes;
 #if sys
@@ -33,15 +34,15 @@ class CCInterp {
         // On non-sys targets, trace is the only option
         if (tempTrace == null) {
             trace("Disabling trace");
-            tempTrace = haxe.Log.trace;
-            haxe.Log.trace = (str, ?posInfo) -> {};
+            tempTrace = Log.trace;
+            Log.trace = (str, ?posInfo) -> {};
         }
     }
 
     function enableTrace() {
         if (tempTrace != null) {
             trace("Enabling trace");
-            haxe.Log.trace = tempTrace;
+            Log.trace = tempTrace;
         }
     }
 
