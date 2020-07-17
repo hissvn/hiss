@@ -242,8 +242,8 @@ class HissTools {
                 "'" + e.toPrint(recursiveCall+1);
             case Object(t, o):
                 '[$t: ${Std.string(o)}]';
-            case Function(_, name):
-                '$name()';
+            case Function(_, name, args):
+                '$name($args)';
             case Macro(_):
                 '[macro]';
             case SpecialForm(_):
@@ -317,9 +317,8 @@ class HissTools {
                 };
             case TObject:
                 Object("!ANONYMOUS!", v);
-            case TFunction:
-                Function(v, "[rewrapped-function]");//Haxe(Fixed, v, "[wrapped-function]"));
-            
+            /*case TFunction:
+                Function(v, "[rewrapped-function]", );*/
             default:
                 throw 'value $v of type $t cannot be wrapped as $hint';
         }

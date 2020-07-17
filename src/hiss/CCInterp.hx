@@ -46,10 +46,10 @@ class CCInterp {
         }
     }
 
-    public function importFunction(func: Function, name: String, keepArgsWrapped: HValue = Nil) {
+    public function importFunction(func: Function, name: String, keepArgsWrapped: HValue = Nil, ?args: Array<String>) {
         globals.put(name, Function((args: HValue, env: HValue, cc: Continuation) -> {
             cc(Reflect.callMethod(null, func, args.unwrapList(keepArgsWrapped)).toHValue());
-        }, name));
+        }, name, args));
     }
 
     function importMethod(method: String, name: String, callOnReference: Bool, keepArgsWrapped: HValue, returnInstance: Bool) {
@@ -73,9 +73,9 @@ class CCInterp {
         globals.put("if", SpecialForm(_if));
         globals.put("lambda", SpecialForm(lambda.bind(false)));
         globals.put("call/cc", SpecialForm(callCC));
-        globals.put("eval", Function(_eval, "eval"));
+        globals.put("eval", Function(_eval, "eval", ["exp"]));
         globals.put("bound?", SpecialForm(bound));
-        globals.put("load", Function(_load, "load"));
+        globals.put("load", Function(_load, "load", ["file"]));
         globals.put("funcall", SpecialForm(funcall.bind(false)));
         globals.put("funcall-inline", SpecialForm(funcall.bind(true)));
         globals.put("loop", SpecialForm(loop));
@@ -97,31 +97,31 @@ class CCInterp {
         globals.put("call-haxe", Function(callHaxe, "call-haxe"));
 
         // Debug info
-        importFunction(HissTools.version, "version");
+        importFunction(HissTools.version, "version", []);
 
         // Sometimes it's useful to provide the interpreter with your own target-native print function
         // so they will be used while the standard library is being loaded.
         if (printFunction != null) {
-            importFunction(printFunction, "print", Nil);
+            importFunction(printFunction, "print", Nil, ["value"]);
         }
         else {
-            importFunction(HissTools.print, "print", T);
+            importFunction(HissTools.print, "print", T, ["value"]);
         }
 
-        importFunction(HissTools.message, "message", T);
+        importFunction(HissTools.message, "message", T, ["value"]);
 
         // Functions/forms that could be bootstrapped with register-function, but save stack frames if not:
-        importFunction(HissTools.length, "length", T);
-        importFunction(HissTools.first, "first", T);
-        importFunction(HissTools.rest, "rest", T);
-        importFunction(HissTools.eq, "eq", T);
-        importFunction(HissTools.nth, "nth", T);
-        importFunction(HissTools.cons, "cons", T);
-        importFunction(HissTools.not, "not", T);
+        importFunction(HissTools.length, "length", T, ["seq"]);
+        importFunction(HissTools.first, "first", T, ["l"]);
+        importFunction(HissTools.rest, "rest", T, ["l"]);
+        importFunction(HissTools.eq, "eq", T, ["a", "b"]);
+        importFunction(HissTools.nth, "nth", T, ["l", "n"]);
+        importFunction(HissTools.cons, "cons", T, ["val", "l"]);
+        importFunction(HissTools.not, "not", T, ["val"]);
         importFunction(HissTools.alternates.bind(_, true), "even-alternates", T);
         importFunction(HissTools.alternates.bind(_, false), "odd-alternates", T);
-        importFunction(HaxeTools.shellCommand, "shell-command", Nil);
-        importFunction(read, "read", Nil);
+        importFunction(HaxeTools.shellCommand, "shell-command", Nil, ["cmd"]);
+        importFunction(read, "read", Nil, ["str"]);
 
         globals.put("quote", SpecialForm(quote));
 
@@ -136,8 +136,8 @@ class CCInterp {
         globals.put("=", Function(HissMath.numCompare.bind(Equal), "="));
 
         // Operating system
-        importFunction(HissTools.homeDir, "home-dir");
-        importFunction(StaticFiles.getContent, "get-content");
+        importFunction(HissTools.homeDir, "home-dir", []);
+        importFunction(StaticFiles.getContent, "get-content", ["file"]);
 
         // (test) is a no-op in production:
         globals.put("test", SpecialForm(noOp));

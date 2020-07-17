@@ -15,13 +15,13 @@ class NativeFunctionTestCase extends utest.Test {
     }
 
     public function testCallNativePrint() {
-        var print = interp.toNativeFunction1(getGlobal("print"));
+        var print = interp.toNativeFunction(getGlobal("print"));
 
         Assert.equals("stuff", print("stuff"));
     }
 
     public function testCallNativeNth() {
-        var nth = interp.toNativeFunction2(getGlobal("nth"));
+        var nth = interp.toNativeFunction(getGlobal("nth"));
 
         var list = [1, 3, 5];
         Assert.equals(1, nth(list, 0));

@@ -37,11 +37,13 @@ class NativeFunctions {
             pos: Context.currentPos()
         });
 
+        var fullBodyExpr = "switch (fun) {";
+
         for (argCount in 0...maxArgCount+1) {
             var argListExpr = "(";
             var funcallExpr = "funcall(false, List([fun,";
             for (argNum in 1...argCount+1) {
-                argListExpr += 'arg$argNum: Dynamic,';
+                argListExpr += '?arg$argNum: Dynamic,';
                 funcallExpr += 'Quote(arg$argNum.toHValue()),';
             }
             if (argCount > 0)
@@ -50,26 +52,32 @@ class NativeFunctions {
             funcallExpr = funcallExpr.substr(0, funcallExpr.length - 1);
             funcallExpr += "]), List([Dict([])]), (_val) -> {val = _val;})";
 
-            var fullBodyExpr = '{ return $argListExpr -> { var val = null; $funcallExpr; return val.value(true);}; }';
-            //trace(fullBodyExpr);
-
-            var newField = {
-                name: "toNativeFunction" + argCount,
-                doc: null,
-                meta: [],
-                access: [APublic],
-                kind: FFun({
-                    ret: macro : Dynamic,
-                    args: [{
-                        name: "fun",
-                        type: macro : HValue}
-                    ],
-                    expr: Context.parse(fullBodyExpr, Context.currentPos())
-                }),
-                pos: Context.currentPos()
-            };
-            fields.push(newField);
+            fullBodyExpr += 'case Function(_, _, args) if (args != null && args.length == $argCount):
+                                return $argListExpr -> { var val = null; $funcallExpr; return val.value(true);};\n';
         }
+
+        fullBodyExpr += "case Function(_, _, args) if (args == null):
+                            throw 'Function has no args specified, cannot be converted';
+                        default:
+                            throw 'Function has too many args for conversion to native function';
+                        }";
+
+        var newField = {
+            name: "toNativeFunction",
+            doc: null,
+            meta: [],
+            access: [APublic],
+            kind: FFun({
+                ret: macro : Dynamic,
+                args: [{
+                    name: "fun",
+                    type: macro : HValue}
+                ],
+                expr: Context.parse(fullBodyExpr, Context.currentPos())
+            }),
+            pos: Context.currentPos()
+        };
+        fields.push(newField);
 
         return fields;
     }
