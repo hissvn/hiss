@@ -56,6 +56,10 @@ typedef HFunDef = {
     var body: HList;
 }
 
+enum HSignal {
+    Quit;
+}
+
 typedef HVarInfo = {
     var name: String;
     var value: HValue;

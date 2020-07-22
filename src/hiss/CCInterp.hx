@@ -164,7 +164,7 @@ class CCInterp {
         // differently than the version in stdlib2.hiss :)
         importFunction(() -> {
             cReader.saveHistory();
-            Sys.exit(0);
+            throw HSignal.Quit;
         }, "quit");
         var locals = List([Dict([])]); // This allows for top-level setlocal
 
@@ -188,6 +188,12 @@ class CCInterp {
             //interp.enableTrace();
             try {
                 internalEval(exp, locals, HissTools.print);
+            }
+            catch (e: HSignal) {
+                switch (e) {
+                    case Quit:
+                        return;
+                }
             }
             #if !throwErrors
             catch (s: Dynamic) {
