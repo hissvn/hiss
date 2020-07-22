@@ -1,6 +1,6 @@
 package hiss;
 
-@:using(hiss.HissTools.HissTools)
+@:using(hiss.HissTools)
 enum HValue {
     // Atoms used to be their own nested enum, but this way is better.
     Int(value: Int);
