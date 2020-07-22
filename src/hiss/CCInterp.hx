@@ -186,8 +186,15 @@ class CCInterp {
                 continue;
             }
             //interp.enableTrace();
-
-            internalEval(exp, locals, HissTools.print);
+            try {
+                internalEval(exp, locals, HissTools.print);
+            }
+            #if !throwErrors
+            catch (s: Dynamic) {
+                HaxeTools.println('Error type ${Type.typeof(s)}: $s from `${exp.toPrint()}`');
+                HaxeTools.println('Callstack depth ${CallStack.callStack().length}');
+            }
+            #end
         }
         #else
         throw "This Hiss interpreter is not compiled with REPL support.";
@@ -594,77 +601,69 @@ class CCInterp {
 
     /** Core form of eval -- continuation-based, takes one expression **/
     private function internalEval(exp: HValue, env: HValue, cc: Continuation) {
-        try {
-            switch (exp) {
-                case Symbol(_):
-                    inline getVar(exp, env, cc);
-                case Int(_) | Float(_) | String(_):
-                    cc(exp);
+        switch (exp) {
+            case Symbol(_):
+                inline getVar(exp, env, cc);
+            case Int(_) | Float(_) | String(_):
+                cc(exp);
 
-                case InterpString(raw):
-                    // Handle expression interpolation
-                    var interpolated = raw;
+            case InterpString(raw):
+                // Handle expression interpolation
+                var interpolated = raw;
 
-                    var idx = 0;
-                    while (interpolated.indexOf("$", idx) != -1) {
-                        idx = interpolated.indexOf("$", idx);
-                        // Allow \$ for putting $ in string.
-                        if (interpolated.charAt(idx-1) == '\\') {
-                            ++idx;
-                            continue;
-                        }
-
-                        var expStream = HStream.FromString(interpolated.substr(idx+1));
-                        var startingLength = expStream.length();
-                        var exp = reader.read("", expStream);
-                        var expLength = startingLength - expStream.length();
-                        internalEval(exp, env, (val) -> {
-                            interpolated = interpolated.substr(0, idx) + val.toMessage() + interpolated.substr(idx+1+expLength);
-                            idx = idx + 1 + val.toMessage().length;
-                        });
-                    }
-                    
-                    cc(String(interpolated));
-                
-                case Quote(e):
-                    cc(e);
-                case Unquote(e):
-                    internalEval(e, env, cc);
-                case Quasiquote(e):
-                    cc(inline evalUnquotes(e, env));
-
-                case Function(_) | SpecialForm(_) | Macro(_) | T | Nil | Object(_, _):
-                    cc(exp);
-
-                case List(_):
-                    maxStackDepth = Math.floor(Math.max(maxStackDepth, CallStack.callStack().length));
-                    if (!readingProgram) {
-                        // For debugging stack overflows, use this:
-
-                        // HaxeTools.println('${CallStack.callStack().length}'.lpad(' ', 3) + '/' + '$maxStackDepth'.rpad(' ', 3) + '    ${exp.toPrint()}');
+                var idx = 0;
+                while (interpolated.indexOf("$", idx) != -1) {
+                    idx = interpolated.indexOf("$", idx);
+                    // Allow \$ for putting $ in string.
+                    if (interpolated.charAt(idx-1) == '\\') {
+                        ++idx;
+                        continue;
                     }
 
-                    internalEval(exp.first(), env, (callable: HValue) -> {
-                        switch (callable) {
-                            case Function(_):
-                                inline funcall(false, exp, env, cc);
-                            case Macro(_):
-                                //HaxeTools.print('macroexpanding ${exp.toPrint()} -> ');
-                                inline macroCall(callable.cons(exp.rest()), env, cc);
-                            case SpecialForm(_):
-                                inline specialForm(callable.cons(exp.rest()), env, cc);
-                            default: throw 'Cannot call $callable';
-                        }
+                    var expStream = HStream.FromString(interpolated.substr(idx+1));
+                    var startingLength = expStream.length();
+                    var exp = reader.read("", expStream);
+                    var expLength = startingLength - expStream.length();
+                    internalEval(exp, env, (val) -> {
+                        interpolated = interpolated.substr(0, idx) + val.toMessage() + interpolated.substr(idx+1+expLength);
+                        idx = idx + 1 + val.toMessage().length;
                     });
-                default:
-                    throw 'Cannot evaluate $exp yet';
-            }
+                }
+
+                cc(String(interpolated));
+
+            case Quote(e):
+                cc(e);
+            case Unquote(e):
+                internalEval(e, env, cc);
+            case Quasiquote(e):
+                cc(inline evalUnquotes(e, env));
+
+            case Function(_) | SpecialForm(_) | Macro(_) | T | Nil | Object(_, _):
+                cc(exp);
+
+            case List(_):
+                maxStackDepth = Math.floor(Math.max(maxStackDepth, CallStack.callStack().length));
+                if (!readingProgram) {
+                    // For debugging stack overflows, use this:
+
+                    // HaxeTools.println('${CallStack.callStack().length}'.lpad(' ', 3) + '/' + '$maxStackDepth'.rpad(' ', 3) + '    ${exp.toPrint()}');
+                }
+
+                internalEval(exp.first(), env, (callable: HValue) -> {
+                    switch (callable) {
+                        case Function(_):
+                            inline funcall(false, exp, env, cc);
+                        case Macro(_):
+                            //HaxeTools.print('macroexpanding ${exp.toPrint()} -> ');
+                            inline macroCall(callable.cons(exp.rest()), env, cc);
+                        case SpecialForm(_):
+                            inline specialForm(callable.cons(exp.rest()), env, cc);
+                        default: throw 'Cannot call $callable';
+                    }
+                });
+            default:
+                throw 'Cannot evaluate $exp yet';
         }
-        #if !throwErrors
-        catch (s: Dynamic) {
-            HaxeTools.println('Error $s from `${exp.toPrint()}`');
-            HaxeTools.println('Callstack depth ${CallStack.callStack().length}');
-        }
-        #end
     }
 }
