@@ -104,7 +104,6 @@ class HissTools {
         arr.toList()[idx.toInt()] = val; return arr;
     }
 
-
     public static function symbolName(v: HValue): String {
         return HaxeTools.extract(v, Symbol(name) => name, "symbol name");
     }

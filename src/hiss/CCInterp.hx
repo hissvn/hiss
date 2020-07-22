@@ -99,6 +99,7 @@ class CCInterp {
         globals.put("Hiss-Tools", Object("Class", HissTools));
         globals.put("get-property", Function(getProperty, "get-property"));
         globals.put("call-haxe", Function(callHaxe, "call-haxe"));
+        importFunction(Type.createInstance, "create-instance");
 
         // Debug info
         importFunction(HissTools.version, "version", []);
