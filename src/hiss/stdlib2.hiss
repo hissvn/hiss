@@ -22,12 +22,6 @@
 
 (register-function Type "resolveClass" resolve-class)
 (register-function Type "resolveEnum" resolve-enum)
-(defmacro import (type-path name)
-    `(defvar ,name (or (resolve-class ,type-path) (resolve-enum ,type-path))))
-
-(import "Sys" Sys)
-(register-function Sys "exit" exit)
-(defun quit () (exit 0))
 
 (defun list (&rest args) args)
 
