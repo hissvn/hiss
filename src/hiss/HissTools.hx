@@ -328,20 +328,20 @@ class HissTools {
         Unwrap hvalues in a hiss list to their underlying types. Don't unwrap values whose indices
         are contained in keepWrapped, an optional list or T/Nil value.
     **/
-    public static function unwrapList(hl: HValue, keepWrapped: HValue = Nil): Array<Dynamic> {
+    public static function unwrapList(hl: HValue, ?interp: CCInterp, keepWrapped: HValue = Nil): Array<Dynamic> {
         var indices: Array<Dynamic> = if (keepWrapped == Nil) {
             [];
         } else if (keepWrapped == T) {
             [for (i in 0... hl.toList().length) i];
         } else {
-            unwrapList(keepWrapped); // This looks like a recursive call but it's not. It's unwrapping the list of indices!
+            unwrapList(keepWrapped, interp); // This looks like a recursive call but it's not. It's unwrapping the list of indices!
         }
         var idx = 0;
         return [for (v in hl.toList()) {
             if (indices.indexOf(idx++) != -1) {
                 v;
             } else {
-                v.value();
+                v.value(interp);
             }
         }];
     }
@@ -372,7 +372,7 @@ class HissTools {
     /**
      * Behind the scenes function to HaxeTools.extract a haxe-compatible value from an HValue
      **/
-     public static function value(hv: HValue, reference: Bool = false): Dynamic {
+     public static function value(hv: HValue, ?interp: CCInterp, reference: Bool = false): Dynamic {
         return switch (hv) {
             case Nil: false;
             case T: true;
@@ -388,11 +388,13 @@ class HissTools {
                 if (reference) {
                     l;
                 } else {
-                    [for (hvv in l) value(hvv, true)]; // So far it seems that nested list elements should stay wrapped
+                    [for (hvv in l) value(hvv, interp, true)]; // So far it seems that nested list elements should stay wrapped
                 }
             case Dict(d):
                 d;
-            default: 
+            case Function(_, _, _):
+                interp.toNativeFunction(hv);
+            default:
                 hv;
                 /*throw 'hvalue $hv cannot be unwrapped for a native Haxe operation';*/
         }

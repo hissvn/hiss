@@ -52,14 +52,14 @@ class CCInterp {
 
     public function importFunction(func: Function, name: String, keepArgsWrapped: HValue = Nil, ?args: Array<String>) {
         globals.put(name, Function((args: HValue, env: HValue, cc: Continuation) -> {
-            cc(Reflect.callMethod(null, func, args.unwrapList(keepArgsWrapped)).toHValue());
+            cc(Reflect.callMethod(null, func, args.unwrapList(this, keepArgsWrapped)).toHValue());
         }, name, args));
     }
 
     function importMethod(method: String, name: String, callOnReference: Bool, keepArgsWrapped: HValue, returnInstance: Bool) {
         globals.put(name, Function((args: HValue, env: HValue, cc: Continuation) -> {
             var instance = args.first().value(callOnReference);
-            cc(instance.callMethod(instance.getProperty(method), args.rest().unwrapList(keepArgsWrapped)).toHValue());
+            cc(instance.callMethod(instance.getProperty(method), args.rest().unwrapList(this, keepArgsWrapped)).toHValue());
         }, name));
     }
 
@@ -481,7 +481,7 @@ class CCInterp {
         //HaxeTools.println('calling haxe ${args.second().toHaxeString()} on ${args.first().toPrint()}');
         var caller = args.first().value(callOnReference);
         var method = Reflect.getProperty(caller, args.second().toHaxeString());
-        var haxeCallArgs = args.third().unwrapList(keepArgsWrapped);
+        var haxeCallArgs = args.third().unwrapList(this, keepArgsWrapped);
 
         cc(Reflect.callMethod(caller, method, haxeCallArgs).toHValue());
     }
