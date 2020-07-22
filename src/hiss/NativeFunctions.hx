@@ -56,10 +56,12 @@ class NativeFunctions {
                                 return $argListExpr -> { var val = null; $funcallExpr; return val.value(true);};\n';
         }
 
-        fullBodyExpr += "case Function(_, _, args) if (args == null):
+        fullBodyExpr += "case Function(_, _, args) if (args.length >" + maxArgCount + "):
+                            throw 'Function has too many args for conversion to native function';
+                        case Function(_, _, args) if (args == null):
                             throw 'Function has no args specified, cannot be converted';
                         default:
-                            throw 'Function has too many args for conversion to native function';
+                            throw 'Cannot convert non-function $fun to native function';
                         }";
 
         var newField = {
