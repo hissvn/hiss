@@ -46,6 +46,10 @@ class CCInterp {
         }
     }
 
+    public function importVar(value: Dynamic, name: String) {
+        globals.put(name, value.toHValue());
+    }
+
     public function importFunction(func: Function, name: String, keepArgsWrapped: HValue = Nil, ?args: Array<String>) {
         globals.put(name, Function((args: HValue, env: HValue, cc: Continuation) -> {
             cc(Reflect.callMethod(null, func, args.unwrapList(keepArgsWrapped)).toHValue());
