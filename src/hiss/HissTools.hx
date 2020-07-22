@@ -283,8 +283,6 @@ class HissTools {
         if (v == null) return Nil;
         var t = Type.typeof(v);
         return switch (t) {
-            case TNull:
-                Nil;
             case TInt:
                 Int(v);
             case TFloat:
