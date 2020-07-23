@@ -225,8 +225,11 @@ class CCInterp {
                 }
             }
             #if !throwErrors
-            catch (s: Dynamic) {
-                HaxeTools.println('Error type ${Type.typeof(s)}: $s from `${exp.toPrint()}`');
+            catch (s: String) {
+                HaxeTools.println('Error "$s" from `${exp.toPrint()}`');
+                HaxeTools.println('Callstack depth ${CallStack.callStack().length}');
+            } catch (err: Dynamic) {
+                HaxeTools.println('Error type ${Type.typeof(err)}: $err from `${exp.toPrint()}`');
                 HaxeTools.println('Callstack depth ${CallStack.callStack().length}');
             }
             #end
