@@ -1,12 +1,14 @@
 package hiss;
 
 import Type;
+using Type;
 import Reflect;
 using Reflect;
 import haxe.CallStack;
 import haxe.Constraints.Function;
 import haxe.io.Path;
 import haxe.Log;
+import hx.strings.Strings;
 
 import hiss.HTypes;
 #if sys
@@ -48,6 +50,28 @@ class CCInterp {
 
     public function importVar(value: Dynamic, name: String) {
         globals.put(name, value.toHValue());
+    }
+
+    public function importClass(clazz: Class<Dynamic>, name: String, ?methodNameFunction: String->String) {
+        globals.put(name, Object("Class", clazz));
+
+        // By default, convert method names to-lower-hyphen
+        if (methodNameFunction == null) methodNameFunction = Strings.toLowerHyphen;
+
+        var dummyInstance = clazz.createEmptyInstance();
+        for (instanceField in clazz.getInstanceFields()) {
+            var fieldValue = Reflect.getProperty(dummyInstance, instanceField);
+            switch (Type.typeof(fieldValue)) {
+                case TFunction:
+                    var translatedName = methodNameFunction(instanceField);
+                    globals.put(translatedName, Function((args, env, cc) -> {
+                        var instance = args.first().value(this);
+                        cc(Reflect.callMethod(instance, fieldValue, args.rest().unwrapList(this)).toHValue());
+                    }, translatedName));
+                default:
+                    // TODO generate getters for fields?
+            }
+        }
     }
 
     public function importFunction(func: Function, name: String, keepArgsWrapped: HValue = Nil, ?args: Array<String>) {
