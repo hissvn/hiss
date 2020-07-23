@@ -9,6 +9,7 @@ import haxe.Constraints.Function;
 import haxe.io.Path;
 import haxe.Log;
 import hx.strings.Strings;
+using hx.strings.Strings;
 
 import hiss.HTypes;
 #if sys
@@ -56,7 +57,11 @@ class CCInterp {
         globals.put(name, Object("Class", clazz));
 
         // By default, convert method names to-lower-hyphen
-        if (methodNameFunction == null) methodNameFunction = Strings.toLowerHyphen;
+        if (methodNameFunction == null) {
+            methodNameFunction = (methodName) -> {
+                name + ":" + methodName.toLowerHyphen();
+            };
+        }
 
         var dummyInstance = clazz.createEmptyInstance();
         for (instanceField in clazz.getInstanceFields()) {
