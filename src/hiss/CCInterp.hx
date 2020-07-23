@@ -125,6 +125,10 @@ class CCInterp {
         globals.put("call-haxe", Function(callHaxe, "call-haxe"));
         importFunction(Type.createInstance, "create-instance");
 
+        // Dictionaries
+        importFunction(HissTools.get, "dict-get");
+        importFunction(HissTools.put, "dict-set");
+
         // Debug info
         importFunction(HissTools.version, "version", []);
 
