@@ -130,9 +130,9 @@ class CCInterp {
         globals.put("and", SpecialForm(and));
 
         globals.put("for", SpecialForm(iterate.bind(true, true)));
-        globals.put("for-drop", SpecialForm(iterate.bind(false, true)));
+        globals.put("do-for", SpecialForm(iterate.bind(false, true)));
         globals.put("map", SpecialForm(iterate.bind(true, false)));
-        globals.put("map-drop", SpecialForm(iterate.bind(false, false)));
+        globals.put("do-map", SpecialForm(iterate.bind(false, false)));
 
         // Use tail-recursive begin for loading the prelude:
         globals.put("begin", SpecialForm(trBegin));
