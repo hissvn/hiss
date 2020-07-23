@@ -112,6 +112,10 @@ class HissTools {
         return HaxeTools.extract(v, Symbol(name) => name, "symbol name");
     }
 
+    public static function symbol(v: HValue): HValue {
+        return Symbol(v.toHaxeString());
+    }
+
     /**
         Return the first argument HDict extended with the keys and values of the second.
     **/

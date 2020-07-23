@@ -170,11 +170,13 @@ class CCInterp {
         importFunction(HissTools.nth, "nth", T, ["l", "n"]);
         importFunction(HissTools.cons, "cons", T, ["val", "l"]);
         importFunction(HissTools.not, "not", T, ["val"]);
-        importFunction(HissTools.symbolName, "symbol-name", T, ["sym"]);
         importFunction(HissTools.alternates.bind(_, true), "even-alternates", T);
         importFunction(HissTools.alternates.bind(_, false), "odd-alternates", T);
         importFunction(HaxeTools.shellCommand, "shell-command", Nil, ["cmd"]);
         importFunction(read, "read", Nil, ["str"]);
+
+        importFunction(HissTools.symbolName, "symbol-name", T, ["sym"]);
+        importFunction(HissTools.symbol, "symbol", T, ["sym-name"]);
 
         globals.put("quote", SpecialForm(quote));
 
