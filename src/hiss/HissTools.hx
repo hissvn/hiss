@@ -24,6 +24,10 @@ class HissTools {
         #end
     }
 
+    public static function get(dict: HValue, key: String) {
+        return dict.toDict()[key];
+    }
+
     public static function exists(dict: HValue, key: String) {
         return dict.toDict().exists(key);
     }
