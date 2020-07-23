@@ -372,7 +372,8 @@ class CCInterp {
         var callable = if (isMacro) {
             Macro(hFun);
         } else {
-            Function(hFun, "[anonymous lambda]");
+            var paramNames = [for (paramSymbol in params.toList()) paramSymbol.symbolName()];
+            Function(hFun, "[anonymous lambda]", paramNames);
         };
         cc(callable);
     }
