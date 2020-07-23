@@ -74,7 +74,21 @@ class CCInterp {
                         cc(Reflect.callMethod(instance, fieldValue, args.rest().unwrapList(this)).toHValue());
                     }, translatedName));
                 default:
-                    // TODO generate getters for fields?
+                    // TODO generate getters and setters for instance fields
+            }
+        }
+
+        for (classField in clazz.getClassFields()) {
+            // TODO this logic is much-repeated from the above for-loop
+            var fieldValue = Reflect.getProperty(clazz, classField);
+            switch (Type.typeof(fieldValue)) {
+                case TFunction:
+                    var translatedName = methodNameFunction(classField);
+                    globals.put(translatedName, Function((args, env, cc) -> {
+                        cc(Reflect.callMethod(null, fieldValue, args.unwrapList(this)).toHValue());
+                    }, translatedName));
+                default:
+                    // TODO generate getters and setters for static properties
             }
         }
     }
