@@ -2,7 +2,7 @@ package hiss;
 
 import haxe.io.Path;
 import haxe.macro.Context;
-#if sys
+#if (sys || hxnodejs)
 import sys.io.File;
 import sys.FileSystem;
 #end
@@ -45,7 +45,7 @@ class StaticFiles {
         if (files.exists(path)) {
             return files[path];
         } else {
-            #if sys
+            #if (sys || hxnodejs)
                 return File.getContent(path);
             #end
             throw 'File was not compiled into the program: $path';

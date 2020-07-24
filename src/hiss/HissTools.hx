@@ -16,7 +16,7 @@ class HissTools {
     }
 
     public static function homeDir() {
-        #if sys
+        #if (sys || hxnodejs)
             var path = Sys.getEnv(if (Sys.systemName() == "Windows") "UserProfile" else "HOME");
             return if (path != null) Path.normalize(path) else "";
         #else

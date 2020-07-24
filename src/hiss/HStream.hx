@@ -65,7 +65,7 @@ class HStream {
 		}
 	}
 
-	#if sys
+	#if (sys || hxnodejs)
 	public static function FromFile(path: String): HStream {
 		return new HStream(path, sys.io.File.getContent(path));
 	}

@@ -25,7 +25,7 @@ class HaxeTools {
     }
 
     public static function print(str: String) {
-        #if sys
+        #if (sys || hxnodejs)
             Sys.print(str);
         #else
             trace(str); // TODO this will have an unwanted newline
@@ -33,7 +33,7 @@ class HaxeTools {
     }
 
     public static function println(str: String) {
-        #if sys
+        #if (sys || hxnodejs)
             Sys.println(str);
         #else
             trace(str);
