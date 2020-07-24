@@ -322,8 +322,8 @@ class HissTools {
                 };
             case TObject:
                 Object("!ANONYMOUS!", v);
-            /*case TFunction:
-                Function(v, "[rewrapped-function]", );*/
+            case TFunction:
+                Object("NativeFun", v);
             default:
                 throw 'value $v of type $t cannot be wrapped as $hint';
         }
