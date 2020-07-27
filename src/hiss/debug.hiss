@@ -1,4 +1,0 @@
-; This file runs when you run Hiss for a non-sys platform
-(print "Hello world!")
-(print (+ 5 6 7))
-(print (for i (list 1 2 3 4) (+ i 6)))
