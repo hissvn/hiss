@@ -270,9 +270,16 @@ class CCInterp {
     public static function main() {
         var interp = new CCInterp();
 
+        run(interp);
+    }
+
+    public static function run(interp: CCInterp, ?args: Array<String>) {
+        if (args == null) {
+            args = Sys.args();
+        }
         #if (sys || hxnodejs)
-        if (Sys.args().length > 0) {
-            var script = Sys.args().shift();
+        if (args.length > 0) {
+            var script = args.shift();
             if (script.endsWith(".hiss")) {
                 interp.load(script);
                 return;
