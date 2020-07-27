@@ -261,16 +261,26 @@ class CCInterp {
         #end
     }
 
+    /** Command-line entrypoint for Hiss. Usage:
+
+            hiss [file.hiss] -- run a hiss script
+            hiss -- start a REPL
+
+    **/
     public static function main() {
         var interp = new CCInterp();
 
-        #if sys
-        interp.repl();
-        #else
-        // An interactive repl isn't possible on non-sys platforms, so just run a test program.
-        StaticFiles.compileWith("debug.hiss");
-        interp.load("debug.hiss");
+        #if (sys || hxnodejs)
+        if (Sys.args().length > 0) {
+            var script = Sys.args().shift();
+            if (script.endsWith(".hiss")) {
+                interp.load(script);
+                return;
+            }
+        }
         #end
+
+        interp.repl();
     }
 
     public function load(file: String) {
