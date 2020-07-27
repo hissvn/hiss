@@ -12,7 +12,7 @@ import hx.strings.Strings;
 using hx.strings.Strings;
 
 import hiss.HTypes;
-#if sys
+#if (sys || hxnodejs)
 import ihx.ConsoleReader;
 #end
 import hiss.HissReader;
@@ -209,7 +209,7 @@ class CCInterp {
 
     /** Run a Hiss REPL from this interpreter instance **/
     public function repl() {
-        #if sys
+        #if (sys || hxnodejs)
         var cReader = new ConsoleReader(-1, Path.join([HissTools.homeDir(), ".hisstory"]));  
         // The REPL needs to make sure its ConsoleReader actually saves the history on exit, so quit() is provided here
         // differently than the version in stdlib2.hiss :)
