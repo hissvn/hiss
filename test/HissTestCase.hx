@@ -72,14 +72,19 @@ class HissTestCase extends Test {
         var expression = args.second();
 
         var actualPrint = "";
-        var testEnv = env.extend(Dict(["print" => Function((innerArgs, innerEnv, innerCC) -> {
-            actualPrint += innerArgs.first().toPrint() + "\n";
-        }, "print")]));
 
-        interp.eval(expression, testEnv);
-        cc(if (expectedPrint == actualPrint) {
+        interp.importFunction((val: HValue) -> {
+            actualPrint += val.toPrint() + "\n";
+        }, "print", T);
+
+        interp.eval(expression, env);
+        interp.importFunction(hissPrintFail, "print", T);
+        cc(if (expectedPrint == actualPrint
+                // Forgive a missing newline in the `prints` statement
+                || (actualPrint.charAt(actualPrint.length-1) == '\n' && expectedPrint == actualPrint.substr(0, actualPrint.length-1))) {
             T;
         } else {
+            trace('"$actualPrint" != "$expectedPrint"');
             Nil;
         });
     }
@@ -87,8 +92,8 @@ class HissTestCase extends Test {
     /**
         Any unnecessary printing is a bug, so replace print() with this function while running tests.
     **/
-    function hissPrintFail(v: Dynamic) {
-        Assert.fail('Tried to print $v unnecessarily');
+    function hissPrintFail(v: HValue) {
+        Assert.fail('Tried to print ${v.toPrint()} unnecessarily');
         return v;
     }
 
@@ -113,7 +118,7 @@ class HissTestCase extends Test {
         #end
 
         if (interp != null) {
-            interp.importFunction(hissPrintFail, "print");
+            interp.importFunction(hissPrintFail, "print", T);
         }
     }
 
