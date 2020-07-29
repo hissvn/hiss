@@ -71,7 +71,32 @@
     (= 11 (offset 5))
     ; test binding macro/special form
     (setlocal false (bind and nil))
-    (not (false t)))
+    (not (false t))
+    ; test binding with gaps
+    (defun printn (&rest args)
+        (do-map args print))
+    (prints "\"a\"\n\"c\"\n\"b\"" (let (print-out-of-order (bind printn "a" _ "b")) (print-out-of-order "c"))))
+
+(test rbind
+    (setlocal fifth-of (rbind / 5))
+    (= 1 (fifth-of 5))
+    (setlocal list-burrito (rbind list 'tortilla _ 'tortilla))
+    (eq '(sauce tortilla meat tortilla) (print (list-burrito 'sauce 'meat))))
+
+(test (nth first second third fourth fifth sixth seventh eight ninth tenth)
+    (setlocal l (list 1 2 3 4 5 6 7 8 9 10))
+    (= 1 (nth l 0))
+    (= 10 (nth l 9))
+    (= 1 (first l))
+    (= 2 (second l))
+    (= 3 (third l))
+    (= 4 (fourth l))
+    (= 5 (fifth l))
+    (= 6 (sixth l))
+    (= 7 (seventh l))
+    (= 8 (eighth l))
+    (= 9 (ninth l))
+    (= 10 (tenth l)))
 
 (test variable-capture
     (let (value 5)

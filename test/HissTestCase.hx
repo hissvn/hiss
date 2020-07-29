@@ -40,12 +40,17 @@ class HissTestCase extends Test {
     function hissTest(args: HValue, env: HValue, cc: Continuation) {
         failOnTrace(interp);
 
-        var fun = args.first().symbolName();
+        var functionsCoveredByUnit = switch (args.first()) {
+            case Symbol(name): [name];
+            case List(symbols): [for (symbol in symbols) symbol.symbolName()];
+            default: throw 'Bad syntax for (test) statement';
+        }
+
         var assertions = args.rest();
 
         for (ass in assertions.toList()) {
-            var failureMessage = 'Failure testing $fun: ${ass.toPrint()} evaluated to: ';
-            var errorMessage = 'Error testing $fun: ${ass.toPrint()}: ';
+            var failureMessage = 'Failure testing $functionsCoveredByUnit: ${ass.toPrint()} evaluated to: ';
+            var errorMessage = 'Error testing $functionsCoveredByUnit: ${ass.toPrint()}: ';
             try {
                 var val = interp.eval(ass, env);
                 Assert.isTrue(val.truthy(), failureMessage + val.toPrint());
@@ -57,7 +62,9 @@ class HissTestCase extends Test {
             #end
         }
 
-        functionsTested[fun] = true;
+        for (fun in functionsCoveredByUnit) {
+            functionsTested[fun] = true;
+        }
 
         enableTrace(interp);
 
