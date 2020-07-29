@@ -74,10 +74,15 @@
     (setlocal false (bind and nil))
     (not (false t)))
 
+(test variable-capture
+    (let (value 5)
+        (defun return-value () value))
+    (= 5 (return-value)))
+
 // For now, Python-style generators are not fully supported.
 // yield just returns a value and sets the global `continue`
 // to the continuation.
-(test yield
+'(test yield
     (defun range (max)
         (setlocal count 0)
         (while (< count max)
