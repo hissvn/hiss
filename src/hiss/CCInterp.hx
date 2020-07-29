@@ -437,8 +437,9 @@ class CCInterp {
         // something like... `big-lambda` XD
 
         var body = Symbol('begin').cons(args.rest());
-        var hFun: HFunction = (fArgs, env, fCC) -> {
-            var callEnv = env.extend(params.destructuringBind(fArgs)); // extending the outer env is how lambdas capture values
+        var hFun: HFunction = (fArgs, innerEnv, fCC) -> {
+            var callEnv = List(env.toList().concat(innerEnv.toList()));
+            callEnv = callEnv.extend(params.destructuringBind(fArgs)); // extending the outer env is how lambdas capture values
             internalEval(body, callEnv, fCC);
         };
         var callable = if (isMacro) {
