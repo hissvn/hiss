@@ -55,15 +55,24 @@
     (eq (list 7 8 9) (for i (list 1 2 3) (+ i 6))))
 
 (test do-for
-    (not (for-drop i (list 1 2 3) i))
-    (prints "1\n2\n3\n" (for-drop i (list 1 2 3) (print i))))
+    (not (do-for i (list 1 2 3) i))
+    (prints "1\n2\n3\n" (do-for i (list 1 2 3) (print i))))
 
 (test map
     (eq (list 7 8 9) (map (list 1 2 3) (lambda (i) (+ i 6)))))
 
 (test do-map
-    (not (map-drop (list 1 2 3) (lambda (i) i)))
-    (prints "1\n2\n3\n" (map-drop (list 1 2 3) print)))
+    (not (do-map (list 1 2 3) (lambda (i) i)))
+    (prints "1\n2\n3\n" (do-map (list 1 2 3) print)))
+
+(test bind
+    (setlocal my-print (bind print "hello"))
+    (prints "hello\n" (my-print))
+    (setlocal offset (bind + 6))
+    (= 11 (offset 5))
+    ; test binding macro/special form
+    (setlocal false (bind and nil))
+    (not (false t)))
 
 // For now, Python-style generators are not fully supported.
 // yield just returns a value and sets the global `continue`

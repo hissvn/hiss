@@ -19,7 +19,7 @@ import hiss.HissReader;
 import hiss.HissTools;
 using hiss.HissTools;
 import hiss.StaticFiles;
-import hiss.HissMath;
+import hiss.VariadicFunctions;
 import hiss.NativeFunctions;
 
 using StringTools;
@@ -180,15 +180,17 @@ class CCInterp {
 
         globals.put("quote", SpecialForm(quote));
 
-        globals.put("+", Function(HissMath.add, "+"));
-        globals.put("-", Function(HissMath.subtract, "-"));
-        globals.put("/", Function(HissMath.divide, "/"));
-        globals.put("*", Function(HissMath.multiply, "/"));
-        globals.put("<", Function(HissMath.numCompare.bind(Lesser), "<"));
-        globals.put("<=", Function(HissMath.numCompare.bind(LesserEqual), "<="));
-        globals.put(">", Function(HissMath.numCompare.bind(Greater), ">"));
-        globals.put(">=", Function(HissMath.numCompare.bind(GreaterEqual), ">="));
-        globals.put("=", Function(HissMath.numCompare.bind(Equal), "="));
+        globals.put("+", Function(VariadicFunctions.add, "+"));
+        globals.put("-", Function(VariadicFunctions.subtract, "-"));
+        globals.put("/", Function(VariadicFunctions.divide, "/"));
+        globals.put("*", Function(VariadicFunctions.multiply, "/"));
+        globals.put("<", Function(VariadicFunctions.numCompare.bind(Lesser), "<"));
+        globals.put("<=", Function(VariadicFunctions.numCompare.bind(LesserEqual), "<="));
+        globals.put(">", Function(VariadicFunctions.numCompare.bind(Greater), ">"));
+        globals.put(">=", Function(VariadicFunctions.numCompare.bind(GreaterEqual), ">="));
+        globals.put("=", Function(VariadicFunctions.numCompare.bind(Equal), "="));
+
+        globals.put("append", Function(VariadicFunctions.append, "append"));
 
         // Operating system
         importFunction(HissTools.homeDir, "home-dir", []);
@@ -737,7 +739,7 @@ class CCInterp {
                             inline macroCall(callable.cons(exp.rest()), env, cc);
                         case SpecialForm(_):
                             inline specialForm(callable.cons(exp.rest()), env, cc);
-                        default: throw 'Cannot call $callable';
+                        default: throw 'Hiss cannot call $callable from ${exp.first().toPrint()}';
                     }
                 });
             default:

@@ -50,9 +50,11 @@ class HissTestCase extends Test {
                 var val = interp.eval(ass, env);
                 Assert.isTrue(val.truthy(), failureMessage + val.toPrint());
             }
+            #if !throwErrors
             catch (err: Dynamic) {
                 Assert.fail(errorMessage + err.toString());
             }
+            #end
         }
 
         functionsTested[fun] = true;

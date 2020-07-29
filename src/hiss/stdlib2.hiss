@@ -8,7 +8,6 @@
 (defun new (class &rest args)
     (create-instance class args))
 
-(register-method "concat" concat nil nil) ; TODO instead of this, have variadic (append) function
 (register-method "push" push t t t)
 (register-method "shift" shift t)
 
@@ -50,12 +49,12 @@
 (defmacro bind (f &rest bind-args)
     `(lambda (&rest call-args) 
         (setlocal args (for arg ',bind-args (if (eq '_ arg) (shift call-args) arg)))
-        (apply ,f (concat args call-args))))
+        (apply ,f (append args call-args))))
 
 (defmacro rbind (f &rest bind-args)
     `(lambda (&rest call-args) 
         (setlocal args (for arg ',bind-args (if (eq '_ arg) (pop call-args) arg)))
-        (apply ,f (concat call-args args))))
+        (apply ,f (append call-args args))))
 
 (defvar second (rbind nth 1))
 (defvar third (rbind nth 2))

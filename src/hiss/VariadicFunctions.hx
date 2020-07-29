@@ -15,7 +15,15 @@ enum Comparison {
 /**
     Variadic operations that used to be fun and DRY, but are efficient now instead
 **/
-class HissMath {
+class VariadicFunctions {
+    public static function append(args: HValue, env: HValue, cc: Continuation) {
+        var result = args.first().toList();
+        for (l in args.rest().toList()) {
+            result = result.concat(l.toList());
+        }
+        cc(List(result));
+    }
+
     public static function add(args: HValue, env: HValue, cc: Continuation) {
         var sum:Dynamic = switch (args.first()) {
             case Int(_): 0;
