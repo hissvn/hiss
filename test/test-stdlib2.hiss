@@ -113,7 +113,7 @@
     (setlocal list-burrito (rbind list 'tortilla _ 'tortilla))
     (eq '(sauce tortilla meat tortilla) (list-burrito 'sauce 'meat)))
 
-(test (nth first second third fourth fifth sixth seventh eight ninth tenth)
+(test (nth first second third fourth fifth sixth seventh eighth ninth tenth)
     (setlocal l (list 1 2 3 4 5 6 7 8 9 10))
     (= 1 (nth l 0))
     (= 10 (nth l 9))
@@ -127,6 +127,9 @@
     (= 8 (eighth l))
     (= 9 (ninth l))
     (= 10 (tenth l)))
+
+(test message
+    (prints "Hello world" (message "Hello world")))
 
 (test variable-capture
     (let (value 5)

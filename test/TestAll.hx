@@ -24,6 +24,7 @@ class TestAll {
           "quit",
           "print",
           "prints",
+          "test",
         ]),
       
       // Internal Tests. These are/were helpful while implementing and re-implementing core components,

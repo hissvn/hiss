@@ -85,8 +85,13 @@ class HissTestCase extends Test {
             actualPrint += val.toPrint() + "\n";
         }, "print", T);
 
+        interp.importFunction((val: HValue) -> {
+            actualPrint += val.toMessage() + "\n";
+        }, "message", T);
+
         interp.eval(expression, env);
         interp.importFunction(hissPrintFail, "print", T);
+        interp.importFunction(HissTools.message, "message", T); // It's ok to send messages from the standard library, just not to print raw HValues
         cc(if (expectedPrint == actualPrint
                 // Forgive a missing newline in the `prints` statement
                 || (actualPrint.charAt(actualPrint.length-1) == '\n' && expectedPrint == actualPrint.substr(0, actualPrint.length-1))) {
@@ -165,6 +170,16 @@ class HissTestCase extends Test {
             return i;
         });
 
+        // Get a list of BUILT-IN functions to make sure they're covered by tests.
+        for (v => val in interp.globals.toDict()) {
+            switch (val) {
+                case Function(_, _) | SpecialForm(_) | Macro(_):
+                    if (!functionsTested.exists(v)) functionsTested[v] = false;
+                default:
+            }
+        }
+        // We don't want to be accountable for testing functions defined IN the tests.
+
         interp.globals.put("test", SpecialForm(hissTest));
         interp.globals.put("prints", SpecialForm(hissPrints.bind(interp)));
 
@@ -178,14 +193,6 @@ class HissTestCase extends Test {
             interp.load(file);
             trace("Total time to run tests:");
         });
-
-        for (v => val in interp.globals.toDict()) {
-            switch (val) {
-                case Function(_, _) | SpecialForm(_) | Macro(_):
-                    if (!functionsTested.exists(v)) functionsTested[v] = false;
-                default:
-            }
-        }
 
         for (fun => tested in functionsTested) {
             Assert.isTrue(tested, 'Failure: $fun was never tested');
