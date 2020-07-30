@@ -43,13 +43,32 @@
     // Test against stack overflows:
     (eq t (and t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t)))
 
-(test pop
-    (eq 4 (pop (list 1 2 3 4)))
-    (eq nil (pop (list))) // TODO is this desirable?
+(test pop!
+    ; Allow popping from a list literal
+    (eq 4 (pop! (list 1 2 3 4)))
+    (eq nil (pop! (list))) // TODO is this desirable?
+    ; Popping from a variable should modify in place
     (setlocal l (list 1 2 3 4))
-    (eq 4 (pop l))
+    (eq 4 (pop! l))
     (eq (list 1 2 3) l)
-    (eq 3 (pop l)))
+    (eq 3 (pop! l)))
+
+(test shift!
+    (eq 1 (shift! (list 1 2 3 4)))
+    (eq nil (shift! (list)))
+    (setlocal l (list 1 2 3 4))
+    (eq 1 (shift! l))
+    (eq (list 2 3 4) l)
+    (eq 2 (shift! l)))
+
+(test take!
+    (setlocal l (list 1 2 3 4 5))
+    (eq (list 1 2 3) (take! l 3))
+    (eq (list 4 5) l))
+
+(test drop!
+    (setlocal l (list 1 2 3 4 5))
+    (eq (list 3 4 5) (drop! l 2)))
 
 (test for
     (eq (list 7 8 9) (for i (list 1 2 3) (+ i 6))))

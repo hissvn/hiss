@@ -8,17 +8,19 @@
 (defun new (class &rest args)
     (create-instance class args))
 
-(register-method "push" push t t t)
-(register-method "shift" shift t)
+(register-method "push" push! t t t)
+(register-method "shift" shift! t)
 
-(register-method "pop" pop t)
+(register-method "pop" pop! t)
 
-(defun drop (l num)
+(defun take! (l num)
+    (call-haxe l "splice" (list 0 num) t))
+(defun drop! (l num)
     (call-haxe l "splice" (list 0 num) t)
     l)
 (defun slice (l start &optional end)
     (call-haxe l "slice" (list start (or end (length l)))))
-(defun take (l num)
+(defun peek (l num)
     (slice l 0 num))
 
 (defun list (&rest args) args)
@@ -49,13 +51,13 @@
 (defmacro bind (f &rest bind-args)
     (let (bind-args (for __arg__ bind-args (if (not (eq '_ __arg__)) (eval __arg__) __arg__)))
         `(lambda (&rest call-args)
-            (setlocal args (for arg ',bind-args (if (eq '_ arg) (shift call-args) arg)))
+            (setlocal args (for arg ',bind-args (if (eq '_ arg) (shift! call-args) arg)))
             (apply ,f (append args call-args)))))
 
 (defmacro rbind (f &rest bind-args)
     (let (bind-args (for __arg__ bind-args (if (not (eq '_ __arg__)) (eval __arg__) __arg__)))
         `(lambda (&rest call-args)
-            (setlocal args (for arg ',bind-args (if (eq '_ arg) (pop call-args) arg)))
+            (setlocal args (for arg ',bind-args (if (eq '_ arg) (pop! call-args) arg)))
             (apply ,f (append call-args args)))))
 
 (defvar second (rbind nth 1))
