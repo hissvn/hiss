@@ -48,11 +48,12 @@ class HissTestCase extends Test {
 
         var assertions = args.rest();
 
+        var freshEnv = List([Dict([])]);
         for (ass in assertions.toList()) {
             var failureMessage = 'Failure testing $functionsCoveredByUnit: ${ass.toPrint()} evaluated to: ';
             var errorMessage = 'Error testing $functionsCoveredByUnit: ${ass.toPrint()}: ';
             try {
-                var val = interp.eval(ass, env);
+                var val = interp.eval(ass, freshEnv);
                 Assert.isTrue(val.truthy(), failureMessage + val.toPrint());
             }
             #if !throwErrors

@@ -120,7 +120,7 @@ class CCInterp {
         globals.put("if", SpecialForm(_if));
         globals.put("lambda", SpecialForm(lambda.bind(false)));
         globals.put("call/cc", SpecialForm(callCC));
-        globals.put("eval", Function(_eval, "eval", ["exp"]));
+        globals.put("eval", SpecialForm(_eval));
         globals.put("bound?", SpecialForm(bound));
         globals.put("load", Function(_load, "load", ["file"]));
         globals.put("funcall", SpecialForm(funcall.bind(false)));
@@ -452,7 +452,7 @@ class CCInterp {
     }
 
     /**
-        Implementation behind (for), (drop-for), (map), and (drop-map)
+        Implementation behind (for), (do-for), (map), and (do-map)
     **/
     function iterate(collect: Bool, bodyForm: Bool, args: HValue, env: HValue, cc: Continuation) {
         var it: HValue = Nil;
@@ -465,13 +465,15 @@ class CCInterp {
 
         var operation: HFunction = null;
         if (bodyForm) {
+            // If it's body form, the values of the iterable need a name for the body
             var varName = args.first().symbolName();
             var body = List(args.toList().slice(2));
-            operation = (innerArgs, env, cc) -> {
+            operation = (innerArgs, innerEnv, cc) -> {
                 var bodyEnv = env.extend(Dict([varName => innerArgs.first()]));
                 internalEval(Symbol("begin").cons(body), bodyEnv, cc);
             };
         } else {
+            // If it's function form, a name is not necessary
             internalEval(args.second(), env, (fun) -> {operation = fun.toHFunction();});
         }
 
@@ -667,7 +669,9 @@ class CCInterp {
 
     /** Hiss-callable form for eval **/
     function _eval(args: HValue, env: HValue, cc: Continuation) {
-        internalEval(args.first(), env, cc);
+        internalEval(args.first(), env, (val) -> {
+            internalEval(val, env, cc);
+        });
     }
 
     /** Public, synchronous form of eval **/

@@ -47,14 +47,16 @@
     (eval `(,f ',@args)))
 
 (defmacro bind (f &rest bind-args)
-    `(lambda (&rest call-args) 
-        (setlocal args (for arg ',bind-args (if (eq '_ arg) (shift call-args) arg)))
-        (apply ,f (append args call-args))))
+    (let (bind-args (for __arg__ bind-args (if (not (eq '_ __arg__)) (eval __arg__) __arg__)))
+        `(lambda (&rest call-args)
+            (setlocal args (for arg ',bind-args (if (eq '_ arg) (shift call-args) arg)))
+            (apply ,f (append args call-args)))))
 
 (defmacro rbind (f &rest bind-args)
-    `(lambda (&rest call-args) 
-        (setlocal args (for arg ',bind-args (if (eq '_ arg) (pop call-args) arg)))
-        (apply ,f (append call-args args))))
+    (let (bind-args (for __arg__ bind-args (if (not (eq '_ __arg__)) (eval __arg__) __arg__)))
+        `(lambda (&rest call-args)
+            (setlocal args (for arg ',bind-args (if (eq '_ arg) (pop call-args) arg)))
+            (apply ,f (append call-args args)))))
 
 (defvar second (rbind nth 1))
 (defvar third (rbind nth 2))

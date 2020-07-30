@@ -203,8 +203,13 @@ class HissTools {
             case Quote(aa) | Quasiquote(aa) | Unquote(aa) | UnquoteList(aa):
                 var bb = HaxeTools.extract(b, Quote(e) | Quasiquote(e) | Unquote(e) | UnquoteList(e) => e);
                 return eq(aa, bb);
+            case SpecialForm(fun):
+                return switch (b) {
+                    case SpecialForm(fun2) if (fun == fun2): T;
+                    default: Nil;
+                };
             default:
-                return Nil;
+                throw 'eq is not implemented for $a and $b';
         }
     }
 

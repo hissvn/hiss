@@ -65,6 +65,13 @@
     (not (do-map (list 1 2 3) (lambda (i) i)))
     (prints "1\n2\n3" (do-map (list 1 2 3) print)))
 
+(test eval
+    ; Test evaluating globals
+    (eq eval (eval 'eval))
+    ; Test evaluating locals
+    (setlocal test-var 5)
+    (= 5 (eval 'test-var)))
+
 (test bind
     (prints "\"hello\"" (let (my-print (bind print "hello")) (my-print)))
     (setlocal offset (bind + 6))
@@ -75,13 +82,17 @@
     ; test binding with gaps
     (defun printn (&rest args)
         (do-map args print))
-    (prints "\"a\"\n\"c\"\n\"b\"" (let (print-out-of-order (bind printn "a" _ "b")) (print-out-of-order "c"))))
+    (prints "\"a\"\n\"c\"\n\"b\"" (let (print-out-of-order (bind printn "a" _ "b")) (print-out-of-order "c")))
+    ; test that bind args are evaluated
+    (setlocal arg 5)
+    (setlocal offset (bind + arg))
+    (= 5 (offset 0)))
 
 (test rbind
     (setlocal fifth-of (rbind / 5))
     (= 1 (fifth-of 5))
     (setlocal list-burrito (rbind list 'tortilla _ 'tortilla))
-    (eq '(sauce tortilla meat tortilla) (print (list-burrito 'sauce 'meat))))
+    (eq '(sauce tortilla meat tortilla) (list-burrito 'sauce 'meat)))
 
 (test (nth first second third fourth fifth sixth seventh eight ninth tenth)
     (setlocal l (list 1 2 3 4 5 6 7 8 9 10))
