@@ -131,6 +131,14 @@
 (test message
     (prints "Hello world" (message "Hello world")))
 
+(test symbol
+    (setlocal you "me")
+    (eq 'hey-me (symbol "hey-$you"))
+    (not (eq (symbol) (symbol))))
+
+(test symbol-name
+    (eq "hey" (symbol-name 'hey)))
+
 (test variable-capture
     (let (value 5)
         (defun return-value () value))

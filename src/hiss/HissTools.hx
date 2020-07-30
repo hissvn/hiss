@@ -6,6 +6,7 @@ import hiss.HTypes;
 import hiss.CompileInfo;
 import Type;
 import haxe.io.Path;
+import uuid.Uuid;
 
 class HissTools {
 
@@ -112,7 +113,11 @@ class HissTools {
         return HaxeTools.extract(v, Symbol(name) => name, "symbol name");
     }
 
-    public static function symbol(v: HValue): HValue {
+    public static function symbol(?v: HValue): HValue {
+        // When called with no arguments, (symbol) acts like common-lisp's (gensym)
+        if (v == null) {
+            return Symbol('_${Uuid.v4()}');
+        }
         return Symbol(v.toHaxeString());
     }
 
