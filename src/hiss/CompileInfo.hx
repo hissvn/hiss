@@ -3,6 +3,7 @@ package hiss;
 using hiss.HaxeTools;
 import haxe.macro.Expr;
 import haxe.macro.Context;
+import haxe.io.Path;
 
 import hiss.HaxeTools;
 
@@ -13,11 +14,13 @@ class CompileInfo {
     **/
     public static macro function version(): ExprOf<String> {
         #if (!display && sys)
+            var posInfos = Context.getPosInfos(Context.currentPos());
+            var directory = Path.directory(posInfos.file);
             var hissVersion = "";
             try {
-                var branch = HaxeTools.shellCommand("git branch --show-current");
-                var revision = HaxeTools.shellCommand("git rev-list --count HEAD");
-                var modified = HaxeTools.shellCommand("git status -s");
+                var branch = HaxeTools.shellCommand('cd "$directory" && git branch --show-current');
+                var revision = HaxeTools.shellCommand('cd "$directory" && git rev-list --count HEAD');
+                var modified = HaxeTools.shellCommand('cd "$directory" && git status -s');
                 if (modified.length > 0) modified = "*";
                 var target = Context.definedValue("target.name");
                 var hissVersion = '$branch-$revision$modified (target: $target)';
