@@ -210,13 +210,16 @@ class CCInterp {
     }
 
     /** Run a Hiss REPL from this interpreter instance **/
-    public function repl() {
+    public function repl(useConsoleReader=true) {
         #if (sys || hxnodejs)
-        var cReader = new ConsoleReader(-1, Path.join([HissTools.homeDir(), ".hisstory"]));  
+        var cReader = null;
+        if (useConsoleReader) cReader = new ConsoleReader(-1, Path.join([HissTools.homeDir(), ".hisstory"]));
         // The REPL needs to make sure its ConsoleReader actually saves the history on exit, so quit() is provided here
         // differently than the version in stdlib2.hiss :)
         importFunction(() -> {
-            cReader.saveHistory();
+            if (useConsoleReader) {
+                cReader.saveHistory();
+            }
             throw HSignal.Quit;
         }, "quit");
         var locals = List([Dict([])]); // This allows for top-level setlocal
@@ -226,9 +229,15 @@ class CCInterp {
 
         while (true) {
             HaxeTools.print(">>> ");
-            cReader.cmd.prompt = ">>> ";
+            
+            var next = "";
+            if (useConsoleReader) {
+                cReader.cmd.prompt = ">>> ";
 
-            var next = cReader.readLine();
+                next = cReader.readLine();
+            } else {
+                next = Sys.stdin().readLine();
+            }
 
             //interp.disableTrace();
             var exp = null;
@@ -276,20 +285,34 @@ class CCInterp {
     }
 
     public static function run(interp: CCInterp, ?args: Array<String>) {
+        #if (sys || hxnodejs)
         if (args == null) {
             args = Sys.args();
         }
-        #if (sys || hxnodejs)
-        if (args.length > 0) {
-            var script = args.shift();
-            if (script.endsWith(".hiss")) {
-                interp.load(script);
-                return;
+        
+        var useConsoleReader = true;
+        var script = null;
+
+        var nextArg = null;
+        while (args.length > 0) {
+            var nextArg = args.shift();
+            switch (nextArg) {
+                case "--nocr" | "--no-cr" | "--no-console-reader":
+                    useConsoleReader = false;
+                default:
+                    script = nextArg;
             }
         }
+
+        if (script != null) {
+            interp.load(script);
+        } else {
+            interp.repl(useConsoleReader);
+        }
+        #else
+        trace("Hiss cannot run as a console application on this target.");
         #end
 
-        interp.repl();
     }
 
     public function load(file: String) {
