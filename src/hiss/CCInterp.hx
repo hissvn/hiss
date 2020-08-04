@@ -299,7 +299,7 @@ class CCInterp {
             switch (nextArg) {
                 case "--nocr" | "--no-cr" | "--no-console-reader":
                     useConsoleReader = false;
-                default:
+                case _ if (nextArg.endsWith(".hiss")):
                     script = nextArg;
             }
         }
