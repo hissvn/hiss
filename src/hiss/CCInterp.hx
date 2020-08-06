@@ -8,6 +8,7 @@ import haxe.CallStack;
 import haxe.Constraints.Function;
 import haxe.io.Path;
 import haxe.Log;
+import sys.io.File;
 import hx.strings.Strings;
 using hx.strings.Strings;
 
@@ -195,6 +196,9 @@ class CCInterp {
         // Operating system
         importFunction(HissTools.homeDir, "home-dir", []);
         importFunction(StaticFiles.getContent, "get-content", ["file"]);
+        #if (sys || hxnodejs)
+        importClass(File, "File");
+        #end
 
         // (test) is a no-op in production:
         globals.put("test", SpecialForm(noOp));
