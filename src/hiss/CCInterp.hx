@@ -9,6 +9,7 @@ import haxe.Constraints.Function;
 import haxe.io.Path;
 import haxe.Log;
 import sys.io.File;
+import sys.io.FileOutput;
 import hx.strings.Strings;
 using hx.strings.Strings;
 
@@ -202,6 +203,8 @@ class CCInterp {
         importFunction(StaticFiles.getContent, "get-content", ["file"]);
         #if (sys || hxnodejs)
         importClass(File, "File");
+        importClass(FileOutput, "FileOutput");
+
         #end
 
         // (test) is a no-op in production:
