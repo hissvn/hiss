@@ -172,6 +172,7 @@ class CCInterp {
         importFunction(HissTools.cons, "cons", T, ["val", "l"]);
         importFunction(HissTools.not, "not", T, ["val"]);
         importFunction(HissTools.sort, "sort", Nil, ["l, sort-function"]);
+        importFunction(HissTools.range, "range", Nil, ["start", "end"]);
         importFunction(HissTools.alternates.bind(_, true), "even-alternates", T);
         importFunction(HissTools.alternates.bind(_, false), "odd-alternates", T);
         importFunction(HaxeTools.shellCommand, "shell-command", Nil, ["cmd"]);

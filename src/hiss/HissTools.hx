@@ -8,6 +8,7 @@ import Type;
 import haxe.io.Path;
 import uuid.Uuid;
 import Reflect;
+using hiss.HissTools;
 
 class HissTools {
 
@@ -127,6 +128,28 @@ class HissTools {
             return Symbol('_${Uuid.v4()}');
         }
         return Symbol(v.toHaxeString());
+    }
+
+    public static function range(a: Dynamic, ?b: Dynamic) {
+        var start = if (b == null) 0 else a;
+        var end = if (b == null) a else b;
+
+        var intIterator = start ... end;
+
+        // Haxe IntIterators are weird. What we really want is an Iterable of HValues,
+        // whose iterator()'s next() and hasNext() are not inlined.
+        return {
+            iterator: function () {
+                return {
+                    next: function() {
+                        return intIterator.next().toHValue();
+                    },
+                    hasNext: function() {
+                        return intIterator.hasNext();
+                    }
+                };
+            }
+        };
     }
 
     /**
