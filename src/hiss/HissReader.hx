@@ -129,7 +129,6 @@ class HissReader {
             stream.putBack(start);
             readSymbol("", stream);
         } else {
-            trace('reading number from $start : $stream');
             readNumber(start, stream);
         }
     }

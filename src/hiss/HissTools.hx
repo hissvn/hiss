@@ -7,6 +7,7 @@ import hiss.CompileInfo;
 import Type;
 import haxe.io.Path;
 import uuid.Uuid;
+import Reflect;
 
 class HissTools {
 
@@ -87,6 +88,13 @@ class HissTools {
 
     public static function rest(list: HValue): HValue {
         return List(list.toList().slice(1));
+    }
+
+    public static function sort(list: Array<Dynamic>, ?fun: (Dynamic, Dynamic) -> Int) {
+        if (fun == null) fun = Reflect.compare;
+        var sorted = list.copy();
+        sorted.sort(fun);
+        return sorted;
     }
 
     public static function alternates(list: HValue, start: Bool) {
