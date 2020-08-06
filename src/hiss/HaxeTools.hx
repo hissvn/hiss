@@ -54,7 +54,7 @@ class HaxeTools {
 
             return result.getString(0, result.length).trim();
         #else
-            return "Can't run shell command on non-sys platform.";
+            throw "Can't run shell command on non-sys platform.";
         #end
     }
 
@@ -62,7 +62,7 @@ class HaxeTools {
         #if (sys || hxnodejs)
             return Sys.stdin().readLine();
         #else
-            return "Can't read input on non-sys platform.";
+            throw "Can't read input on non-sys platform.";
         #end
     }
 }
