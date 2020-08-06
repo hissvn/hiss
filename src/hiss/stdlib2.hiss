@@ -23,6 +23,8 @@
 (defun peek (l num)
     (slice l 0 num))
 
+(register-method "split" split)
+
 (defun list (&rest args) args)
 
 (defmacro let (bindings &rest body)
