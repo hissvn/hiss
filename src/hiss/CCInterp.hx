@@ -497,11 +497,11 @@ class CCInterp {
 
         var operation: HFunction = null;
         if (bodyForm) {
-            // If it's body form, the values of the iterable need a name for the body
-            var varName = args.first().symbolName();
             var body = List(args.toList().slice(2));
             operation = (innerArgs, innerEnv, cc) -> {
-                var bodyEnv = env.extend(Dict([varName => innerArgs.first()]));
+                // If it's body form, the values of the iterable need to be bound for the body
+                // (potentially with list destructuring)
+                var bodyEnv = env.extend(args.first().destructuringBind(innerArgs.first()));
                 internalEval(Symbol("begin").cons(body), bodyEnv, cc);
             };
         } else {

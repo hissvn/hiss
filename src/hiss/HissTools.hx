@@ -170,35 +170,43 @@ class HissTools {
     public static function destructuringBind(names: HValue, values: HValue) {
         var bindings = Dict([]);
 
-        var l1 = names.toList();
-        var l2 = values.toList();
-        
-        /*if (l1.length != l2.length) {
-            throw 'Cannot bind ${l2.length} values to ${l1.length} names';
-        }*/
+        switch (names) {
+            case Symbol(name):
+                // Destructuring bind is still valid with a one-value binding
+                bindings.put(name, values);
+            case List(l1):
 
-        for (idx in 0...l1.length) {
-            switch (l1[idx]) {
-                case List(nestedList):
-                    bindings = bindings.dictExtend(destructuringBind(l1[idx], l2[idx]));
-                case Symbol("&optional"):
-                    var numOptionalValues = l1.length - idx - 1;
-                    var remainingValues = l2.slice(idx);
-                    while (remainingValues.length < numOptionalValues) {
-                        remainingValues.push(Nil);
+                var l2 = values.toList();
+
+                /*if (l1.length != l2.length) {
+                    throw 'Cannot bind ${l2.length} values to ${l1.length} names';
+                }*/
+
+                for (idx in 0...l1.length) {
+                    switch (l1[idx]) {
+                        case List(nestedList):
+                            bindings = bindings.dictExtend(destructuringBind(l1[idx], l2[idx]));
+                        case Symbol("&optional"):
+                            var numOptionalValues = l1.length - idx - 1;
+                            var remainingValues = l2.slice(idx);
+                            while (remainingValues.length < numOptionalValues) {
+                                remainingValues.push(Nil);
+                            }
+                            bindings = bindings.dictExtend(destructuringBind(List(l1.slice(idx+1)), List(remainingValues)));
+                            break;
+                        case Symbol("&rest"):
+                            var remainingValues = l2.slice(idx);
+                            bindings.put(l1[idx+1].symbolName(), List(remainingValues));
+                            break;
+                        case Symbol(name):
+                            bindings.put(name, l2[idx]);
+                        default:
+                            throw 'Bad element ${l1[idx]} in name list for bindings';
                     }
-                    bindings = bindings.dictExtend(destructuringBind(List(l1.slice(idx+1)), List(remainingValues)));
-                    break;
-                case Symbol("&rest"):
-                    var remainingValues = l2.slice(idx);
-                    bindings.put(l1[idx+1].symbolName(), List(remainingValues));
-                    break;
-                case Symbol(name):
-                    bindings.put(name, l2[idx]);
-                default:
-                    throw 'Bad element ${l1[idx]} in name list for bindings';
-            }
-            
+
+                }
+            default:
+                throw 'Cannot perform destructuring bind on ${names.toPrint()} and ${values.toPrint()}';
         }
 
         return bindings;
