@@ -76,6 +76,12 @@
         (for i (range final-length)
             (for l lists (nth l i)))))
 
+(defun collect (iterable)
+    (for elem iterable elem))
+
+(defun enumerate (l)
+    (zip (collect (range (length l))) l))
+
 (defun current-continuation ()
     (call/cc (lambda (cc) 
         (cc cc))))
