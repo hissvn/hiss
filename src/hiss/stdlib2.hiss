@@ -70,6 +70,12 @@
 (defvar ninth (rbind nth 8))
 (defvar tenth (rbind nth 9))
 
+(defun zip (&rest lists)
+    "Create a list of tuples by grouping all same-nth elements in the given lists. Discards elements with no corresponding element in all other lists"
+    (let (final-length (first (sort (for l lists (length l)))))
+        (for i (range final-length)
+            (for l lists (nth l i)))))
+
 (defun current-continuation ()
     (call/cc (lambda (cc) 
         (cc cc))))
