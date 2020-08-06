@@ -195,6 +195,8 @@ class CCInterp {
 
         globals.put("append", Function(VariadicFunctions.append, "append"));
 
+        importFunction(HaxeTools.readLine, "read-line");
+
         // Operating system
         importFunction(HissTools.homeDir, "home-dir", []);
         importFunction(StaticFiles.getContent, "get-content", ["file"]);
@@ -490,6 +492,7 @@ class CCInterp {
         } else {
             args.first();
         }, env, (_iterable) -> { it = _iterable; });
+
         var iterable: Iterable<HValue> = it.value(true);
 
         var operation: HFunction = null;

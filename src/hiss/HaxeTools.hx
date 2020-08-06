@@ -41,6 +41,7 @@ class HaxeTools {
     }
 
     public static function shellCommand(cmd: String) {
+        // hxnodejs doesn't implement the Process class.
         #if sys
             var process = new Process(cmd);
             if (process.exitCode() != 0) {
@@ -54,6 +55,14 @@ class HaxeTools {
             return result.getString(0, result.length).trim();
         #else
             return "Can't run shell command on non-sys platform.";
+        #end
+    }
+
+    public static function readLine() {
+        #if (sys || hxnodejs)
+            return Sys.stdin().readLine();
+        #else
+            return "Can't read input on non-sys platform.";
         #end
     }
 }
