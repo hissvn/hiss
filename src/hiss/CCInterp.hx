@@ -605,13 +605,21 @@ class CCInterp {
         cc(Reflect.callMethod(caller, method, haxeCallArgs).toHValue());
     }
 
+    static var ccNum = 0;
     function callCC(args: HValue, env: HValue, cc: Continuation) {
+        var ccId = ccNum++;
         // Convert the continuation to a hiss function accepting one argument
         var ccHFunction = Function((innerArgs: HValue, innerEnv: HValue, innerCC: Continuation) -> {
-            //trace('cc was called with ${innerArgs.first().toPrint()}');
-            // It's typical to JUST want to break out of a sequence, not return a value to it.
-            if (!innerArgs.truthy()) cc(Nil);
-            else cc(innerArgs.first());
+            var arg = if (!innerArgs.truthy()) {
+                // It's typical to JUST want to break out of a sequence, not return a value to it.
+                Nil;
+            } else {
+                innerArgs.first();
+            };
+
+            trace('calling cc#$ccId with ${arg.toPrint()}');
+
+            cc(arg);
         }, "cc");
 
         funcall(true,
