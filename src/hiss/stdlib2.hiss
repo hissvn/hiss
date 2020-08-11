@@ -93,6 +93,10 @@
         (defvar continue cc)
         (ret ,value)))
 
-(defun input (&optional prompt)
+(defun input-expression (&optional prompt)
     (when prompt (message prompt))
-    (read (read-line)))
+    (eval (read (read-line))))
+
+(defun input-string (&optional prompt)
+    (when prompt (message prompt))
+    (read-line))
