@@ -92,3 +92,7 @@
     `(let (ret return cc (current-continuation))
         (defvar continue cc)
         (ret ,value)))
+
+(defun input (&optional prompt)
+    (when prompt (message prompt))
+    (read (read-line)))
