@@ -163,7 +163,7 @@ class HissReader {
         // Quotes inside Interpolated expressions shouldn't terminate the literal
         var literal = "";
         while (true) {
-            var outputInfo = HaxeTools.extract(str.takeUntil(['"', '\\$', '$'], false, false), Some(o) => o); // don't drop the terminator
+            var outputInfo = HaxeTools.extract(str.takeUntil(['"', '\\$', '$', '\\\\'], false, false), Some(o) => o); // don't drop the terminator
             //trace(outputInfo.terminator);
             switch (outputInfo.terminator) {
                 case '"':
@@ -187,6 +187,9 @@ class HissReader {
                         default:
                     }
                     literal += str.take(expLength);
+                case '\\\\':
+                    literal += "\\";
+                    str.drop(outputInfo.terminator);
             }
         }
 

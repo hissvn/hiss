@@ -744,7 +744,7 @@ class CCInterp {
                     idx = interpolated.indexOf("$", idx);
                     // Allow \$ for putting $ in string.
                     if (interpolated.charAt(idx-1) == '\\') {
-                        ++idx;
+                        interpolated = interpolated.substr(0, idx - 1) + interpolated.substr(idx++);
                         continue;
                     }
 
