@@ -453,4 +453,84 @@ class HissTools {
                 /*throw 'hvalue $hv cannot be unwrapped for a native Haxe operation';*/
         }
     }
+
+    // Primitive type predicates
+    
+    public static function isInt(hv: HValue) {
+        return switch (hv) {
+            case Int(_): T;
+            default: Nil;
+        };
+    }
+
+    public static function isFloat(hv: HValue) {
+        return switch (hv) {
+            case Float(_): T;
+            default: Nil;
+        };
+    }
+
+    public static function isNumber(hv: HValue) {
+        return switch (hv) {
+            case Int(_) | Float(_): T;
+            default: Nil;
+        };
+    }
+
+    public static function isSymbol(hv: HValue) {
+        return switch (hv) {
+            case Symbol(_): T;
+            default: Nil;
+        };
+    }
+
+    public static function isString(hv: HValue) {
+        return switch (hv) {
+            case String(_): T;
+            default: Nil;
+        };
+    }
+
+    public static function isList(hv: HValue) {
+        return switch (hv) {
+            case List(l): T;
+            default: Nil;
+        };
+    }
+
+    public static function isDict(hv: HValue) {
+        return switch (hv) {
+            case Dict(d): T;
+            default: Nil;
+        };
+    }
+
+    public static function isFunction(hv: HValue) {
+        return switch (hv) {
+            case Function(_, _, _): T;
+            default: Nil;
+        };
+    }
+
+    public static function isMacro(hv: HValue) {
+        return switch (hv) {
+            case Macro(_) | SpecialForm(_): T;
+            default: Nil;
+        };
+    }
+
+    public static function isCallable(hv: HValue) {
+        return switch (hv) {
+            case Function(_, _, _): T;
+            case Macro(_) | SpecialForm(_): T;
+            default: Nil;
+        };
+    }
+
+    public static function isObject(hv: HValue) {
+        return switch (hv) {
+            case Object(_, _): T;
+            default: Nil;
+        };
+    }
 }

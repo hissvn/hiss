@@ -150,6 +150,19 @@ class CCInterp {
         importFunction(HissTools.get, "dict-get");
         importFunction(HissTools.put, "dict-set");
 
+        // Primitive type predicates
+        importFunction(HissTools.isInt, "int?", T);
+        importFunction(HissTools.isFloat, "float?", T);
+        importFunction(HissTools.isNumber, "number?", T);
+        importFunction(HissTools.isSymbol, "symbol?", T);
+        importFunction(HissTools.isString, "string?", T);
+        importFunction(HissTools.isList, "list?", T);
+        importFunction(HissTools.isDict, "dict?", T);
+        importFunction(HissTools.isFunction, "function?", T);
+        importFunction(HissTools.isMacro, "macro?", T);
+        importFunction(HissTools.isCallable, "callable?", T);
+        importFunction(HissTools.isObject, "object?", T);
+
         // Debug info
         importFunction(HissTools.version, "version", []);
 
