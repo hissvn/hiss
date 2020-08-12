@@ -194,9 +194,9 @@ class HissTestCase extends Test {
             trace("Total time to run tests:");
         });
 
-        for (fun => tested in functionsTested) {
-            Assert.isTrue(tested, 'Failure: $fun was never tested');
-        }
+        var functionsNotTested = [for (fun => tested in functionsTested) if (!tested) fun];
+
+        Assert.isTrue(functionsNotTested.length == 0, 'Failure: $functionsNotTested were never tested');
 
         if (async != null) {
             async.done();
