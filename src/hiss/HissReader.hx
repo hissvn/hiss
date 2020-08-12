@@ -151,7 +151,7 @@ class HissReader {
         str.drop('"');
         var terminator = '"$pounds';
 
-        switch (str.takeUntil([terminator])) {
+        switch (str.takeUntil([terminator], false, false)) {
             case Some(s): 
                 return String(s.output);
             case None:
@@ -161,9 +161,10 @@ class HissReader {
 
     function readString(start: String, str: HStream): HValue {
         // Quotes inside Interpolated expressions shouldn't terminate the literal
+
         var literal = "";
         while (true) {
-            var outputInfo = HaxeTools.extract(str.takeUntil(['"', '\\$', '$', '\\\\'], false, false), Some(o) => o); // don't drop the terminator
+            var outputInfo = HaxeTools.extract(str.takeUntil(['"', '\\$', '$', '\\\\'], false, true, false), Some(o) => o); // don't drop the terminator
             //trace(outputInfo.terminator);
             switch (outputInfo.terminator) {
                 case '"':
@@ -210,7 +211,7 @@ class HissReader {
         var whitespaceOrTerminator = HStream.WHITESPACE.concat(terminators);
 
         try {
-            return HaxeTools.extract(str.takeUntil(whitespaceOrTerminator, true, false), Some(s) => s, "next token").output;
+            return HaxeTools.extract(str.takeUntil(whitespaceOrTerminator, true, false, false), Some(s) => s, "next token").output;
         } catch (s: Dynamic) {
             return "";
         }
@@ -256,13 +257,16 @@ class HissReader {
 
     function callReadFunction(func: HValue, start: String, stream: HStream): HValue {
         var pos = stream.position();
+        var startingStream = stream.toString();
         try {
             return interp.eval(func.cons(List([String(start), Object("HStream", stream)])));
         }
         #if !throwErrors
         catch (s: Dynamic) {
+            var endingStream = stream.toString();
+            var consumed = startingStream.substr(0, startingStream.length - endingStream.length);
             if (s.indexOf("Reader error") == 0) throw s;
-            throw 'Reader error `$s` at ${pos.toString()}';
+            throw 'Reader error `$s` after taking `$consumed` at ${pos.toString()}';
         }
         #end
     }

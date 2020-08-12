@@ -36,6 +36,8 @@ typedef HStreamOutput = {
 	terminator:String
 };
 
+typedef Retriever = (Array<String>, Bool, Bool, Bool) -> Option<HStreamOutput>;
+
 /**
 	Helper class for reading/parsing information from a string stream.
 **/
@@ -95,7 +97,8 @@ class HStream {
 	/** Peek through the buffer until encountering one of the given terminator sequences
 		@param eofTerminates Whether the end of the file is also a valid terminator
 	**/
-	public function peekUntil(terminators:Array<String>, eofTerminates:Bool = false, _:Bool = false):Option<HStreamOutput> {
+	// NOTE: The _ parameter is to match the signature of a Retriever function for getLine
+	public function peekUntil(terminators:Array<String>, eofTerminates:Bool = false, allowEscapedTerminators:Bool = true, _:Bool = false):Option<HStreamOutput> {
 		if (rawString.length == 0)
 			return None;
 
@@ -105,7 +108,7 @@ class HStream {
 		for (terminator in terminators) {
 			var nextIndex = rawString.indexOf(terminator);
 			// Don't acknowledge terminators preceded by the escape operator 
-			while (nextIndex > 0 && rawString.charAt(nextIndex-1) == '\\') {
+			while (allowEscapedTerminators && nextIndex > 0 && rawString.charAt(nextIndex-1) == '\\') {
 				nextIndex = rawString.indexOf(terminator, nextIndex+1);
 			}
 			if (nextIndex != -1 && nextIndex < index) {
@@ -139,7 +142,7 @@ class HStream {
 		//trace('dropping $s');
 		var next = peek(s.length);
 		if (next != s) {
-			throw 'Expected to drop $s from buffer but found $next';
+			throw 'Expected to drop `$s` from buffer but found `$next`';
 		}
 
 		var lines = HStream.FromString(next).everyIndexOf('\n').length;
@@ -154,8 +157,8 @@ class HStream {
 	}
 
 	/** Take data from the file until encountering one of the given terminator sequences. **/
-	public function takeUntil(terminators:Array<String>, eofTerminates:Bool = false, dropTerminator = true):Option<HStreamOutput> {
-		return switch (peekUntil(terminators, eofTerminates)) {
+	public function takeUntil(terminators:Array<String>, eofTerminates:Bool = false, allowEscapedTerminators:Bool = true, dropTerminator = true):Option<HStreamOutput> {
+		return switch (peekUntil(terminators, eofTerminates, allowEscapedTerminators)) {
 			case Some({output: s, terminator: t}):
 				// Remove the desired data from the buffer
 				drop(s);
@@ -214,8 +217,8 @@ class HStream {
 	/** DRY Helper for peekLine() and takeLine() 
 		@param trimmed String including 'l' (ltrim), and/or 'r' (rtrim)
 	**/
-	function getLine(trimmed:String, retriever:Array<String>->Bool->Bool->Option<HStreamOutput>):Option<String> {
-		var nextLine = retriever(['\n'], true, true);
+	function getLine(trimmed:String, retriever:Retriever):Option<String> {
+		var nextLine = retriever(['\n'], true, true, true);
 
 		return switch (nextLine) {
 			case Some({output: nextLine, terminator: _}):
@@ -265,11 +268,11 @@ class HStream {
 	}
 
 	public function takeUntilWhitespace() {
-		return takeUntil(WHITESPACE, true);
+		return takeUntil(WHITESPACE, true, false);
 	}
 
 	public function peekUntilWhitespace() {
-		return peekUntil(WHITESPACE, true);
+		return peekUntil(WHITESPACE, true, false);
 	}
 
 	public function nextIsWhitespace() {

@@ -144,6 +144,11 @@
         (defun return-value () value))
     (= 5 (return-value)))
 
+(test read-strings
+    (eq #"\"# "\\")
+    (eq #"""# "\"")
+    (eq #"$"# "\$"))
+
 // For now, Python-style generators are not fully supported.
 // yield just returns a value and sets the global `continue`
 // to the continuation.
