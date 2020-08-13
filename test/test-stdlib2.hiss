@@ -159,7 +159,8 @@
     (eq "5. hey-symbol" "${i}. $sy")
     (eq "10.5" "$(+ i f)")
     (eq #"(5 5.5 hey-symbol "hey")"# "$l")
-    (eq "hey!" "${st}!"))
+    (eq "hey!" "${st}!")
+    (eq "hey you" "$st you"))
 
 // For now, Python-style generators are not fully supported.
 // yield just returns a value and sets the global `continue`
