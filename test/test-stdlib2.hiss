@@ -149,6 +149,18 @@
     (eq #"""# "\"")
     (eq #"$"# "\$"))
 
+(test string-interpolation
+    // TODO test interpolating all types of primitives
+    (setlocal i 5)
+    (setlocal f 5.5)
+    (setlocal sy 'hey-symbol)
+    (setlocal st "hey")
+    (setlocal l (list 5 5.5 'hey-symbol "hey"))
+    (eq "5. hey-symbol" "${i}. $sy")
+    (eq "10.5" "$(+ i f)")
+    (eq #"(5 5.5 hey-symbol "hey")"# "$l")
+    (eq "hey!" "${st}!"))
+
 // For now, Python-style generators are not fully supported.
 // yield just returns a value and sets the global `continue`
 // to the continuation.

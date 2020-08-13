@@ -178,11 +178,28 @@ class HissReader {
                     literal += outputInfo.output + outputInfo.terminator;
                     str.drop(outputInfo.terminator);
 
-                    var strCopy = str.copy();
-                    var startingLength = strCopy.length();
-                    var v = read("", strCopy);
-                    var expLength = startingLength - strCopy.length();
-                    switch (v) {
+                    // There is a painful edge case where string literals could be inside an expression
+                    // being interpolated into another string literal. The only way to make sure we're
+                    // taking the entire OUTER string literal is to preemptively read the expression
+                    // being interpolated, even though it will need to be read again later at eval-time.
+                    var expStream = str.copy();
+
+                    var exp = null;
+                    var expLength = -1;
+                    var startingLength = expStream.length();
+
+                    if (expStream.peek(1) == "{") {
+                        expStream.drop("{");
+                        var braceContents = HaxeTools.extract(expStream.takeUntil(['}'], false, false, true), Some(o) => o).output;
+                        expStream = HStream.FromString(braceContents);
+                        expLength = 2 + expStream.length();
+                        exp = read("", expStream);
+                    } else {
+                        exp = read("", expStream);
+                        expLength = startingLength - expStream.length();
+                    }
+                    switch (exp) {
+                        // The closing quote of an interp string like "$var" will get caught up as part of the symbol name
                         case Symbol(name) if (name.charAt(name.length - 1) == '"'):
                             expLength -= 1;
                         default:
@@ -219,7 +236,11 @@ class HissReader {
 
     function readSymbol(start: String, str: HStream): HValue {
         var symbolName = nextToken(str);
-        // We mustn't return Symbol(nil) because it creates a logical edge case
+        // braces are not allowed in symbols because they would break string interpolation
+        if (symbolName.indexOf("{") != -1 || symbolName.indexOf("}") != -1) {
+            throw 'Cannot have braces in symbol $symbolName';
+        }
+        // We mustn't return Symbol(nil) because it creates an annoying logical edge case
         if (symbolName == "nil") return Nil;
         if (symbolName == "t") return T;
         return Symbol(symbolName);

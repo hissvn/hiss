@@ -764,9 +764,21 @@ class CCInterp {
                     }
 
                     var expStream = HStream.FromString(interpolated.substr(idx+1));
-                    var startingLength = expStream.length();
-                    var exp = reader.read("", expStream);
-                    var expLength = startingLength - expStream.length();
+
+                    // Allow ${name} so a space isn't required to terminate the symbol
+                    var exp = null;
+                    var expLength = -1;
+                    if (expStream.peek(1) == "{") {
+                        expStream.drop("{");
+                        var braceContents = HaxeTools.extract(expStream.takeUntil(['}'], false, false, true), Some(o) => o).output;
+                        expStream = HStream.FromString(braceContents);
+                        expLength = 2 + expStream.length();
+                        exp = reader.read("", expStream);
+                    } else {
+                        var startingLength = expStream.length();
+                        exp = reader.read("", expStream);
+                        expLength = startingLength - expStream.length();
+                    }
                     internalEval(exp, env, (val) -> {
                         interpolated = interpolated.substr(0, idx) + val.toMessage() + interpolated.substr(idx+1+expLength);
                         idx = idx + 1 + val.toMessage().length;
