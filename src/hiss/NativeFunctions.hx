@@ -16,10 +16,10 @@ class NativeFunctions {
         // to support native function interchangeability
         var maxArgCount = 5;
 
-        // If hiss-native-function-max-args is defined when compiling Hiss,
+        // If nativeFunctionMaxArgs is defined when compiling Hiss,
         // any Hiss function with number of arguments up to/including the defined value,
         // will be passable as a native function in the target language.
-        var maxArgCompilerFlag = Context.definedValue("hiss-native-function-max-args");
+        var maxArgCompilerFlag = Context.definedValue("nativeFunctionMaxArgs");
         if (maxArgCompilerFlag != null) {
             maxArgCount = Std.parseInt(maxArgCompilerFlag);
         }
