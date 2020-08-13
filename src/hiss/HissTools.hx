@@ -1,5 +1,7 @@
 package hiss;
 
+import haxe.CallStack;
+
 import hiss.HaxeTools;
 using hiss.HaxeTools;
 import hiss.HTypes;
@@ -48,7 +50,7 @@ class HissTools {
     }
 
     public static function toCallable(f: HValue, hint: String = "function"): HFunction {
-        return HaxeTools.extract(f, Function(hf, _) | Macro(hf) | SpecialForm(hf) => hf, hint);
+        return HaxeTools.extract(f, Function(hf, _) | Macro(hf, _) | SpecialForm(hf, _) => hf, hint);
     }
 
     public static function toHaxeString(hv: HValue): String {
@@ -226,7 +228,6 @@ class HissTools {
         return Dict([]);
     }
 
-    // TODO It's possible eq could be re-implemented in Hiss now
     public static function eq(a: HValue, b: HValue): HValue {
         if (Type.enumIndex(a) != Type.enumIndex(b)) {
             return Nil;
@@ -247,9 +248,9 @@ class HissTools {
             case Quote(aa) | Quasiquote(aa) | Unquote(aa) | UnquoteList(aa):
                 var bb = HaxeTools.extract(b, Quote(e) | Quasiquote(e) | Unquote(e) | UnquoteList(e) => e);
                 return eq(aa, bb);
-            case SpecialForm(fun):
+            case SpecialForm(fun, _):
                 return switch (b) {
-                    case SpecialForm(fun2) if (fun == fun2): T;
+                    case SpecialForm(fun2, _) if (fun == fun2): T;
                     default: Nil;
                 };
             default:
@@ -300,10 +301,10 @@ class HissTools {
                 '[$t: ${Std.string(o)}]';
             case Function(_, name, args):
                 '$name($args)';
-            case Macro(_):
-                '[macro]';
-            case SpecialForm(_):
-                '[special form]';
+            case Macro(_, name):
+                '$name';
+            case SpecialForm(_, name):
+                '$name';
             case Nil:
                 'nil';
             case T:

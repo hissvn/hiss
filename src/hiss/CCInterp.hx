@@ -115,29 +115,29 @@ class CCInterp {
         reader = new HissReader(this);
 
         // Primitives
-        globals.put("setlocal", SpecialForm(set.bind(false)));
-        globals.put("defvar", SpecialForm(set.bind(true)));
-        globals.put("defun", SpecialForm(setCallable.bind(false)));
-        globals.put("defmacro", SpecialForm(setCallable.bind(true)));
-        globals.put("if", SpecialForm(_if));
-        globals.put("lambda", SpecialForm(lambda.bind(false)));
-        globals.put("call/cc", SpecialForm(callCC));
-        globals.put("eval", SpecialForm(_eval));
-        globals.put("bound?", SpecialForm(bound));
+        globals.put("setlocal", SpecialForm(set.bind(false), "setlocal"));
+        globals.put("defvar", SpecialForm(set.bind(true), "defvar"));
+        globals.put("defun", SpecialForm(setCallable.bind(false), "defun"));
+        globals.put("defmacro", SpecialForm(setCallable.bind(true), "defmacro"));
+        globals.put("if", SpecialForm(_if, "if"));
+        globals.put("lambda", SpecialForm(lambda.bind(false), "lambda"));
+        globals.put("call/cc", SpecialForm(callCC, "call/cc"));
+        globals.put("eval", SpecialForm(_eval, "eval"));
+        globals.put("bound?", SpecialForm(bound, "bound?"));
         globals.put("load", Function(_load, "load", ["file"]));
-        globals.put("funcall", SpecialForm(funcall.bind(false)));
-        globals.put("funcall-inline", SpecialForm(funcall.bind(true)));
-        globals.put("loop", SpecialForm(loop));
-        globals.put("or", SpecialForm(or));
-        globals.put("and", SpecialForm(and));
+        globals.put("funcall", SpecialForm(funcall.bind(false), "funcall"));
+        globals.put("funcall-inline", SpecialForm(funcall.bind(true), "funcall-inline"));
+        globals.put("loop", SpecialForm(loop, "loop"));
+        globals.put("or", SpecialForm(or, "or"));
+        globals.put("and", SpecialForm(and, "and"));
 
-        globals.put("for", SpecialForm(iterate.bind(true, true)));
-        globals.put("do-for", SpecialForm(iterate.bind(false, true)));
-        globals.put("map", SpecialForm(iterate.bind(true, false)));
-        globals.put("do-map", SpecialForm(iterate.bind(false, false)));
+        globals.put("for", SpecialForm(iterate.bind(true, true), "for"));
+        globals.put("do-for", SpecialForm(iterate.bind(false, true), "do-for"));
+        globals.put("map", SpecialForm(iterate.bind(true, false), "map"));
+        globals.put("do-map", SpecialForm(iterate.bind(false, false), "do-map"));
 
         // Use tail-recursive begin for loading the prelude:
-        globals.put("begin", SpecialForm(trBegin));
+        globals.put("begin", SpecialForm(trBegin, "begin"));
 
         // Haxe interop -- We could bootstrap the rest from these if we had unlimited stack frames:
         globals.put("Type", Object("Class", Type));
@@ -197,7 +197,7 @@ class CCInterp {
         importFunction(HissTools.symbolName, "symbol-name", T, ["sym"]);
         importFunction(HissTools.symbol, "symbol", T, ["sym-name"]);
 
-        globals.put("quote", SpecialForm(quote));
+        globals.put("quote", SpecialForm(quote, "quote"));
 
         globals.put("+", Function(VariadicFunctions.add, "+"));
         globals.put("-", Function(VariadicFunctions.subtract, "-"));
@@ -223,7 +223,7 @@ class CCInterp {
         #end
 
         // (test) is a no-op in production:
-        globals.put("test", SpecialForm(noOp));
+        globals.put("test", SpecialForm(noOp, "test"));
 
         StaticFiles.compileWith("stdlib2.hiss");
 
@@ -232,7 +232,7 @@ class CCInterp {
         //enableTrace();
 
         // Training wheels off. Give Hiss users the callCC-enabled, dangerous begin()
-        globals.put("begin", SpecialForm(begin));
+        globals.put("begin", SpecialForm(begin, "begin"));
     }
 
     /** Run a Hiss REPL from this interpreter instance **/
@@ -388,17 +388,25 @@ class CCInterp {
     }
 
     function specialForm(args: HValue, env: HValue, cc: Continuation) {
+        #if traceCallstack
+        HaxeTools.println('${CallStack.callStack().length}: ${args.toPrint()}');
+        #end
         args.first().toCallable()(args.rest(), env, cc);
     }
 
     function macroCall(args: HValue, env: HValue, cc: Continuation) {
         specialForm(args, env, (expansion: HValue) -> {
-            //HaxeTools.println(' ${expansion.toPrint()}');
+            #if traceMacros
+            HaxeTools.println('${args.toPrint()} -> ${expansion.toPrint()}');
+            #end
             internalEval(expansion, env, cc);
         });
     }
 
     function funcall(callInline: Bool, args: HValue, env: HValue, cc: Continuation) {
+        #if traceCallstack
+        HaxeTools.println('${CallStack.callStack().length}: ${args.toPrint()}');
+        #end
         evalAll(args, env, (values) -> {
             // trace(values.toPrint());
             values.first().toHFunction()(values.rest(), if (callInline) env else List([Dict([])]), cc);
@@ -492,7 +500,7 @@ class CCInterp {
             internalEval(body, callEnv, fCC);
         };
         var callable = if (isMacro) {
-            Macro(hFun);
+            Macro(hFun, "[anonymous macro]");
         } else {
             var paramNames = [for (paramSymbol in params.toList()) paramSymbol.symbolName()];
             Function(hFun, "[anonymous lambda]", paramNames);
@@ -566,7 +574,7 @@ class CCInterp {
                 }
 
                 // Recur has to be a special form so it retains the environment of the original loop call
-                internalEval(Symbol("begin").cons(body), env.extend(names.destructuringBind(SpecialForm(recur).cons(values))), (value) -> {result = value;});
+                internalEval(Symbol("begin").cons(body), env.extend(names.destructuringBind(SpecialForm(recur, "recur").cons(values))), (value) -> {result = value;});
                 
             } while (recurCalled);
             cc(result);

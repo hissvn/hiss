@@ -17,8 +17,8 @@ enum HValue {
     List(l: HList);
     Dict(n: HDict);
     Function(f: HFunction, name: String, ?args: Array<String>);
-    Macro(f: HFunction);
-    SpecialForm(f: HFunction);
+    Macro(f: HFunction, name: String);
+    SpecialForm(f: HFunction, name: String);
     // If you're going to store arbitrary objects in Hiss variables, do yourself a favor and give them a descriptive label because Haxe runtime type info can be squirrely on different platforms
     Object(t: String, v: Dynamic);
 
