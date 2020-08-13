@@ -362,6 +362,13 @@ class CCInterp {
         trBegin(exps, env, cc);
     }
 
+    function envWithReturn(env: HValue, cc: Continuation, called: RefBool) {
+        return env.extend(Dict(["return" => Function((args, env, cc) -> {
+            called.b = true;
+            cc(args.first());
+        }, "return")]));
+    }
+
     /**
         This tail-recursive implementation of begin breaks callCC.
         Toggle between tail recursion and continuation support with
@@ -372,9 +379,11 @@ class CCInterp {
         (The X denotes equivalent functions)
     **/
     function trBegin(exps: HValue, env: HValue, cc: Continuation) {
+        var returnCalled = new RefBool();
+        env = envWithReturn(env, cc, returnCalled);
         var value = eval(exps.first(), env);
 
-        if (!exps.rest().truthy()) {
+        if (returnCalled.b || !exps.rest().truthy()) {
             cc(value);
         }
         else {
@@ -383,14 +392,11 @@ class CCInterp {
     }
 
     function begin(exps: HValue, env: HValue, cc: Continuation) {
-        var returnCalled = false;
-        env = env.extend(Dict(["return" => Function((args, env, cc) -> {
-            returnCalled = true;
-            cc(args.first());
-        }, "return")]));
+        var returnCalled = new RefBool();
+        env = envWithReturn(env, cc, returnCalled);
 
         internalEval(exps.first(), env, (result) -> {
-            if (returnCalled || !exps.rest().truthy()) {
+            if (returnCalled.b || !exps.rest().truthy()) {
                 cc(result);
             }
             else {

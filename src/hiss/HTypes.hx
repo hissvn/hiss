@@ -67,3 +67,8 @@ typedef HVarInfo = {
 }
 
 typedef HList = Array<HValue>;
+
+class RefBool {
+    public var b: Bool = false;
+    public function new() { }
+}
