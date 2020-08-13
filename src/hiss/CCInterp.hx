@@ -136,8 +136,14 @@ class CCInterp {
         globals.put("map", SpecialForm(iterate.bind(true, false), "map"));
         globals.put("do-map", SpecialForm(iterate.bind(false, false), "do-map"));
 
-        // Use tail-recursive begin for loading the prelude:
-        globals.put("begin", SpecialForm(trBegin, "begin"));
+        // Use tail-recursive begin by default:
+        useBeginFunction(trBegin);
+
+        // Allow switching at runtime:
+        importFunction(useBeginFunction.bind(trBegin), "enable-tail-recursion");
+        importFunction(useBeginFunction.bind(trBegin), "disable-continuations");
+        importFunction(useBeginFunction.bind(begin), "enable-continuations");
+        importFunction(useBeginFunction.bind(begin), "disable-tail-recursion");
 
         // Haxe interop -- We could bootstrap the rest from these if we had unlimited stack frames:
         globals.put("Type", Object("Class", Type));
@@ -230,9 +236,10 @@ class CCInterp {
         //disableTrace();
         load("stdlib2.hiss");
         //enableTrace();
+    }
 
-        // Training wheels off. Give Hiss users the callCC-enabled, dangerous begin()
-        globals.put("begin", SpecialForm(begin, "begin"));
+    function useBeginFunction(bf: HFunction) {
+        globals.put("begin", SpecialForm(bf, "begin"));
     }
 
     /** Run a Hiss REPL from this interpreter instance **/
@@ -356,8 +363,13 @@ class CCInterp {
     }
 
     /**
-        This tail-recursive implementation of begin breaks callCC,
-        so it is only used internally.
+        This tail-recursive implementation of begin breaks callCC.
+        Toggle between tail recursion and continuation support with
+        (enable-tail-recursion), (disable-tail-recursion),
+                               X
+        (enable-continuations), (disable-continuations)
+
+        (The X denotes equivalent functions)
     **/
     function trBegin(exps: HValue, env: HValue, cc: Continuation) {
         var value = eval(exps.first(), env);
