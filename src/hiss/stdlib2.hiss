@@ -93,6 +93,20 @@
         (defvar continue cc)
         (ret ,value)))
 
+(defmacro case (form &rest case-list)
+    (let (case-first (first case-list)
+            case-rest (rest case-list))
+        (if case-first
+            `(if (or (eq ,(first case-first) t) (eq ,(first case-first) ,form))
+                (begin ,@(rest case-first))
+                (case ,form ,@case-rest))
+            nil)))
+
+(defmacro cond (&rest forms)
+    `(and ',forms (if (eval (first (first ',forms)))
+            (eval (cons 'begin (rest (first ',forms))))
+        (eval (cons 'cond (rest ',forms))))))
+
 (defun input-expression (&optional prompt)
     (when prompt (message prompt))
     (eval (read (read-line))))
