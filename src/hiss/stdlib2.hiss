@@ -84,6 +84,12 @@
 (defun enumerate (l)
     (zip (collect (range (length l))) l))
 
+(defun filter (l &optional pred)
+    (let (pred (or pred (lambda (x) x))
+            result (list))
+        (do-for elem l (when (pred elem) (push! result elem)))
+        result))
+
 (defun current-continuation ()
     (call/cc (lambda (cc) 
         (cc cc))))
