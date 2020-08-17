@@ -24,6 +24,7 @@ import hiss.StaticFiles;
 import hiss.VariadicFunctions;
 import hiss.NativeFunctions;
 
+import StringTools;
 using StringTools;
 
 @:build(hiss.NativeFunctions.build())
@@ -170,6 +171,10 @@ class CCInterp {
         importFunction(HissTools.isMacro, "macro?", T);
         importFunction(HissTools.isCallable, "callable?", T);
         importFunction(HissTools.isObject, "object?", T);
+
+        // String functions:
+        importFunction(StringTools.startsWith, "starts-with");
+        importFunction(StringTools.endsWith, "ends-with");
 
         // Debug info
         importFunction(HissTools.version, "version", []);
