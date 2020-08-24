@@ -1,0 +1,4 @@
+hxml/all-target-args.hxml
+hxml/all-build-args.hxml
+-lib hxnodejs
+--js bin/js/hiss-node.js

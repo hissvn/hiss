@@ -341,6 +341,11 @@ class CCInterp {
             }
         }
 
+        #if js
+        // On JS we might as well never try to use the console reader
+        useConsoleReader = false;
+        #end
+
         if (script != null) {
             interp.load(script);
         } else {
