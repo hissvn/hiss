@@ -23,7 +23,9 @@
 (defun peek (l num)
     (slice l 0 num))
 
+// String functions:
 (register-method "split" split)
+(register-method "substr" substr)
 
 (defun list (&rest args) args)
 
