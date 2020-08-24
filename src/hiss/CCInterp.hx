@@ -103,6 +103,14 @@ class CCInterp {
         }, name, args));
     }
 
+    public function importCCFunction(func: HFunction, name: String, ?args: Array<String>) {
+        globals.put(name, Function(func, name, args));
+    }
+
+    public function importSpecialForm(func: HFunction, name: String) {
+        globals.put(name, SpecialForm(func, name));
+    }
+
     function importMethod(method: String, name: String, callOnReference: Bool, keepArgsWrapped: HValue, returnInstance: Bool) {
         globals.put(name, Function((args: HValue, env: HValue, cc: Continuation) -> {
             var instance = args.first().value(callOnReference);
@@ -117,26 +125,26 @@ class CCInterp {
         reader = new HissReader(this);
 
         // Primitives
-        globals.put("setlocal", SpecialForm(set.bind(false), "setlocal"));
-        globals.put("defvar", SpecialForm(set.bind(true), "defvar"));
-        globals.put("defun", SpecialForm(setCallable.bind(false), "defun"));
-        globals.put("defmacro", SpecialForm(setCallable.bind(true), "defmacro"));
-        globals.put("if", SpecialForm(_if, "if"));
-        globals.put("lambda", SpecialForm(lambda.bind(false), "lambda"));
-        globals.put("call/cc", SpecialForm(callCC, "call/cc"));
-        globals.put("eval", SpecialForm(_eval, "eval"));
-        globals.put("bound?", SpecialForm(bound, "bound?"));
-        globals.put("load", Function(_load, "load", ["file"]));
-        globals.put("funcall", SpecialForm(funcall.bind(false), "funcall"));
-        globals.put("funcall-inline", SpecialForm(funcall.bind(true), "funcall-inline"));
-        globals.put("loop", SpecialForm(loop, "loop"));
-        globals.put("or", SpecialForm(or, "or"));
-        globals.put("and", SpecialForm(and, "and"));
+        importSpecialForm(set.bind(false), "setlocal");
+        importSpecialForm(set.bind(true), "defvar");
+        importSpecialForm(setCallable.bind(false), "defun");
+        importSpecialForm(setCallable.bind(true), "defmacro");
+        importSpecialForm(_if, "if");
+        importSpecialForm(lambda.bind(false), "lambda");
+        importSpecialForm(callCC, "call/cc");
+        importSpecialForm(_eval, "eval");
+        importSpecialForm(bound, "bound?");
+        importCCFunction(_load, "load", ["file"]);
+        importSpecialForm(funcall.bind(false), "funcall");
+        importSpecialForm(funcall.bind(true), "funcall-inline");
+        importSpecialForm(loop, "loop");
+        importSpecialForm(or, "or");
+        importSpecialForm(and, "and");
 
-        globals.put("for", SpecialForm(iterate.bind(true, true), "for"));
-        globals.put("do-for", SpecialForm(iterate.bind(false, true), "do-for"));
-        globals.put("map", SpecialForm(iterate.bind(true, false), "map"));
-        globals.put("do-map", SpecialForm(iterate.bind(false, false), "do-map"));
+        importSpecialForm(iterate.bind(true, true), "for");
+        importSpecialForm(iterate.bind(false, true), "do-for");
+        importSpecialForm(iterate.bind(true, false), "map");
+        importSpecialForm(iterate.bind(false, false), "do-map");
 
         // Use tail-recursive begin by default:
         useBeginFunction(trBegin);
@@ -148,11 +156,9 @@ class CCInterp {
         importFunction(useBeginFunction.bind(begin), "disable-tail-recursion");
 
         // Haxe interop -- We could bootstrap the rest from these if we had unlimited stack frames:
-        globals.put("Type", Object("Class", Type));
-        globals.put("Hiss-Tools", Object("Class", HissTools));
-        globals.put("get-property", Function(getProperty, "get-property"));
-        globals.put("call-haxe", Function(callHaxe, "call-haxe"));
-        importFunction(Type.createInstance, "create-instance");
+        importClass(Type, "Type");
+        importCCFunction(getProperty, "get-property");
+        importCCFunction(callHaxe, "call-haxe");
 
         importFunction(repl, "repl");
 
@@ -161,6 +167,7 @@ class CCInterp {
         importFunction(HissTools.put, "dict-set");
 
         // Primitive type predicates
+        // TODO could handle these all with an importClass() that has no prefix and converts is{Thing} to thing?
         importFunction(HissTools.isInt, "int?", T);
         importFunction(HissTools.isFloat, "float?", T);
         importFunction(HissTools.isNumber, "number?", T);
@@ -209,19 +216,19 @@ class CCInterp {
         importFunction(HissTools.symbolName, "symbol-name", T, ["sym"]);
         importFunction(HissTools.symbol, "symbol", T, ["sym-name"]);
 
-        globals.put("quote", SpecialForm(quote, "quote"));
+        importSpecialForm(quote, "quote");
 
-        globals.put("+", Function(VariadicFunctions.add, "+"));
-        globals.put("-", Function(VariadicFunctions.subtract, "-"));
-        globals.put("/", Function(VariadicFunctions.divide, "/"));
-        globals.put("*", Function(VariadicFunctions.multiply, "/"));
-        globals.put("<", Function(VariadicFunctions.numCompare.bind(Lesser), "<"));
-        globals.put("<=", Function(VariadicFunctions.numCompare.bind(LesserEqual), "<="));
-        globals.put(">", Function(VariadicFunctions.numCompare.bind(Greater), ">"));
-        globals.put(">=", Function(VariadicFunctions.numCompare.bind(GreaterEqual), ">="));
-        globals.put("=", Function(VariadicFunctions.numCompare.bind(Equal), "="));
+        importCCFunction(VariadicFunctions.add, "+");
+        importCCFunction(VariadicFunctions.subtract, "-");
+        importCCFunction(VariadicFunctions.divide, "/");
+        importCCFunction(VariadicFunctions.multiply, "*");
+        importCCFunction(VariadicFunctions.numCompare.bind(Lesser), "<");
+        importCCFunction(VariadicFunctions.numCompare.bind(LesserEqual), "<=");
+        importCCFunction(VariadicFunctions.numCompare.bind(Greater), ">");
+        importCCFunction(VariadicFunctions.numCompare.bind(GreaterEqual), ">=");
+        importCCFunction(VariadicFunctions.numCompare.bind(Equal), "=");
 
-        globals.put("append", Function(VariadicFunctions.append, "append"));
+        importCCFunction(VariadicFunctions.append, "append");
 
         importFunction(HaxeTools.readLine, "read-line");
 
@@ -233,8 +240,8 @@ class CCInterp {
         importClass(FileOutput, "FileOutput");
         #end
 
-        // (test) is a no-op in production:
-        globals.put("test", SpecialForm(noOp, "test"));
+        // (test) is a no-op in production (for now):
+        importSpecialForm(noOp, "test");
 
         StaticFiles.compileWith("stdlib2.hiss");
 

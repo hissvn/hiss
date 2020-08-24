@@ -1,12 +1,10 @@
-(defmacro register-function (class function name &optional keep-args-wrapped)
-    `(defun ,name (&rest args)
-        (call-haxe ,class ,function args nil ,keep-args-wrapped)))
 (defmacro register-method (method name &optional call-on-reference keep-args-wrapped return-instance)
+    "Register a method call as an unqualified global function. Unlike CCInterp.importClass, there won't be a Class: prefix"
     `(defun ,name (instance &rest args)
         (setlocal result (call-haxe instance ,method args ,call-on-reference ,keep-args-wrapped))
         (if ,return-instance instance result)))
 (defun new (class &rest args)
-    (create-instance class args))
+    (Type:create-instance class args))
 
 (register-method "push" push! t t t)
 (register-method "shift" shift! t)
