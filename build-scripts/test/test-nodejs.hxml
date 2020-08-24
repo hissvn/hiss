@@ -1,0 +1,5 @@
+build-scripts/all-script-args.hxml
+build-scripts/test/all-test-args.hxml
+-lib hxnodejs
+--js bin/js/test-hiss-node.js
+--cmd node bin/js/test-hiss-node.js

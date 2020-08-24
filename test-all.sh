@@ -1,4 +1,6 @@
 #! /bin/bash
 
-timeout 5 haxe hxml/test-py.hxml
-haxe hxml/test-interp.hxml
+haxe build-scripts/test/test-py.hxml
+haxe build-scripts/test/test-interp.hxml
+haxe build-scripts/test/test-js.hxml
+haxe build-scripts/test/test-nodejs.hxml
