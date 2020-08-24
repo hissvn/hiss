@@ -180,8 +180,8 @@ class HissTestCase extends Test {
         }
         // We don't want to be accountable for testing functions defined IN the tests.
 
-        interp.globals.put("test", SpecialForm(hissTest));
-        interp.globals.put("prints", SpecialForm(hissPrints.bind(interp)));
+        interp.globals.put("test", SpecialForm(hissTest, "test"));
+        interp.globals.put("prints", SpecialForm(hissPrints.bind(interp), "prints"));
 
         for (f in ignoreFunctions) {
             functionsTested[f] = true;
