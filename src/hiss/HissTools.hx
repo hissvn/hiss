@@ -12,6 +12,7 @@ import uuid.Uuid;
 import Reflect;
 using hiss.HissTools;
 
+@:expose
 class HissTools {
 
     // The version macro can't be passed directly as a function object.
