@@ -29,7 +29,7 @@ class VariadicFunctions {
             case Int(_): 0;
             case Float(_): 0;
             case String(_): "";
-            default: throw 'Cannot perform addition with operands: ${args.toPrint()}';
+            default: throw 'Cannot perform addition with operands: ${args.toPrint()} because first element is  ${Type.enumConstructor(args.first())}';
         };
         for (i in args.unwrapList()) {
             sum += i;
