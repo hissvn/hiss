@@ -1,0 +1,3 @@
+build-scripts/all-script-args.hxml
+build-scripts/lib/all-lib-args.hxml
+--js bin/js/hiss.js
