@@ -8,7 +8,6 @@ import sys.FileSystem;
 #end
 using StringTools;
 
-@:expose
 class StaticFiles {
     static var files: Map<String, String> = new Map<String, String>();
 
