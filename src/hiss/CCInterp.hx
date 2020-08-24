@@ -27,6 +27,7 @@ import hiss.NativeFunctions;
 import StringTools;
 using StringTools;
 
+@:expose
 @:build(hiss.NativeFunctions.build())
 class CCInterp {
     public var globals: HValue = Dict([]);
