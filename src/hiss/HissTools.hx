@@ -101,6 +101,12 @@ class HissTools {
         return sorted;
     }
 
+    public static function reverse(list: HValue): HValue {
+        var reversed = list.toList().copy();
+        reversed.reverse();
+        return List(reversed);
+    }
+
     public static function alternates(list: HValue, start: Bool) {
         var result = new Array<HValue>();
         var l = list.toList().copy();

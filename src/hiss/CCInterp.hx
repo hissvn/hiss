@@ -200,6 +200,7 @@ class CCInterp {
 
         // Functions/forms that could be bootstrapped with register-function, but save stack frames if not:
         importFunction(HissTools.length, "length", T, ["seq"]);
+        importFunction(HissTools.reverse, "reverse", T, ["l"]);
         importFunction(HissTools.first, "first", T, ["l"]);
         importFunction(HissTools.rest, "rest", T, ["l"]);
         importFunction(HissTools.eq, "eq", T, ["a", "b"]);
