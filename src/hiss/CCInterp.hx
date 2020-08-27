@@ -776,7 +776,7 @@ class CCInterp {
         });
     }
 
-    /** Public, synchronous form of eval **/
+    /** Public, synchronous form of eval. Won't work with javascript asynchronous functions **/
     public function eval(arg: HValue, ?env: HValue) {
         var value = null;
         if (env == null) env = List([Dict([])]);
@@ -784,6 +784,12 @@ class CCInterp {
             value = _value;
         });
         return value;
+    }
+
+    /** Asynchronos-friendly form of eval. NOTE: The args are out of order so this isn't an HFunction. **/
+    public function evalCC(arg: HValue, cc: Continuation, ?env: HValue) {
+        if (env == null) env = List([Dict([])]);
+        internalEval(arg, env, cc);
     }
 
     /** Core form of eval -- continuation-based, takes one expression **/
