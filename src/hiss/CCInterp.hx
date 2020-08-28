@@ -141,19 +141,14 @@ class CCInterp {
         importSpecialForm(or, "or");
         importSpecialForm(and, "and");
 
-        importSpecialForm(iterate.bind(true, true), "for");
-        importSpecialForm(iterate.bind(false, true), "do-for");
-        importSpecialForm(iterate.bind(true, false), "map");
-        importSpecialForm(iterate.bind(false, false), "do-map");
-
-        // Use tail-recursive begin by default:
-        useBeginFunction(trBegin);
+        // Use tail-recursive begin and iterate by default:
+        useBeginAndIterate(trBegin, iterate);
 
         // Allow switching at runtime:
-        importFunction(useBeginFunction.bind(trBegin), "enable-tail-recursion");
-        importFunction(useBeginFunction.bind(trBegin), "disable-continuations");
-        importFunction(useBeginFunction.bind(begin), "enable-continuations");
-        importFunction(useBeginFunction.bind(begin), "disable-tail-recursion");
+        importFunction(useBeginAndIterate.bind(trBegin, iterate), "enable-tail-recursion");
+        importFunction(useBeginAndIterate.bind(trBegin, iterate), "disable-continuations");
+        importFunction(useBeginAndIterate.bind(begin, iterateCC), "enable-continuations");
+        importFunction(useBeginAndIterate.bind(begin, iterateCC), "disable-tail-recursion");
 
         // Haxe interop -- We could bootstrap the rest from these if we had unlimited stack frames:
         importClass(Type, "Type");
@@ -251,8 +246,12 @@ class CCInterp {
         //enableTrace();
     }
 
-    function useBeginFunction(bf: HFunction) {
-        globals.put("begin", SpecialForm(bf, "begin"));
+    function useBeginAndIterate(beginFunction: HFunction, iterateFunction: IterateFunction) {
+        globals.put("begin", SpecialForm(beginFunction, "begin"));
+        importSpecialForm(iterateFunction.bind(true, true), "for");
+        importSpecialForm(iterateFunction.bind(false, true), "do-for");
+        importSpecialForm(iterateFunction.bind(true, false), "map");
+        importSpecialForm(iterateFunction.bind(false, false), "do-map");
     }
 
     /** Run a Hiss REPL from this interpreter instance **/
@@ -523,12 +522,6 @@ class CCInterp {
     function lambda(isMacro: Bool, args: HValue, env: HValue, cc: Continuation, name = "[anonymous lambda]") {
         var params = args.first();
 
-        // TODO do I need a switch here to decide whether to use tail-recursive begin or not?!
-
-        // like, exposing lambda vs. tr-lambda to Hiss programs
-
-        // something like... `big-lambda` XD
-
         var body = Symbol('begin').cons(args.rest());
         var hFun: HFunction = (fArgs, innerEnv, fCC) -> {
             var callEnv = List(env.toList().concat(innerEnv.toList()));
@@ -544,45 +537,84 @@ class CCInterp {
         cc(callable);
     }
 
-    /**
-        Implementation behind (for), (do-for), (map), and (do-map)
-    **/
-    function iterate(collect: Bool, bodyForm: Bool, args: HValue, env: HValue, cc: Continuation) {
-        var it: HValue = Nil;
+    // Helper function to get the iterable object in iterate() and iterateCC()
+    function iterable(bodyForm: Bool, args: HValue, env: HValue, cc: Continuation) {
         internalEval(if (bodyForm) {
             args.second();
         } else {
             args.first();
-        }, env, (_iterable) -> { it = _iterable; });
+        }, env, cc);
+    }
 
-        var iterable: Iterable<HValue> = it.value(true);
-
-        var operation: HFunction = null;
+    function performIteration(bodyForm: Bool, args:HValue, env: HValue, cc: Continuation, performFunction: PerformIterationFunction) {
         if (bodyForm) {
             var body = List(args.toList().slice(2));
-            operation = (innerArgs, innerEnv, cc) -> {
+            performFunction((innerArgs, innerEnv, innerCC) -> {
                 // If it's body form, the values of the iterable need to be bound for the body
                 // (potentially with list destructuring)
                 var bodyEnv = env.extend(args.first().destructuringBind(innerArgs.first()));
-                internalEval(Symbol("begin").cons(body), bodyEnv, cc);
-            };
+                internalEval(Symbol("begin").cons(body), bodyEnv, innerCC);
+            }, env, cc);
         } else {
-            // If it's function form, a name is not necessary
-            internalEval(args.second(), env, (fun) -> {operation = fun.toHFunction();});
+            // If it's function form, a name symbol is not necessary
+            internalEval(args.second(), env, (fun) -> { 
+                performFunction(fun.toHFunction(), List([Dict([])]), cc);
+            });
+        }
+    }
+
+    /**
+        Stack-safe implementation behind (for), (do-for), (map), and (do-map)
+    **/
+    function iterate(collect: Bool, bodyForm: Bool, args: HValue, env: HValue, cc: Continuation) {
+        var it: HValue = Nil;
+        iterable(bodyForm, args, env, (_iterable) -> { it = _iterable; });
+        var iterable: Iterable<HValue> = it.value(true);
+
+        function synchronousIteration(operation: HFunction, innerEnv: HValue, outerCC: Continuation) {
+            var results = [];
+            var iterationCC = if (collect) {
+                (result) -> { results.push(result); };
+            } else {
+                noCC;
+            }
+
+            for (value in iterable) {
+                operation(List([value]), innerEnv, iterationCC);
+            }
+
+            outerCC(List(results));
         }
 
-        var results = [];
-        var iterationCC = if (collect) {
-            (result) -> { results.push(result); };
-        } else {
-            noCC;
-        }
+        performIteration(bodyForm, args, env, cc, synchronousIteration);
+    }
 
-        for (value in iterable) {
-            operation(List([value]), if (bodyForm) { env; } else { List([Dict([])]); }, iterationCC);
-        }
+    /**
+        Continuation-based (and therefore dangerous!) implementation
+    **/
+    function iterateCC(collect: Bool, bodyForm: Bool, args: HValue, env: HValue, cc: Continuation) {
+        iterable(bodyForm, args, env, (it) -> {
+            var iterable: Iterable<HValue> = it.value(true);
+            var iterator = iterable.iterator();
 
-        cc(List(results));
+            var results = [];
+            function asynchronousIteration(operation: HFunction, innerEnv: HValue, outerCC: Continuation) {
+                if (!iterator.hasNext()) {
+                    outerCC(List(results));
+                } else {
+                    operation(List([iterator.next()]), innerEnv, (value) -> {
+                        if (collect) {
+                            results.push(value);
+                        }
+
+                        asynchronousIteration(operation, innerEnv, outerCC);
+                    });
+                }
+                
+            }
+
+            performIteration(bodyForm, args, env, cc, asynchronousIteration);
+        });
     }
 
     /**
@@ -872,3 +904,6 @@ class CCInterp {
         }
     }
 }
+
+typedef IterateFunction = (collect: Bool, bodyForm: Bool, args: HValue, env: HValue, cc: Continuation) -> Void;
+typedef PerformIterationFunction = (operation: HFunction, env: HValue, cc: Continuation) -> Void;

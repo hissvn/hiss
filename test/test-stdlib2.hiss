@@ -82,7 +82,9 @@
 
 (test do-map
     (not (do-map (list 1 2 3) (lambda (i) i)))
-    (prints "1\n2\n3" (do-map (list 1 2 3) print)))
+    (prints "1\n2\n3" (do-map (list 1 2 3) print))))
+
+; TODO run the last 4 tests but with continuations enabled WITHOUT causing a stack overflow
 
 (test eval
     ; Test evaluating globals
