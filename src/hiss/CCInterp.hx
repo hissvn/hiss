@@ -17,6 +17,9 @@ import sys.io.File;
 import sys.io.FileOutput;
 import ihx.ConsoleReader;
 #end
+#if target.threaded
+import hiss.wrappers.Threading;
+#end
 import hiss.HissReader;
 import hiss.HissTools;
 using hiss.HissTools;
@@ -156,6 +159,15 @@ class CCInterp {
         importClass(Type, "Type");
         importCCFunction(getProperty, "get-property");
         importCCFunction(callHaxe, "call-haxe");
+
+        // Open Pandora's box if it's available:
+        #if target.threaded
+        //importClass(Threading.HDeque, "Deque");
+        importClass(HLock, "Lock");
+        importClass(HMutex, "Mutex");
+        importClass(HThread, "Thread");
+        //importClass(Threading.Tls, "Tls");
+        #end
 
         importFunction(repl, "repl");
 
