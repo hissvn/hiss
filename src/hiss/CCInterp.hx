@@ -121,6 +121,8 @@ class CCInterp {
     public static function noOp (args: HValue, env: HValue, cc: Continuation) { }
     public static function noCC (arg: HValue) { }
 
+    var currentBeginFunction: HFunction = null;
+
     public function new(?printFunction: (Dynamic) -> Dynamic) {
         reader = new HissReader(this);
 
@@ -162,7 +164,7 @@ class CCInterp {
         importFunction(HissTools.put, "dict-set");
 
         // Primitive type predicates
-        // TODO could handle these all with an importClass() that has no prefix and converts is{Thing} to thing?
+        // TODO could handle these all with an importClass() that doesn't apply a function prefix and converts is{Thing} to thing?
         importFunction(HissTools.isInt, "int?", T);
         importFunction(HissTools.isFloat, "float?", T);
         importFunction(HissTools.isNumber, "number?", T);
@@ -247,6 +249,7 @@ class CCInterp {
     }
 
     function useBeginAndIterate(beginFunction: HFunction, iterateFunction: IterateFunction) {
+        currentBeginFunction = beginFunction;
         globals.put("begin", SpecialForm(beginFunction, "begin"));
         importSpecialForm(iterateFunction.bind(true, true), "for");
         importSpecialForm(iterateFunction.bind(false, true), "do-for");
@@ -374,9 +377,8 @@ class CCInterp {
         var exps = reader.readAll(String(StaticFiles.getContent(args.first().value())));
         readingProgram = false;
 
-        // Use a tail-recursive begin() call because programs can be long
-        // and we can't keep descending in the stack:
-        trBegin(exps, env, cc);
+        // Let the user decide whether to load tail-recursively or not:
+        currentBeginFunction(exps, env, cc);
     }
 
     function envWithReturn(env: HValue, cc: Continuation, called: RefBool) {
