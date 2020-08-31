@@ -227,14 +227,21 @@ class HissReader {
     function nextToken(str: HStream): String {
         var whitespaceOrTerminator = HStream.WHITESPACE.concat(terminators);
 
-        try {
-            return HaxeTools.extract(str.takeUntil(whitespaceOrTerminator, true, false, false), Some(s) => s, "next token").output;
+        var token = try {
+            HaxeTools.extract(str.takeUntil(whitespaceOrTerminator, true, false, false), Some(s) => s, "next token").output;
         } catch (s: Dynamic) {
-            return "";
+            "";
+        };
+
+        if (token == "") {
+            throw "nextToken() called without a next token in the stream";
         }
+
+        return token;
     }
 
     function readSymbol(start: String, str: HStream): HValue {
+        if (str.peek(1) == ")") throw "Unmatched closing paren";
         var symbolName = nextToken(str);
         // braces are not allowed in symbols because they would break string interpolation
         if (symbolName.indexOf("{") != -1 || symbolName.indexOf("}") != -1) {
@@ -331,6 +338,7 @@ class HissReader {
         if (dropWhitespace == null) dropWhitespace = T;
 
         var exprs = [];
+
         while (!stream.isEmpty()) {
             exprs.push(read("", stream));
             if (dropWhitespace != Nil) {

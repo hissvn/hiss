@@ -1,4 +1,4 @@
 build-scripts/all-script-args.hxml
 build-scripts/test/all-test-args.hxml
 -cpp bin/cpp/test
--cmd bin/cpp/test/TestAll.exe
+-cmd bash build-scripts/test/test-cpp.sh
