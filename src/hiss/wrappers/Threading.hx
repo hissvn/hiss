@@ -9,10 +9,6 @@ import sys.thread.Tls;
 // Because many targets implement the threading API with abstracts, those types need to be wrapped
 // in classes before they can be imported to the Hiss environment.
 
-// On the C++ target, references to the underlying class instances will not be counted for some
-// reason, so a VERY hacky form of manual reference preservation/deletion is required
-
-
 class HDeque {
     var instance: Deque<Dynamic>;
     public function new() { instance = new Deque<Dynamic>(); }

@@ -28,10 +28,6 @@ import hiss.StaticFiles;
 import hiss.VariadicFunctions;
 import hiss.NativeFunctions;
 
-#if cpp
-import cpp.Pointer;
-#end
-
 import StringTools;
 using StringTools;
 
@@ -86,9 +82,6 @@ class CCInterp {
         var dummyInstance = clazz.createEmptyInstance();
         for (instanceField in clazz.getInstanceFields()) {
             var fieldValue = Reflect.getProperty(dummyInstance, instanceField);
-            if (fieldValue == null) {
-                continue;
-            }
             switch (Type.typeof(fieldValue)) {
                 case TFunction:
                     var translatedName = methodNameFunction(instanceField);
@@ -99,7 +92,11 @@ class CCInterp {
                         // This has been split into more atomic steps for debugging on different hiss targets:
                         var instance = args.first().value(this);
                         var argArray = args.rest().unwrapList(this);
-                        var returnValue: Dynamic = Reflect.callMethod(instance, fieldValue, argArray);
+                        // We need an empty instance for checking the types of the properties.
+                        // BUT if we get our function pointers from the empty instance, the C++ target
+                        // will segfault when we try to call them, so getProperty has to be called every time
+                        var methodPointer = Reflect.getProperty(instance, instanceField);
+                        var returnValue: Dynamic = Reflect.callMethod(instance, methodPointer, argArray);
                         cc(returnValue.toHValue());
                     }, translatedName));
                 default:
@@ -125,21 +122,10 @@ class CCInterp {
         }
     }
 
-    // On the C++ target, references to objects created by Hiss get lost, so they specifically need to be saved,
-    // and deleted manually. Fun!
-    #if cpp
-    // Yeah... this should be a HashSet I think, but Haxe doesn't have those.
-    var cppObjects: Array<Dynamic> = []; /* Map<Pointer<Dynamic>, Pointer<Dynamic>> = []; */
-    #end
-
     function _new(args: HValue, env: HValue, cc: Continuation) {
         var clazz: Class<Dynamic> = args.first().value(this);
         var args = args.rest().unwrapList(this);
         var instance: Dynamic = Type.createInstance(clazz, args);
-        #if cpp
-        var pointer = instance; /*Pointer.fromStar(instance);*/
-        cppObjects.push(pointer);
-        #end
         cc(instance.toHValue());
     }
 
