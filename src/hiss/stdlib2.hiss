@@ -115,3 +115,12 @@
 (defun input-string (&optional prompt)
     (when prompt (message prompt))
     (read-line))
+
+(defmacro defgen (name args &rest body)
+    `(defun ,name ,args
+        (let (__lock__ (new Lock)
+                __deque__ (new Deque)
+                yield (lambda (value) (Deque:add __deque__ value) (Lock:wait __lock__))
+                next (lambda () (Lock:release __lock__) (Deque:pop __deque__)))
+            (Thread:create (lambda () ,@body))
+            next)))
