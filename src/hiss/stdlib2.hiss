@@ -3,8 +3,6 @@
     `(defun ,name (instance &rest args)
         (setlocal result (call-haxe instance ,method args ,call-on-reference ,keep-args-wrapped))
         (if ,return-instance instance result)))
-(defun new (class &rest args)
-    (Type:create-instance class args))
 
 (register-method "push" push! t t t)
 (register-method "shift" shift! t)
@@ -93,11 +91,6 @@
 (defun current-continuation ()
     (call/cc (lambda (cc) 
         (cc cc))))
-
-(defmacro yield (value)
-    `(let (ret return cc (current-continuation))
-        (defvar continue cc)
-        (ret ,value)))
 
 (defmacro case (form &rest case-list)
     (let (case-first (first case-list)

@@ -20,12 +20,17 @@ import ihx.ConsoleReader;
 #if target.threaded
 import hiss.wrappers.Threading;
 #end
+import hiss.wrappers.HType;
 import hiss.HissReader;
 import hiss.HissTools;
 using hiss.HissTools;
 import hiss.StaticFiles;
 import hiss.VariadicFunctions;
 import hiss.NativeFunctions;
+
+#if cpp
+import cpp.Pointer;
+#end
 
 import StringTools;
 using StringTools;
@@ -60,10 +65,18 @@ class CCInterp {
         globals.put(name, value.toHValue());
     }
 
+    // Sometimes Haxe stdlib classes are implemented differently from target to target,
+    // so it's important to see whether all the methods Hiss relies on are actually
+    // imported on each target, and if not all targets provide them, wrap them
+    var debugClassImports = false;
+
     public function importClass(clazz: Class<Dynamic>, name: String, ?methodNameFunction: String->String) {
+        if (debugClassImports) {
+            trace('Import $name');
+        }
         globals.put(name, Object("Class", clazz));
 
-        // By default, convert method names to-lower-hyphen
+        // By default, convert method names into the form ClassName:method-to-lower-hyphen
         if (methodNameFunction == null) {
             methodNameFunction = (methodName) -> {
                 name + ":" + methodName.toLowerHyphen();
@@ -73,12 +86,21 @@ class CCInterp {
         var dummyInstance = clazz.createEmptyInstance();
         for (instanceField in clazz.getInstanceFields()) {
             var fieldValue = Reflect.getProperty(dummyInstance, instanceField);
+            if (fieldValue == null) {
+                continue;
+            }
             switch (Type.typeof(fieldValue)) {
                 case TFunction:
                     var translatedName = methodNameFunction(instanceField);
+                    if (debugClassImports) {
+                        trace(translatedName);
+                    }
                     globals.put(translatedName, Function((args, env, cc) -> {
+                        // This has been split into more atomic steps for debugging on different hiss targets:
                         var instance = args.first().value(this);
-                        cc(Reflect.callMethod(instance, fieldValue, args.rest().unwrapList(this)).toHValue());
+                        var argArray = args.rest().unwrapList(this);
+                        var returnValue: Dynamic = Reflect.callMethod(instance, fieldValue, argArray);
+                        cc(returnValue.toHValue());
                     }, translatedName));
                 default:
                     // TODO generate getters and setters for instance fields
@@ -91,6 +113,9 @@ class CCInterp {
             switch (Type.typeof(fieldValue)) {
                 case TFunction:
                     var translatedName = methodNameFunction(classField);
+                    if (debugClassImports) {
+                        trace(translatedName);
+                    }
                     globals.put(translatedName, Function((args, env, cc) -> {
                         cc(Reflect.callMethod(null, fieldValue, args.unwrapList(this)).toHValue());
                     }, translatedName));
@@ -98,6 +123,24 @@ class CCInterp {
                     // TODO generate getters and setters for static properties
             }
         }
+    }
+
+    // On the C++ target, references to objects created by Hiss get lost, so they specifically need to be saved,
+    // and deleted manually. Fun!
+    #if cpp
+    // Yeah... this should be a HashSet I think, but Haxe doesn't have those.
+    var cppObjects: Array<Dynamic> = []; /* Map<Pointer<Dynamic>, Pointer<Dynamic>> = []; */
+    #end
+
+    function _new(args: HValue, env: HValue, cc: Continuation) {
+        var clazz: Class<Dynamic> = args.first().value(this);
+        var args = args.rest().unwrapList(this);
+        var instance: Dynamic = Type.createInstance(clazz, args);
+        #if cpp
+        var pointer = instance; /*Pointer.fromStar(instance);*/
+        cppObjects.push(pointer);
+        #end
+        cc(instance.toHValue());
     }
 
     public function importFunction(func: Function, name: String, keepArgsWrapped: HValue = Nil, ?args: Array<String>) {
@@ -156,13 +199,14 @@ class CCInterp {
         importFunction(useBeginAndIterate.bind(begin, iterateCC), "disable-tail-recursion");
 
         // Haxe interop -- We could bootstrap the rest from these if we had unlimited stack frames:
-        importClass(Type, "Type");
+        importClass(HType, "Type");
         importCCFunction(getProperty, "get-property");
         importCCFunction(callHaxe, "call-haxe");
+        importCCFunction(_new, "new");
 
         // Open Pandora's box if it's available:
         #if target.threaded
-        //importClass(Threading.HDeque, "Deque");
+        importClass(HDeque, "Deque");
         importClass(HLock, "Lock");
         importClass(HMutex, "Mutex");
         importClass(HThread, "Thread");

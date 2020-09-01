@@ -9,7 +9,17 @@ import sys.thread.Tls;
 // Because many targets implement the threading API with abstracts, those types need to be wrapped
 // in classes before they can be imported to the Hiss environment.
 
-// TODO should the generic types be wrapped explicitly for HValues?
+// On the C++ target, references to the underlying class instances will not be counted for some
+// reason, so a VERY hacky form of manual reference preservation/deletion is required
+
+
+class HDeque {
+    var instance: Deque<Dynamic>;
+    public function new() { instance = new Deque<Dynamic>(); }
+    public function add(i: Dynamic) { instance.add(i); }
+    public function pop(block) { return instance.pop(block); }
+    public function push(i: Dynamic) { instance.push(i); }
+}
 
 class HLock {
     var instance: Lock;
