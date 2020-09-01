@@ -25,11 +25,19 @@
 
 (defun list (&rest args) args)
 
+(defun zip (&rest lists)
+    "Create a list of tuples by grouping all same-nth elements in the given lists. Discards elements with no corresponding element in all other lists"
+    (setlocal final-length (first (sort (for l lists (length l)))))
+    (for i (range final-length)
+        (for l lists (nth l i))))
+
 (defmacro let (bindings &rest body)
-    `(funcall-inline
-        (lambda ,(even-alternates bindings)
-            ,@body)
-        ,@(odd-alternates bindings)))
+    (setlocal names (odd-alternates bindings))
+    (setlocal values (even-alternates bindings))
+    (setlocal setlocal-exps (for pair (zip names values) `(setlocal ,(first pair) ,(nth pair 1))))
+    `(begin
+        ,@setlocal-exps
+        ,@body))
 
 (defmacro when (cond &rest body)
     `(if ,cond (begin ,@body)))
@@ -69,12 +77,6 @@
 (defvar eighth (rbind nth 7))
 (defvar ninth (rbind nth 8))
 (defvar tenth (rbind nth 9))
-
-(defun zip (&rest lists)
-    "Create a list of tuples by grouping all same-nth elements in the given lists. Discards elements with no corresponding element in all other lists"
-    (let (final-length (first (sort (for l lists (length l)))))
-        (for i (range final-length)
-            (for l lists (nth l i)))))
 
 (defun collect (iterable)
     (for elem iterable elem))
