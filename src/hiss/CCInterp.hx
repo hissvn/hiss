@@ -248,8 +248,8 @@ class CCInterp {
         importFunction(HissTools.not, "not", T, ["val"]);
         importFunction(HissTools.sort, "sort", Nil, ["l, sort-function"]);
         importFunction(HissTools.range, "range", Nil, ["start", "end"]);
-        importFunction(HissTools.alternates.bind(_, true), "even-alternates", T);
-        importFunction(HissTools.alternates.bind(_, false), "odd-alternates", T);
+        importFunction(HissTools.alternates.bind(_, false), "even-alternates", T);
+        importFunction(HissTools.alternates.bind(_, true), "odd-alternates", T);
         importFunction(HaxeTools.shellCommand, "shell-command", Nil, ["cmd"]);
         importFunction(read, "read", Nil, ["str"]);
 
@@ -787,6 +787,7 @@ class CCInterp {
                                 for (exp in innerList.toList()) { 
                                     copy.insert(idx++, exp);
                                 }
+                                idx--; // continue; would be better, but this is a callback!
                             });
                         // If an UnquoteList is quoted, apply the quote to each expression in the list
                         case Quote(UnquoteList(exp)):
@@ -795,6 +796,7 @@ class CCInterp {
                                 for (exp in innerList.toList()) { 
                                     copy.insert(idx++, Quote(exp));
                                 }
+                                idx--;
                             });
                         default:
                             var exp = copy[idx];
