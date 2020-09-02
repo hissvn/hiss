@@ -157,6 +157,15 @@ class HissTools {
         };
     }
 
+    /** 
+        Destructively clear a list
+    **/
+    public static function clear(l: HValue) {
+        var arr = l.toList();
+        arr.splice(0, arr.length);
+        return l;
+    }
+
     /**
         Wrap a Haxe iterator as a hiss-compatible Iterable.
     **/
