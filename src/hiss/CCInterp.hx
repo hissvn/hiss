@@ -743,13 +743,21 @@ class CCInterp {
         } else {
             args.nth(Int(4));
         };
+        var haxeCallArgs = if (args.length() < 3) {
+            [];
+        } else {
+            args.third().unwrapList(this, keepArgsWrapped);
+        };
 
-        //HaxeTools.println('calling haxe ${args.second().toHaxeString()} on ${args.first().toPrint()}');
         var caller = args.first().value(callOnReference);
-        var method = Reflect.getProperty(caller, args.second().toHaxeString());
-        var haxeCallArgs = args.third().unwrapList(this, keepArgsWrapped);
+        var methodName = args.second().toHaxeString();
+        var method = Reflect.getProperty(caller, methodName);
 
-        cc(Reflect.callMethod(caller, method, haxeCallArgs).toHValue());
+        if (method == null) {
+            throw 'There is no haxe method called $methodName on ${args.first().toPrint()}';
+        } else {
+            cc(Reflect.callMethod(caller, method, haxeCallArgs).toHValue());
+        }
     }
 
     static var ccNum = 0;
