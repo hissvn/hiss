@@ -157,7 +157,7 @@ class HissTools {
         };
     }
 
-    /** 
+    /**
         Destructively clear a list
     **/
     public static function clear(l: HValue) {

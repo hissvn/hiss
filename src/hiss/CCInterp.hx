@@ -201,12 +201,14 @@ class CCInterp {
 
         importFunction(repl, "repl");
 
+        // TODO could handle all HissTools imports with an importClass() that doesn't apply a function prefix and converts is{Thing} to thing?
+        // The only problem with that some functions need args wrapped and others don't
+
         // Dictionaries
         importFunction(HissTools.get, "dict-get");
         importFunction(HissTools.put, "dict-set");
 
         // Primitive type predicates
-        // TODO could handle these all with an importClass() that doesn't apply a function prefix and converts is{Thing} to thing?
         importFunction(HissTools.isInt, "int?", T);
         importFunction(HissTools.isFloat, "float?", T);
         importFunction(HissTools.isNumber, "number?", T);
