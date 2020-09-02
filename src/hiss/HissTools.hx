@@ -139,6 +139,31 @@ class HissTools {
         return Symbol(v.toHaxeString());
     }
 
+    /**
+        Hiss can only iterate on objects that unify with the Haxe Iterable interface.
+        This function wraps a next() and hasNext() function as an iterable object.
+        With it, you can make an iterable object out of hiss functions.
+
+        If you need to call this with Haxe functions, make sure next() returns an HValue.
+    **/
+    public static function iterable(next: Dynamic, hasNext: Dynamic) {
+        return {
+            iterator: function() {
+                return {
+                    next: () -> next().toHValue(),
+                    hasNext: hasNext
+                };
+            }
+        };
+    }
+
+    /**
+        Wrap a Haxe iterator as a hiss-compatible Iterable.
+    **/
+    public static function iteratorToIterable(iterator: Iterator<Dynamic>) {
+        return iterable(iterator.next, iterator.hasNext);
+    }
+
     public static function range(a: Dynamic, ?b: Dynamic) {
         var start = if (b == null) 0 else a;
         var end = if (b == null) a else b;
@@ -147,18 +172,7 @@ class HissTools {
 
         // Haxe IntIterators are weird. What we really want is an Iterable of HValues,
         // whose iterator()'s next() and hasNext() are not inlined.
-        return {
-            iterator: function () {
-                return {
-                    next: function() {
-                        return intIterator.next().toHValue();
-                    },
-                    hasNext: function() {
-                        return intIterator.hasNext();
-                    }
-                };
-            }
-        };
+        return iteratorToIterable(intIterator);
     }
 
     /**

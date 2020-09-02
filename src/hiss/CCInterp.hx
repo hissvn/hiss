@@ -219,6 +219,10 @@ class CCInterp {
         importFunction(HissTools.isCallable, "callable?", T);
         importFunction(HissTools.isObject, "object?", T);
 
+        // Iterator tools
+        importFunction(HissTools.iterable, "iterable", Nil, ["next", "has-next"]);
+        importFunction(HissTools.iteratorToIterable, "iterator->iterable", Nil, ["haxe-iterator"]);
+
         // String functions:
         importFunction(StringTools.startsWith, "starts-with");
         importFunction(StringTools.endsWith, "ends-with");
