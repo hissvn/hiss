@@ -31,10 +31,23 @@
     (for i (range final-length)
         (for l lists (nth l i))))
 
+(defmacro cond (&rest forms)
+    `(and ',forms (if (eval (first (first ',forms)))
+            (eval (cons 'begin (rest (first ',forms))))
+        (eval (cons 'cond (rest ',forms))))))
+
 (defmacro let (bindings &rest body)
-    (setlocal names (odd-alternates bindings))
-    (setlocal values (even-alternates bindings))
-    (setlocal setlocal-exps (for pair (zip names values) `(setlocal ,(first pair) ,(nth pair 1))))
+    (setlocal setlocal-exps 
+        (cond
+            ; New-fangled, single-list let bindings like (name1 val1 name2 val2)
+            ((symbol? (first bindings))
+                (setlocal names (odd-alternates bindings))
+                (setlocal values (even-alternates bindings))
+                (for pair (zip names values) `(setlocal ,(first pair) ,(nth pair 1))))
+                
+            ; Old-school, many-list let bindings like ((name1 val1) (name2 val2))
+            ((list? (first bindings))
+                (for pair bindings `(setlocal ,@pair)))))
     `(begin
         ,@setlocal-exps
         ,@body))
@@ -102,11 +115,6 @@
                 (begin ,@(rest case-first))
                 (case ,form ,@case-rest))
             nil)))
-
-(defmacro cond (&rest forms)
-    `(and ',forms (if (eval (first (first ',forms)))
-            (eval (cons 'begin (rest (first ',forms))))
-        (eval (cons 'cond (rest ',forms))))))
 
 (defun input-expression (&optional prompt)
     (when prompt (message prompt))

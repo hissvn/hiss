@@ -237,3 +237,9 @@
         (= 1 (next c))
         (has-next c)
         (eq (list 2 3 4) (collect c))))
+
+(test let
+    (eq "onetwo" (let (a "one" b "two") (+ a b)))
+    (eq "onetwo" (let ((a "one") (b "two")) (+ a b)))
+    ; All lets should be sequential:
+    (eq (list 1 1 2) (let (a 1 b a c (+ a b)) (list a b c))))
