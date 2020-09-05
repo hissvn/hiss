@@ -3,16 +3,10 @@ package test;
 import haxe.Log;
 import haxe.PosInfos;
 import hiss.StaticFiles;
-import test.HissTestCase;
+import hiss.HissTestCase;
 
 class TestAll {
-  public static var reallyTrace: (Dynamic, ?PosInfos) -> Void;
   public static function main() {
-    reallyTrace = (message, ?posInfos) -> {
-      #if sys
-      Sys.println(message);
-      #end
-    };
     StaticFiles.compileWith("test-stdlib2.hiss");
     utest.UTest.run([
       new HissTestCase(

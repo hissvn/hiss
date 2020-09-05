@@ -1,7 +1,8 @@
-package test;
+package hiss;
 
 import haxe.Timer;
 import haxe.Log;
+import haxe.PosInfos;
 #if target.threaded
 import sys.thread.Thread;
 #end
@@ -23,11 +24,12 @@ class HissTestCase extends Test {
     var interp: CCInterp;
     var file: String;
 
-    var functionsTested: Map<String, Bool> = [];
+    static var functionsTested: Map<String, Bool> = [];
     var ignoreFunctions: Array<String> = [];
     var useTimeout: Bool;
+    var expressions: HValue = null;
 
-    var printTestCommands: Bool = false; // Only enable this for debugging infinite loops
+    static var printTestCommands: Bool = false; // Only enable this for debugging infinite loops
 
     public function new(hissFile: String, useTimeout: Bool = false, ?ignoreFunctions: Array<String>) {
         super();
@@ -39,7 +41,17 @@ class HissTestCase extends Test {
         if (ignoreFunctions != null) this.ignoreFunctions = ignoreFunctions;
     }
 
-    function hissTest(args: HValue, env: HValue, cc: Continuation) {
+    public static function testAtRuntime(interp: CCInterp, args: HValue, env: HValue, cc: Continuation) {
+        var instance = new HissTestCase(null, false, null);
+        instance.interp = interp;
+        instance.expressions = args;
+        utest.UTest.run([instance]);
+        cc(Nil);
+    }
+
+    public static var reallyTrace: (Dynamic, ?PosInfos) -> Void = null;
+
+    public static function hissTest(interp: CCInterp, args: HValue, env: HValue, cc: Continuation) {
         failOnTrace(interp);
 
         var functionsCoveredByUnit = switch (args.first()) {
@@ -49,7 +61,7 @@ class HissTestCase extends Test {
         }
 
         if (printTestCommands) {
-            TestAll.reallyTrace(functionsCoveredByUnit);
+            reallyTrace(functionsCoveredByUnit);
         }
 
         var assertions = args.rest();
@@ -81,7 +93,7 @@ class HissTestCase extends Test {
     /**
         Function for asserting that a given expression prints what it's supposed to
     **/
-    function hissPrints(interp: CCInterp, args: HValue, env: HValue, cc: Continuation) {
+    public static function hissPrints(interp: CCInterp, args: HValue, env: HValue, cc: Continuation) {
         var expectedPrint = interp.eval(args.first(), env).toHaxeString();
         var expression = args.second();
 
@@ -111,16 +123,16 @@ class HissTestCase extends Test {
     /**
         Any unnecessary printing is a bug, so replace print() with this function while running tests.
     **/
-    function hissPrintFail(v: HValue) {
+    static function hissPrintFail(v: HValue) {
         Assert.fail('Tried to print ${v.toPrint()} unnecessarily');
         return v;
     }
 
-    var tempTrace = null;
+    static var tempTrace = null;
     /**
         Make all forms of unnecessary printing into test failures :)
     **/
-    function failOnTrace(?interp: CCInterp) {
+    static function failOnTrace(?interp: CCInterp) {
         tempTrace = Log.trace;
         
         // When running Hiss to throw errors, this whole situation gets untenable because `throw` relies on trace()
@@ -141,7 +153,7 @@ class HissTestCase extends Test {
         }
     }
 
-    function enableTrace(interp: CCInterp) {
+    static function enableTrace(interp: CCInterp) {
         #if !throwErrors
         Log.trace = tempTrace;
         #end
@@ -156,60 +168,63 @@ class HissTestCase extends Test {
 
     @:timeout(10000)
     function testWithTimeout(async: Async) {
-        TestAll.reallyTrace("testWithTimeout");
         if (useTimeout) {
             #if target.threaded
             Thread.create(runTests.bind(async));
             #else
-            TestAll.reallyTrace("Warning! On single-threaded target, an infinite loop will cause tests to hang.");
+            reallyTrace("Warning! On single-threaded target, an infinite loop will cause tests to hang.");
             runTests(async);
             #end
         }
-        else Assert.pass();
+        else { Assert.pass(); async.done(); };
     }
 
     function runTests(?async: Async) {
-        trace("Measuring time to construct the Hiss environment:");
-        interp = Timer.measure(function () { 
-            failOnTrace();
-            var i = new CCInterp(hissPrintFail);
-            enableTrace(i);
-            return i;
-        });
+        if (file == null) {
+            hissTest(interp, expressions, HissTools.emptyEnv(), CCInterp.noCC);
+        } else {
+            // Full-blown test run
+            trace("Measuring time to construct the Hiss environment:");
+            interp = Timer.measure(function () { 
+                failOnTrace();
+                var i = new CCInterp(hissPrintFail);
+                enableTrace(i);
+                return i;
+            });
 
-        // Get a list of BUILT-IN functions to make sure they're covered by tests.
-        for (v => val in interp.globals.toDict()) {
-            switch (val) {
-                case Function(_, _) | SpecialForm(_) | Macro(_):
-                    if (!functionsTested.exists(v.symbolName())) functionsTested[v.symbolName()] = false;
-                default:
+            // Get a list of BUILT-IN functions to make sure they're covered by tests.
+            for (v => val in interp.globals.toDict()) {
+                switch (val) {
+                    case Function(_, _) | SpecialForm(_) | Macro(_):
+                        if (!functionsTested.exists(v.symbolName())) functionsTested[v.symbolName()] = false;
+                    default:
+                }
+            }
+            // We don't want to be accountable for testing functions defined IN the tests.
+
+            interp.globals.put("test", SpecialForm(hissTest.bind(interp), "test"));
+            interp.globals.put("prints", SpecialForm(hissPrints.bind(interp), "prints"));
+
+            for (f in ignoreFunctions) {
+                functionsTested[f] = true;
+            }
+
+            trace("Measuring time taken to run the unit tests:");
+
+            Timer.measure(function() {
+                interp.load(file);
+                trace("Total time to run tests:");
+            });
+
+            var functionsNotTested = [for (fun => tested in functionsTested) if (!tested) fun];
+
+            if (functionsNotTested.length != 0) {
+                Assert.warn('Warning: $functionsNotTested were never tested');
+            }
+
+            if (async != null) {
+                async.done();
             }
         }
-        // We don't want to be accountable for testing functions defined IN the tests.
-
-        interp.globals.put("test", SpecialForm(hissTest, "test"));
-        interp.globals.put("prints", SpecialForm(hissPrints.bind(interp), "prints"));
-
-        for (f in ignoreFunctions) {
-            functionsTested[f] = true;
-        }
-
-        trace("Measuring time taken to run the unit tests:");
-
-        Timer.measure(function() {
-            interp.load(file);
-            trace("Total time to run tests:");
-        });
-
-        var functionsNotTested = [for (fun => tested in functionsTested) if (!tested) fun];
-
-        if (functionsNotTested.length != 0) {
-            Assert.warn('Warning: $functionsNotTested were never tested');
-        }
-
-        if (async != null) {
-            async.done();
-        }
     }
-
 }

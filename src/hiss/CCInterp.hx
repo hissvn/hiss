@@ -27,6 +27,7 @@ using hiss.HissTools;
 import hiss.StaticFiles;
 import hiss.VariadicFunctions;
 import hiss.NativeFunctions;
+import hiss.HissTestCase;
 
 import StringTools;
 using StringTools;
@@ -162,6 +163,8 @@ class CCInterp {
     var currentBeginFunction: HFunction = null;
 
     public function new(?printFunction: (Dynamic) -> Dynamic) {
+        HissTestCase.reallyTrace = Log.trace;
+
         globals = HissTools.emptyDict();
         reader = new HissReader(this);
 
@@ -191,6 +194,10 @@ class CCInterp {
         importFunction(useBeginAndIterate.bind(trBegin, iterate), "disable-continuations");
         importFunction(useBeginAndIterate.bind(begin, iterateCC), "enable-continuations");
         importFunction(useBeginAndIterate.bind(begin, iterateCC), "disable-tail-recursion");
+
+        // First-class unit testing:
+        importSpecialForm(HissTestCase.testAtRuntime.bind(this), "test");
+        importCCFunction(HissTestCase.hissPrints.bind(this), "prints");
 
         // Haxe interop -- We could bootstrap the rest from these if we had unlimited stack frames:
         importClass(HType, "Type");
@@ -303,9 +310,6 @@ class CCInterp {
         importClass(FileOutput, "FileOutput");
         importFunction(Sys.sleep, "sleep!", ["duration"]);
         #end
-
-        // (test) is a no-op in production (for now):
-        importSpecialForm(noOp, "test");
 
         StaticFiles.compileWith("stdlib2.hiss");
 
