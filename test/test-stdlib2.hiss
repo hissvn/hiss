@@ -243,3 +243,6 @@
     (eq "onetwo" (let ((a "one") (b "two")) (+ a b)))
     ; All lets should be sequential:
     (eq (list 1 1 2) (let (a 1 b a c (+ a b)) (list a b c))))
+
+(test tree-replace
+    (eq '(hey (whats up)) (tree-replace '(hey (shut up)) 'shut 'whats)))

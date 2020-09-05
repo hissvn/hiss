@@ -21,7 +21,7 @@
 
 // String functions:
 (register-method "split" split)
-(register-method "substr" substr)
+(register-method "substr" substring)
 
 (defun list (&rest args) args)
 
@@ -44,7 +44,7 @@
                 (setlocal names (odd-alternates bindings))
                 (setlocal values (even-alternates bindings))
                 (for pair (zip names values) `(setlocal ,(first pair) ,(nth pair 1))))
-                
+
             ; Old-school, many-list let bindings like ((name1 val1) (name2 val2))
             ((list? (first bindings))
                 (for pair bindings `(setlocal ,@pair)))))
@@ -181,3 +181,9 @@
                 (let (result (apply f args))
                     (dict-set! prior-args args result)
                     result)))))
+
+(defun tree-replace (tree old new)
+    (cond
+        ((list? tree)
+            (for element tree (tree-replace element old new)))
+        (t (if (eq tree old) new tree))))
