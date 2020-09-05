@@ -219,6 +219,9 @@ class CCInterp {
         importFunction((dict: HValue, key) -> dict.toDict().exists(key), "dict-contains", T);
         importFunction((dict: HValue, key) -> dict.toDict().erase(key), "dict-erase!", T);
 
+        // command-line args
+        importFunction(() -> List(scriptArgs), "args");
+
         // Primitive type predicates
         importFunction(HissTools.isInt, "int?", T);
         importFunction(HissTools.isFloat, "float?", T);
@@ -395,6 +398,8 @@ class CCInterp {
         run(interp);
     }
 
+    var scriptArgs: HList = [];
+
     public static function run(interp: CCInterp, ?args: Array<String>) {
         #if (sys || hxnodejs)
         if (args == null) {
@@ -412,6 +417,9 @@ class CCInterp {
                     useConsoleReader = false;
                 case _ if (nextArg.endsWith(".hiss")):
                     script = nextArg;
+                // Args after the script path are passed to the script to be accessed by (args)
+                case _ if (script != null):
+                    interp.scriptArgs.push(String(nextArg));
             }
         }
 
