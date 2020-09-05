@@ -96,6 +96,10 @@ class HissTools {
         return list.toList()[3];
     }
 
+    public static function last(list: HValue): HValue {
+        return list.nth(Int(list.length()-1));
+    }
+
     public static function rest(list: HValue): HValue {
         return List(list.toList().slice(1));
     }

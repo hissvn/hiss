@@ -254,6 +254,7 @@ class CCInterp {
         importFunction(HissTools.reverse, "reverse", T, ["l"]);
         importFunction(HissTools.first, "first", T, ["l"]);
         importFunction(HissTools.rest, "rest", T, ["l"]);
+        importFunction(HissTools.last, "last", T, ["l"]);
         importFunction(HissTools.eq, "eq", T, ["a", "b"]);
         importFunction(HissTools.nth, "nth", T, ["l", "n"]);
         importFunction(HissTools.cons, "cons", T, ["val", "l"]);
