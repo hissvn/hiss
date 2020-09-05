@@ -32,38 +32,14 @@ enum HValue {
     Comment;
 }
 
-enum HArgType {
-    Fixed;
-    Var;
-}
-
 typedef Continuation = (HValue) -> Void;
 
 typedef HFunction = (HValue, HValue, Continuation) -> Void;
 
-/*
-@:using(HissTools.HissTools)
-enum HFunction {
-    Haxe(t: HArgType, f: Dynamic, name: String);
-    Hiss(f: HFunDef);
-    Macro(evalResult: Bool, f: HFunction);
-}*/
-
 typedef HDict = Map<String, HValue>;
-
-typedef HFunDef = {
-    var argNames: Array<String>;
-    var body: HList;
-}
 
 enum HSignal {
     Quit;
-}
-
-typedef HVarInfo = {
-    var name: String;
-    var value: HValue;
-    var container: Null<HDict>;
 }
 
 typedef HList = Array<HValue>;
