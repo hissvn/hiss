@@ -164,22 +164,6 @@
     (eq "hey!" "${st}!")
     (eq "hey you" "$st you"))
 
-// For now, Python-style generators are not fully supported.
-// yield just returns a value and sets the global `continue`
-// to the continuation.
-'(test yield
-    (defun range (max)
-        (setlocal count 0)
-        (while (< count max)
-            (yield count)
-            (setlocal count (+ 1 count))))
-    (= 0 (range 2))
-    (= 1 (continue))
-    (eq nil (continue))
-    (= 0 (range 3))
-    (= 1 (continue))
-    (= 2 (continue)))
-
 (test (dict dict-get dict-set! dict-contains dict-erase!)
     (setlocal d (dict "StringKey" "StringValue" 
                         0 5 
@@ -240,3 +224,16 @@
     (eq "heyheyheyhey" (* 4 "hey"))
     (eq "heyheyheyhey" (* 2 2 "hey"))
     (eq "heyheyheyhey" (* "hey" 2 2)))
+
+(if defgen
+    (test defgen
+        (defgen counter (max) (do-for i (range max) (yield i)))
+        (setlocal c (counter 5))
+        (eq (list 0 1 2 3 4) (collect c))
+        (setlocal c (counter 5))
+        (has-next c)
+        (has-next c)
+        (= 0 (next c))
+        (= 1 (next c))
+        (has-next c)
+        (eq (list 2 3 4) (collect c))))
