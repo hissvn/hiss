@@ -29,10 +29,16 @@ class VariadicFunctions {
             case Int(_): 0;
             case Float(_): 0;
             case String(_): "";
+            case List(_): [];
             default: throw 'Cannot perform addition with operands: ${args.toPrint()} because first element is  ${Type.enumConstructor(args.first())}';
         };
+        var addNext: (Dynamic)->Void = switch (args.first()) {
+            case Int(_) | Float(_) | String(_): (i) -> sum += i;
+            case List(_): (i) -> sum = sum.concat(i);
+            default: null; // The error should already have been thrown.
+        }
         for (i in args.unwrapList()) {
-            sum += i;
+            addNext(i);
         }
         cc(HissTools.toHValue(sum));
     }
@@ -65,14 +71,46 @@ class VariadicFunctions {
     }
 
     public static function multiply(args: HValue, env: HValue, cc: Continuation) {
-        switch (args.length()) {
-            case 0: cc(Int(0));
-            default:
-                var first: Dynamic = 1;
-                for (val in args.rest().unwrapList()) {
-                    first *= val;
+        switch (args.first()) {
+            case Int(_) | Float(_):
+                var product: Dynamic = 1;
+                var operands = args.unwrapList();
+
+                switch (args.last()) {
+                    case List(_) | String(_):
+                        multiply(operands[operands.length-1].toHValue().cons(operands.slice(0, operands.length-1).toHList()), env, cc);
+                        return;
+                    default:
                 }
-                cc(HissTools.toHValue(first));
+                for (val in operands) {
+                    product *= val;
+                }
+                cc(HissTools.toHValue(product));
+            case String(str):
+                var product = "";
+                var toRepeat = args.first().toHaxeString();
+                var times = args.second().toInt();
+                for (i in 0...times) {
+                    product += toRepeat;
+                }
+                if (args.length() == 2) {
+                    cc(String(product));
+                } else {
+                    multiply(String(product).cons(args.slice(2)), env, cc);
+                }
+            case List(l):
+                var product = [];
+                var toRepeat = args.first().toList();
+                var times = args.second().toInt();
+                for (i in 0...times) {
+                    product = product.concat(toRepeat);
+                }
+                if (args.length() == 2) {
+                    cc(List(product));
+                } else {
+                    multiply(List(product).cons(args.slice(2)), env, cc);
+                }
+            default: throw 'Cannot multiply with first operand ${args.first().toPrint()}';
         }
     }
 

@@ -104,6 +104,10 @@ class HissTools {
         return List(list.toList().slice(1));
     }
 
+    public static function slice(list: HValue, idx: Int) {
+        return List(list.toList().slice(idx));
+    }
+
     public static function sort(list: Array<Dynamic>, ?fun: (Dynamic, Dynamic) -> Int) {
         if (fun == null) fun = Reflect.compare;
         var sorted = list.copy();
@@ -440,6 +444,10 @@ class HissTools {
                 v.value(interp);
             }
         }];
+    }
+
+    public static function toHList(l: Array<Dynamic>): HValue { 
+        return List([for (v in l) v.toHValue()]);
     }
 
     public static function length(v: HValue) {
