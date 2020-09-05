@@ -20,7 +20,15 @@ class HDict {
 
     /** Iterate on Hiss lists of the form (key value), which can be destructured in Hiss for loops **/
     public function iterator(): Iterator<HValue> {
-        return null; // TODO
+        var kvIterator = keyValueIterator();
+        return {
+            next: () -> {
+                var pair = kvIterator.next();
+                return List([pair.key, pair.value]);
+            },
+
+            hasNext: () -> kvIterator.hasNext()
+        };
     }
 
     /** Allow key => value iteration in Haxe **/

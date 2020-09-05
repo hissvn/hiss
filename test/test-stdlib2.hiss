@@ -201,6 +201,7 @@
     (not (dict-contains d "StringKey")))
 
 (test dict-iteration
-    ; TODO do a for loop on a dictionary
-    ; TODO do a key-value destructuring for loop on a dictionary
-    nil)
+    (setlocal d (dict "StringKey" "StringValue"
+                        0 5
+                        (list "ListKey") 9))
+    (eq 6 (length (apply append (for (key value) d (list key value))))))
