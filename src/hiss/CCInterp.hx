@@ -544,6 +544,9 @@ class CCInterp {
     }
 
     function _if(args: HValue, env: HValue, cc: Continuation) {
+        if (args.length() > 3) {
+            throw '(if) called with too many arguments. Try wrapping the cases in (begin)';
+        }
         internalEval(args.first(), env, (val) -> {
             if (val.truthy()) {
                 internalEval(args.second(), env, cc);
