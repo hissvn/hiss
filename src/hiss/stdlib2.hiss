@@ -157,3 +157,12 @@
                                     (begin (push! __next__ (next))
                                         (not __done__))))))
             (iterable next has-next))))
+
+(defun memoize (f)
+    "Return a version of the given function that caches return values for different argument lists"
+    (let (prior-args (dict))
+        (lambda (&rest args)
+            (or (dict-get prior-args args)
+                (let (result (apply f args))
+                    (dict-set! prior-args args result)
+                    result)))))
