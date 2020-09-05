@@ -34,7 +34,7 @@ using StringTools;
 @:expose
 @:build(hiss.NativeFunctions.build())
 class CCInterp {
-    public var globals: HValue = Dict([]);
+    public var globals: HValue;
     var reader: HissReader;
 
     var tempTrace: Dynamic = null;
@@ -156,6 +156,7 @@ class CCInterp {
     var currentBeginFunction: HFunction = null;
 
     public function new(?printFunction: (Dynamic) -> Dynamic) {
+        globals = HissTools.emptyDict();
         reader = new HissReader(this);
 
         // Primitives
@@ -205,8 +206,11 @@ class CCInterp {
         // The only problem with that some functions need args wrapped and others don't
 
         // Dictionaries
-        importFunction(HissTools.get, "dict-get");
-        importFunction(HissTools.put, "dict-set");
+        importCCFunction(makeDict, "dict");
+        importFunction((dict: HValue, key) -> dict.toDict().get(key), "dict-get", T);
+        importFunction((dict: HValue, key, value) -> dict.toDict().put(key, value), "dict-set", T);
+        importFunction((dict: HValue, key) -> dict.toDict().exists(key), "dict-contains", T);
+        importFunction((dict: HValue, key) -> dict.toDict().erase(key), "dict-erase", T);
 
         // Primitive type predicates
         importFunction(HissTools.isInt, "int?", T);
@@ -320,7 +324,7 @@ class CCInterp {
             }
             throw HSignal.Quit;
         }, "quit");
-        var locals = List([Dict([])]); // This allows for top-level setlocal
+        var locals = HissTools.emptyEnv(); // This allows for top-level setlocal
 
         HaxeTools.println('Hiss version ${CompileInfo.version()}');
         HaxeTools.println("Type (quit) to quit the REPL");
@@ -419,7 +423,7 @@ class CCInterp {
     }
 
     public function load(file: String) {
-        _load(List([String(file)]), List([Dict([])]), noCC);
+        _load(List([String(file)]), HissTools.emptyEnv(), noCC);
     }
 
     function _load(args: HValue, env: HValue, cc: Continuation) {
@@ -432,10 +436,12 @@ class CCInterp {
     }
 
     function envWithReturn(env: HValue, cc: Continuation, called: RefBool) {
-        return env.extend(Dict(["return" => Function((args, env, cc) -> {
+        var stackFrameWithReturn = HissTools.emptyDict();
+        stackFrameWithReturn.put("return", Function((args, env, cc) -> {
             called.b = true;
             cc(args.first());
-        }, "return")]));
+        }, "return"));
+        return env.extend(stackFrameWithReturn);
     }
 
     /**
@@ -496,7 +502,7 @@ class CCInterp {
         #end
         evalAll(args, env, (values) -> {
             // trace(values.toPrint());
-            values.first().toHFunction()(values.rest(), if (callInline) env else List([Dict([])]), cc);
+            values.first().toHFunction()(values.rest(), if (callInline) env else HissTools.emptyEnv(), cc);
         });
     }
 
@@ -552,20 +558,19 @@ class CCInterp {
         var stackFrames = env.toList();
 
         var g = globals.toDict();
-        var name = name.symbolName();
 
         var v = null;
         for (frame in stackFrames) {
             var frameDict = frame.toDict();
             if (frameDict.exists(name)) {
-                v = frameDict[name];
+                v = frameDict.get(name);
                 break;
             }
         }
         cc(if (v != null) {
             v;
         } else if (g.exists(name)) {
-            g[name];
+            g.get(name);
         } else {
             throw '$name is undefined';
         });
@@ -610,7 +615,7 @@ class CCInterp {
         } else {
             // If it's function form, a name symbol is not necessary
             internalEval(args.second(), env, (fun) -> { 
-                performFunction(fun.toHFunction(), List([Dict([])]), cc);
+                performFunction(fun.toHFunction(), HissTools.emptyEnv(), cc);
             });
         }
     }
@@ -704,7 +709,7 @@ class CCInterp {
     function bound(args: HValue, env: HValue, cc: Continuation) {
         var stackFrames = env.toList();
         var g = globals.toDict();
-        var name = args.first().symbolName();
+        var name = args.first();
 
         for (frame in stackFrames) {
             var frameDict = frame.toDict();
@@ -863,6 +868,20 @@ class CCInterp {
         cc(argVal);
     }
 
+    function makeDict(args: HValue, env: HValue, cc: Continuation) {
+        var dict = new HDict();
+
+        var idx = 0;
+        while (idx < args.length()) {
+            var key = args.nth(Int(idx));
+            var value = args.nth(Int(idx+1));
+            dict.put(key, value);
+            idx += 2;
+        }
+
+        cc(Dict(dict));
+    }
+
     /** Hiss-callable form for eval **/
     function _eval(args: HValue, env: HValue, cc: Continuation) {
         internalEval(args.first(), env, (val) -> {
@@ -873,7 +892,7 @@ class CCInterp {
     /** Public, synchronous form of eval. Won't work with javascript asynchronous functions **/
     public function eval(arg: HValue, ?env: HValue) {
         var value = null;
-        if (env == null) env = List([Dict([])]);
+        if (env == null) env = HissTools.emptyEnv();
         internalEval(arg, env, (_value) -> {
             value = _value;
         });
@@ -882,7 +901,7 @@ class CCInterp {
 
     /** Asynchronos-friendly form of eval. NOTE: The args are out of order so this isn't an HFunction. **/
     public function evalCC(arg: HValue, cc: Continuation, ?env: HValue) {
-        if (env == null) env = List([Dict([])]);
+        if (env == null) env = HissTools.emptyEnv();
         internalEval(arg, env, cc);
     }
 

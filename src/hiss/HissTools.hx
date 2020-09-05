@@ -11,6 +11,7 @@ import haxe.io.Path;
 import uuid.Uuid;
 import Reflect;
 using hiss.HissTools;
+import hiss.HDict;
 
 @:expose
 class HissTools {
@@ -30,17 +31,22 @@ class HissTools {
         #end
     }
 
+    // These dictionary functions are for Haxe usage and are more ergonomic with string args,
+    // although the underlying keys will be HValues:
     public static function get(dict: HValue, key: String) {
-        return dict.toDict()[key];
+        return dict.toDict().get(Symbol(key));
     }
 
     public static function exists(dict: HValue, key: String) {
-        return dict.toDict().exists(key);
+        return dict.toDict().exists(Symbol(key));
     }
 
     public static function put(dict: HValue, key: String, v: HValue) {
-        dict.toDict()[key] = v;
+        dict.toDict().put(Symbol(key), v);
+        return dict;
     }
+
+
 
     public static function toList(list: HValue, hint: String = "list"): HList {
         return HaxeTools.extract(list, List(l) => l, "list");
@@ -190,7 +196,7 @@ class HissTools {
     public static function dictExtend(dict: HValue, extension: HValue) {
         var extended = dict.toDict().copy();
         for (pair in extension.toDict().keyValueIterator()) {
-            extended.set(pair.key, pair.value);
+            extended.put(pair.key, pair.value);
         }
         return Dict(extended);
     }    
@@ -199,8 +205,14 @@ class HissTools {
         return cons(extension, env);
     }
 
+    public static function emptyList() { return List([]); }
+
+    public static function emptyDict() { return Dict(new HDict()); }
+
+    public static function emptyEnv() { return List([emptyDict()]); }
+
     public static function destructuringBind(names: HValue, values: HValue) {
-        var bindings = Dict([]);
+        var bindings = emptyDict();
 
         switch (names) {
             case Symbol(name):
@@ -251,11 +263,6 @@ class HissTools {
         var l = hl.toList().copy();
         l.insert(0, hv);
         return List(l);
-    }
-
-    // This one can't be pure Hiss because we can't instantiate a Map with a type parameter using reflection:
-    static function emptyDict() {
-        return Dict([]);
     }
 
     public static function eq(a: HValue, b: HValue): HValue {

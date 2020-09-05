@@ -27,7 +27,7 @@ class HissTestCase extends Test {
     var ignoreFunctions: Array<String> = [];
     var useTimeout: Bool;
 
-    var printTestCommands: Bool = true; // Only enable this for debugging infinite loops
+    var printTestCommands: Bool = false; // Only enable this for debugging infinite loops
 
     public function new(hissFile: String, useTimeout: Bool = false, ?ignoreFunctions: Array<String>) {
         super();
@@ -54,7 +54,7 @@ class HissTestCase extends Test {
 
         var assertions = args.rest();
 
-        var freshEnv = List([Dict([])]);
+        var freshEnv = HissTools.emptyEnv();
         for (ass in assertions.toList()) {
             var failureMessage = 'Failure testing $functionsCoveredByUnit: ${ass.toPrint()} evaluated to: ';
             var errorMessage = 'Error testing $functionsCoveredByUnit: ${ass.toPrint()}: ';
@@ -181,7 +181,7 @@ class HissTestCase extends Test {
         for (v => val in interp.globals.toDict()) {
             switch (val) {
                 case Function(_, _) | SpecialForm(_) | Macro(_):
-                    if (!functionsTested.exists(v)) functionsTested[v] = false;
+                    if (!functionsTested.exists(v.symbolName())) functionsTested[v.symbolName()] = false;
                 default:
             }
         }

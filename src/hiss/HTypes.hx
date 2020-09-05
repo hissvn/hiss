@@ -36,8 +36,6 @@ typedef Continuation = (HValue) -> Void;
 
 typedef HFunction = (HValue, HValue, Continuation) -> Void;
 
-typedef HDict = Map<String, HValue>;
-
 enum HSignal {
     Quit;
 }

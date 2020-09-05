@@ -50,7 +50,7 @@ class NativeFunctions {
                 argListExpr = argListExpr.substr(0, argListExpr.length - 1);
             argListExpr += ")";
             funcallExpr = funcallExpr.substr(0, funcallExpr.length - 1);
-            funcallExpr += "]), List([Dict([])]), (_val) -> {val = _val;})";
+            funcallExpr += "]), HissTools.emptyEnv(), (_val) -> {val = _val;})";
 
             fullBodyExpr += 'case Function(_, _, args) if (args != null && args.length == $argCount):
                                 return $argListExpr -> { var val = null; $funcallExpr; return val.value(true);};\n';

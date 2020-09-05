@@ -179,3 +179,28 @@
     (= 0 (range 3))
     (= 1 (continue))
     (= 2 (continue)))
+
+(test (dict dict-get dict-set dict-contains dict-erase)
+    (setlocal d (dict "StringKey" "StringValue" 
+                        0 5 
+                        (list "ListKey") 9))
+    
+    (dict-contains d "StringKey")
+    (dict-contains d 0)
+    (dict-contains d (list "ListKey"))
+    
+    (eq "StringValue" (dict-get d "StringKey"))
+    (eq 5 (dict-get d 0))
+    (eq 9 (dict-get d (list "ListKey")))
+
+    (or (dict-set d "StringKey" "DifferentStringValue") t)
+    (dict-contains d "StringKey")
+    (eq "DifferentStringValue" (dict-get d "StringKey"))
+
+    (or (dict-erase d "StringKey") t)
+    (not (dict-contains d "StringKey")))
+
+(test dict-iteration
+    ; TODO do a for loop on a dictionary
+    ; TODO do a key-value destructuring for loop on a dictionary
+    nil)
