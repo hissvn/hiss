@@ -132,9 +132,9 @@
         `(defun ,name ,args
             (let (__lock__ (new Lock)
                     __deque__ (new Deque)
-                    __thread__ (list)
-                    __next__ (list) // When has-next is called, the next value must be stored
-                    __done__ (list)
+                    __thread__ nil
+                    __next__ nil // When has-next is called, the next value must be stored
+                    __done__ nil
                     __done-signal__ (symbol)
                     yield (lambda (value)
                                 (Deque:add __deque__ value)
@@ -143,18 +143,18 @@
                             (if __done__ nil
                                 (begin
                                     (if __next__
-                                        (return (let (ret (first __next__))
-                                            (clear! __next__)
+                                        (return (let (ret __next__)
+                                            (set! __next__ nil)
                                             ret)))
                                     (if (not __thread__)
-                                        (push! __thread__ (Thread:create
+                                        (set! __thread__ (Thread:create
                                                                 (lambda ()
                                                                     ,@body
                                                                     (Deque:add __deque__ __done-signal__)))))
                                     (Lock:release __lock__)
                                     (let (value (Deque:pop __deque__ t))
                                         (case value
-                                            (__done-signal__ (push! __done__ t) nil)
+                                            (__done-signal__ (set! __done__ t) nil)
                                             (t value))))))
                     has-next (lambda ()
                                 (if __done__ nil
@@ -162,7 +162,7 @@
                                         (let (could-be-next (next))
                                             (case could-be-next
                                                 (nil (not __done__))
-                                                (t (push! __next__ could-be-next) t)))))))
+                                                (t (set! __next__ could-be-next) t)))))))
                 (iterable next has-next)))))
 
 (defun memoize (f)
