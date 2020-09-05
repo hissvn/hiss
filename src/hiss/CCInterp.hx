@@ -290,6 +290,7 @@ class CCInterp {
         #if (sys || hxnodejs)
         importClass(File, "File");
         importClass(FileOutput, "FileOutput");
+        importFunction(Sys.sleep, "sleep!", ["duration"]);
         #end
 
         // (test) is a no-op in production (for now):
