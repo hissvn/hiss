@@ -208,9 +208,9 @@ class CCInterp {
         // Dictionaries
         importCCFunction(makeDict, "dict");
         importFunction((dict: HValue, key) -> dict.toDict().get(key), "dict-get", T);
-        importFunction((dict: HValue, key, value) -> dict.toDict().put(key, value), "dict-set", T);
+        importFunction((dict: HValue, key, value) -> dict.toDict().put(key, value), "dict-set!", T);
         importFunction((dict: HValue, key) -> dict.toDict().exists(key), "dict-contains", T);
-        importFunction((dict: HValue, key) -> dict.toDict().erase(key), "dict-erase", T);
+        importFunction((dict: HValue, key) -> dict.toDict().erase(key), "dict-erase!", T);
 
         // Primitive type predicates
         importFunction(HissTools.isInt, "int?", T);

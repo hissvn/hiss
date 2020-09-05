@@ -180,7 +180,7 @@
     (= 1 (continue))
     (= 2 (continue)))
 
-(test (dict dict-get dict-set dict-contains dict-erase)
+(test (dict dict-get dict-set! dict-contains dict-erase!)
     (setlocal d (dict "StringKey" "StringValue" 
                         0 5 
                         (list "ListKey") 9))
@@ -193,11 +193,11 @@
     (eq 5 (dict-get d 0))
     (eq 9 (dict-get d (list "ListKey")))
 
-    (or (dict-set d "StringKey" "DifferentStringValue") t)
+    (or (dict-set! d "StringKey" "DifferentStringValue") t)
     (dict-contains d "StringKey")
     (eq "DifferentStringValue" (dict-get d "StringKey"))
 
-    (or (dict-erase d "StringKey") t)
+    (or (dict-erase! d "StringKey") t)
     (not (dict-contains d "StringKey")))
 
 (test dict-iteration
