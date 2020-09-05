@@ -31,6 +31,12 @@ import hiss.NativeFunctions;
 import StringTools;
 using StringTools;
 
+enum SetType {
+    Global;
+    Local;
+    Destructive;
+}
+
 @:expose
 @:build(hiss.NativeFunctions.build())
 class CCInterp {
@@ -160,8 +166,9 @@ class CCInterp {
         reader = new HissReader(this);
 
         // Primitives
-        importSpecialForm(set.bind(false), "setlocal");
-        importSpecialForm(set.bind(true), "defvar");
+        importSpecialForm(set.bind(Global), "defvar");
+        importSpecialForm(set.bind(Local), "setlocal");
+        importSpecialForm(set.bind(Destructive), "set!");
         importSpecialForm(setCallable.bind(false), "defun");
         importSpecialForm(setCallable.bind(true), "defmacro");
         importSpecialForm(_if, "if");
@@ -524,13 +531,24 @@ class CCInterp {
         cc(args.first());
     }
 
-    function set(global: Bool, args: HValue, env: HValue, cc: Continuation) {
+    function set(type: SetType, args: HValue, env: HValue, cc: Continuation) {
         internalEval(args.second(),
             env, (val) -> {
-                var scope = if (global) {
-                    globals;
-                } else {
-                    env.first();
+                var scope = null;
+                switch (type) {
+                    case Global:
+                        scope = globals;
+                    case Local:
+                        scope = env.first();
+                    case Destructive:
+                        for (frame in env.toList()) {
+                            var frameDict = frame.toDict();
+                            if (frameDict.exists(args.first())) {
+                                scope = frame;
+                                break;
+                            }
+                        }
+                        if (scope == null) scope = globals;
                 }
                 scope.put(args.first().symbolName(), val);
                 cc(val);
@@ -539,7 +557,7 @@ class CCInterp {
 
     function setCallable(isMacro: Bool, args: HValue, env: HValue, cc: Continuation) {
         lambda(isMacro, args.rest(), env, (fun: HValue) -> {
-            set(true, args.first().cons(List([fun])), env, cc);
+            set(Global, args.first().cons(List([fun])), env, cc);
         }, args.first().symbolName());
     }
 
