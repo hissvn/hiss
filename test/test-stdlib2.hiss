@@ -151,6 +151,13 @@
     (eq #"""# "\"")
     (eq #"$"# "\$"))
 
+(test return
+    (defun cut-off-early () (return 5) 6)
+    (= (cut-off-early) 5)
+    (enable-continuations)
+    (= (cut-off-early) 5)
+    (disable-continuations))
+
 (test string-interpolation
     // TODO test interpolating all types of primitives
     (setlocal i 5)

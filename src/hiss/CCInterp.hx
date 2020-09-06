@@ -459,7 +459,7 @@ class CCInterp {
         currentBeginFunction(exps, env, cc);
     }
 
-    function envWithReturn(env: HValue, cc: Continuation, called: RefBool) {
+    function envWithReturn(env: HValue, called: RefBool) {
         var stackFrameWithReturn = HissTools.emptyDict();
         stackFrameWithReturn.put("return", Function((args, env, cc) -> {
             called.b = true;
@@ -479,7 +479,7 @@ class CCInterp {
     **/
     function trBegin(exps: HValue, env: HValue, cc: Continuation) {
         var returnCalled = new RefBool();
-        env = envWithReturn(env, cc, returnCalled);
+        env = envWithReturn(env, returnCalled);
         var value = eval(exps.first(), env);
 
         if (returnCalled.b || !exps.rest().truthy()) {
@@ -492,7 +492,7 @@ class CCInterp {
 
     function begin(exps: HValue, env: HValue, cc: Continuation) {
         var returnCalled = new RefBool();
-        env = envWithReturn(env, cc, returnCalled);
+        env = envWithReturn(env, returnCalled);
 
         internalEval(exps.first(), env, (result) -> {
             if (returnCalled.b || !exps.rest().truthy()) {
