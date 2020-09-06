@@ -300,6 +300,8 @@ class CCInterp {
 
         importCCFunction(VariadicFunctions.append, "append");
 
+        importFunction((a, b) -> { return a % b;}, "%");
+
         importFunction(HaxeTools.readLine, "read-line");
 
         // Operating system
