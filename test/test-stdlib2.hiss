@@ -240,7 +240,7 @@
     (eq "heyheyheyhey" (* 2 2 "hey"))
     (eq "heyheyheyhey" (* "hey" 2 2)))
 
-(if defgen
+(if (bound? defgen)
     (test defgen
         (defgen counter (max) (do-for i (range max) (yield i)))
         (setlocal c (counter 5))

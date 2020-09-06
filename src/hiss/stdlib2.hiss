@@ -126,6 +126,10 @@
     (when prompt (message prompt))
     (read-line))
 
+
+(defmacro default! (var value)
+    `(if (or (not (bound? ,var)) (nil? ,var)) (set! ,var ,value)))
+
 // (next) and (has-next) should work on Iterables AND Iterators, for convenience
 (defun iterator (iterable-or-iterator)
     (if (get-property iterable-or-iterator "iterator")
@@ -137,7 +141,7 @@
 (defun has-next (iterable-or-iterator)
     (call-haxe (iterator iterable-or-iterator) "hasNext"))
 
-(if Thread
+(if (bound? Thread)
     (defmacro defgen (name args &rest body)
         `(defun ,name ,args
             (let (__lock__ (new Lock)

@@ -786,6 +786,7 @@ class CCInterp {
             var frameDict = frame.toDict();
             if (frameDict.exists(name)) {
                 cc(T);
+                return;
             }
         }
         cc(if (g.exists(name)) {
