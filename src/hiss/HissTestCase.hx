@@ -37,6 +37,8 @@ class HissTestCase extends Test {
 
         this.useTimeout = useTimeout;
 
+        reallyTrace = Log.trace;
+
         // Some functions just don't wanna be tested
         if (ignoreFunctions != null) this.ignoreFunctions = ignoreFunctions;
     }
