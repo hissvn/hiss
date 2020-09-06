@@ -1,0 +1,5 @@
+language: haxe
+haxe:
+  - stable
+  - development
+script: ./test-all.sh
