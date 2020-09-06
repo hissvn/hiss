@@ -468,6 +468,17 @@ class CCInterp {
         return env.extend(stackFrameWithReturn);
     }
 
+    function envWithBreakContinue(env: HValue, breakCalled: RefBool, continueCalled: RefBool) {
+        var stackFrameWithBreakContinue = HissTools.emptyDict();
+        stackFrameWithBreakContinue.put("continue", Function((_, _, continueCC) -> {
+            continueCalled.b = true; continueCC(Nil);
+        }, "continue", []));
+        stackFrameWithBreakContinue.put("break", Function((_, _, breakCC) -> {
+            breakCalled.b = true; breakCC(Nil);
+        }, "break", []));
+        return env.extend(stackFrameWithBreakContinue);
+    }
+
     /**
         This tail-recursive implementation of begin breaks callCC.
         Toggle between tail recursion and continuation support with
@@ -647,7 +658,7 @@ class CCInterp {
             performFunction((innerArgs, innerEnv, innerCC) -> {
                 // If it's body form, the values of the iterable need to be bound for the body
                 // (potentially with list destructuring)
-                var bodyEnv = env.extend(args.first().destructuringBind(innerArgs.first()));
+                var bodyEnv = innerEnv.extend(args.first().destructuringBind(innerArgs.first()));
                 internalEval(Symbol("begin").cons(body), bodyEnv, innerCC);
             }, env, cc);
         } else {
@@ -668,14 +679,26 @@ class CCInterp {
 
         function synchronousIteration(operation: HFunction, innerEnv: HValue, outerCC: Continuation) {
             var results = [];
+            var continueCalled = new RefBool();
+            var breakCalled = new RefBool();
+
+            innerEnv = envWithBreakContinue(innerEnv, breakCalled, continueCalled);
+
             var iterationCC = if (collect) {
-                (result) -> { results.push(result); };
+                (result) -> {
+                    if (continueCalled.b || breakCalled.b) {
+                        continueCalled.b = false;
+                        return;
+                    }
+                    results.push(result);
+                };
             } else {
                 noCC;
             }
 
             for (value in iterable) {
                 operation(List([value]), innerEnv, iterationCC);
+                if (breakCalled.b) break;
             }
 
             outerCC(List(results));
@@ -693,16 +716,26 @@ class CCInterp {
             var iterator = iterable.iterator();
 
             var results = [];
+            var continueCalled = new RefBool();
+            var breakCalled = new RefBool();
+            
+            env = envWithBreakContinue(env, breakCalled, continueCalled);
+
             function asynchronousIteration(operation: HFunction, innerEnv: HValue, outerCC: Continuation) {
                 if (!iterator.hasNext()) {
                     outerCC(List(results));
                 } else {
                     operation(List([iterator.next()]), innerEnv, (value) -> {
-                        if (collect) {
-                            results.push(value);
-                        }
+                        if (breakCalled.b) {
+                            outerCC(List(results));
+                        } else {
+                            if (collect && !continueCalled.b) {
+                                results.push(value);
+                            }
+                            continueCalled.b = false;
 
-                        asynchronousIteration(operation, innerEnv, outerCC);
+                            asynchronousIteration(operation, innerEnv, outerCC);
+                        }
                     });
                 }
                 

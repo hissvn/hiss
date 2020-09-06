@@ -19,6 +19,8 @@
 (defun peek (l num)
     (slice l 0 num))
 
+(defun nil? (v) (eq nil v))
+
 // String functions:
 (register-method "split" split)
 (register-method "substr" substring)

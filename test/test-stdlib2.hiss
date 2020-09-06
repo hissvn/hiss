@@ -71,7 +71,9 @@
     (eq (list 3 4 5) (drop! l 2)))
 
 (test for
-    (eq (list 7 8 9) (for i (list 1 2 3) (+ i 6))))
+    (eq (list 7 8 9) (for i (list 1 2 3) (+ i 6)))
+    (eq (list 0 2 4 6) (for i (range 7) (if (= 1 (% i 2)) (continue) i)))
+    (eq (list 0 1 2 3 4) (for i (range 7) (if (= 5 i) (break) i))))
 
 (test do-for
     (not (do-for i (list 1 2 3) i))
@@ -84,7 +86,13 @@
     (not (do-map (list 1 2 3) (lambda (i) i)))
     (prints "1\n2\n3" (do-map (list 1 2 3) print)))
 
-; TODO run the last 4 tests but with continuations enabled WITHOUT causing a stack overflow
+(test continuation-iteration
+    (defun one-three-five () (for i (range 8) (cond ((= 1 (% i 2)) i) ((= 6 i) (break)) (t (continue)))))
+    (eq (list 1 3 5) (one-three-five))
+    (nil? (enable-continuations))
+    (eq (list 1 3 5) (one-three-five))
+    (nil? (disable-continuations))
+    (eq (list 1 3 5) (one-three-five)))
 
 (test eval
     ; Test evaluating globals
