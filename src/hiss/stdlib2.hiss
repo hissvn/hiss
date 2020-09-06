@@ -241,3 +241,13 @@
                     (break)))
             found)
         (t (eq tree elem))))
+
+(defun groups (l size &optional take-remainder)
+    (cond
+        ((< (length l) size)
+            (if take-remainder
+                    (list l)
+                (list)))
+        ((= (length l) size)
+            (list l))
+        (t (cons (peek l size) (groups (slice l size) size take-remainder)))))
