@@ -249,8 +249,11 @@ class CCInterp {
         importFunction(HissTools.iteratorToIterable, "iterator->iterable", Nil, ["haxe-iterator"]);
 
         // String functions:
+        globals.put("StringTools", Object("Class", StringTools));
         importFunction(StringTools.startsWith, "starts-with");
         importFunction(StringTools.endsWith, "ends-with");
+        importFunction(StringTools.lpad, "lpad");
+        importFunction(StringTools.rpad, "rpad");
 
         // Debug info
         importFunction(HissTools.version, "version", []);
@@ -718,7 +721,7 @@ class CCInterp {
             var results = [];
             var continueCalled = new RefBool();
             var breakCalled = new RefBool();
-            
+
             env = envWithBreakContinue(env, breakCalled, continueCalled);
 
             function asynchronousIteration(operation: HFunction, innerEnv: HValue, outerCC: Continuation) {
