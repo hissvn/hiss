@@ -205,6 +205,11 @@ class CCInterp {
         importCCFunction(callHaxe, "call-haxe");
         importCCFunction(_new, "new");
 
+        // Error handling
+        importFunction((message) -> throw message, "error!", Nil, ["message"]);
+        importSpecialForm(throwsError, "error?");
+        importSpecialForm(_try, "try");
+
         // Open Pandora's box if it's available:
         #if target.threaded
         importClass(HDeque, "Deque");
@@ -321,6 +326,30 @@ class CCInterp {
         //disableTrace();
         load("stdlib2.hiss");
         //enableTrace();
+    }
+
+    // error? will have an implicit begin
+    function throwsError(args: HValue, env: HValue, cc: Continuation) {
+        try {
+            internalEval(Symbol("begin").cons(args), env, (val) -> {
+                cc(Nil); // If the continuation is called, there is no error
+            });
+        } catch (err: Dynamic) {
+            cc(T);
+        }
+    }
+
+    function _try(args: HValue, env: HValue, cc: Continuation) {
+        try {
+            // Try cannot have an implicit begin because the second argument is the catch
+            internalEval(args.first(), env, cc);
+        } catch (err: Dynamic) {
+            if (args.length() > 1) {
+                internalEval(args.second(), env, cc);
+            } else {
+                cc(Nil);
+            }
+        }
     }
 
     function useBeginAndIterate(beginFunction: HFunction, iterateFunction: IterateFunction) {
