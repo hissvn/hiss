@@ -327,6 +327,7 @@ class CCInterp {
         importSpecialForm(iterateFunction.bind(false, true), "do-for");
         importSpecialForm(iterateFunction.bind(true, false), "map");
         importSpecialForm(iterateFunction.bind(false, false), "do-map");
+        return Nil;
     }
 
     /** Run a Hiss REPL from this interpreter instance **/
