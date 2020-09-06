@@ -4,6 +4,7 @@ haxelib install ihx
 haxelib install haxe-strings
 haxelib install uuid
 haxelib install utest
+haxelib install hxnodejs
 haxe build-scripts/test/test-interp.hxml && \
 haxe build-scripts/test/test-py3.hxml && \
 haxe build-scripts/test/test-js.hxml && \
