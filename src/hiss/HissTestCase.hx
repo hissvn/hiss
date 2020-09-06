@@ -221,7 +221,9 @@ class HissTestCase extends Test {
             var functionsNotTested = [for (fun => tested in functionsTested) if (!tested) fun];
 
             if (functionsNotTested.length != 0) {
-                Assert.warn('Warning: $functionsNotTested were never tested');
+                #if sys
+                Sys.print('Warning: $functionsNotTested were never tested');
+                #end
             }
 
             if (async != null) {
