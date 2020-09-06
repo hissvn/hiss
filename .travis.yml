@@ -6,4 +6,4 @@ env:
 haxe:
   - stable
   - development
-script: ./test-all.sh
+script: ./test-travis.sh
