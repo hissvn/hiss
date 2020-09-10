@@ -1,5 +1,27 @@
 (message "Testing Hiss standard library for version $(version)")
 
+(defun eq-with-input (input expected expression)
+    (let (version (version)
+            hiss-shell-command
+                (cond
+                    ((contains version "(target: python)") "python bin/py/hiss-repl.py")
+                    ((contains version "(target: nodejs)") "node bin/js/hiss-node-repl.js") ; TODO this won't be recognized yet because both js targets return target js
+                    ((contains version "(target: cpp)") nil) ; "bash -c bin/cpp/CCInterp") ; TODO for some reason, this causes read-line to hang!
+                    ((contains version "(target: eval)") "haxe build-scripts/all-script-args.hxml build-scripts/repl/all-repl-args.hxml --run hiss.CCInterp")
+                    (t nil)))
+        (if hiss-shell-command
+                (let (shell-output
+                            (begin
+                                (shell-command "echo ${expression} > temp.hiss")
+                                (shell-command "echo ${input}| $hiss-shell-command temp.hiss")))
+                    (eq expected (read shell-output)))
+
+            // If testing a target without a command-line interpreter, automatically pass this check. 
+            t)))
+
+(test read-line
+    (eq-with-input "sup" "sup" '(print (read-line))))
+
 (test or
     // Test with booleans:
     (eq nil (or))
