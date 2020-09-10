@@ -52,7 +52,7 @@ class HaxeTools {
             var result = process.stdout.readAll();
             process.close();
 
-            return result.getString(0, result.length).trim();
+            return result.toString().trim();
         #else
             throw "Can't run shell command on non-sys platform.";
         #end
