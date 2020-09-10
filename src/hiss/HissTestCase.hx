@@ -68,7 +68,7 @@ class HissTestCase extends Test {
 
         var assertions = args.rest();
 
-        var freshEnv = HissTools.emptyEnv();
+        var freshEnv = interp.emptyEnv();
         for (ass in assertions.toList()) {
             var failureMessage = 'Failure testing $functionsCoveredByUnit: ${ass.toPrint()} evaluated to: ';
             var errorMessage = 'Error testing $functionsCoveredByUnit: ${ass.toPrint()}: ';
@@ -183,7 +183,7 @@ class HissTestCase extends Test {
 
     function runTests(?async: Async) {
         if (file == null) {
-            hissTest(interp, expressions, HissTools.emptyEnv(), CCInterp.noCC);
+            hissTest(interp, expressions, interp.emptyEnv(), CCInterp.noCC);
         } else {
             // Full-blown test run
             trace("Measuring time to construct the Hiss environment:");

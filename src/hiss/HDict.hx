@@ -13,8 +13,10 @@ typedef HKeyValuePair = {
 **/
 class HDict {
     var map: Map<String, Array<HKeyValuePair>> = [];
+    var interp: CCInterp;
 
-    public function new (?map: Map<String, Array<HKeyValuePair>>) {
+    public function new (interp: CCInterp, ?map: Map<String, Array<HKeyValuePair>>) {
+        this.interp = interp;
         if (map != null) this.map = map;
     }
 
@@ -36,14 +38,14 @@ class HDict {
         return new HDictIterator(map.keyValueIterator());
     }
 
-    public function copy() { return new HDict(map.copy()); }
+    public function copy() { return new HDict(interp, map.copy()); }
 
     public function get(key: HValue): HValue {
         if (!map.exists(key.toPrint())) return Nil;
         var hashMatches = map[key.toPrint()];
 
         for (match in hashMatches) {
-            if (match.key.eq(key).truthy()) {
+            if (match.key.eq(interp, key).truthy()) {
                 return match.value;
             }
         }
@@ -56,7 +58,7 @@ class HDict {
         var hashMatches = map[key.toPrint()];
 
         for (match in hashMatches) {
-            if (match.key.eq(key).truthy()) {
+            if (match.key.eq(interp, key).truthy()) {
                 match.value = value;
                 return;
             }
@@ -73,7 +75,7 @@ class HDict {
         var hashMatches = map[key.toPrint()];
 
         for (match in hashMatches) {
-            if (match.key.eq(key).truthy()) {
+            if (match.key.eq(interp, key).truthy()) {
                 return true;
             }
         }
@@ -88,7 +90,7 @@ class HDict {
         var idx = 0;
         while (idx < hashMatches.length) {
             var match = hashMatches[idx];
-            if (match.key.eq(key).truthy()) {
+            if (match.key.eq(interp, key).truthy()) {
                 hashMatches.splice(idx, 1);
                 return;
             }

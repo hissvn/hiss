@@ -213,14 +213,8 @@ class HissTools {
         return cons(extension, env);
     }
 
-    public static function emptyList() { return List([]); }
-
-    public static function emptyDict() { return Dict(new HDict()); }
-
-    public static function emptyEnv() { return List([emptyDict()]); }
-
-    public static function destructuringBind(names: HValue, values: HValue) {
-        var bindings = emptyDict();
+    public static function destructuringBind(names: HValue, interp: CCInterp, values: HValue) {
+        var bindings = interp.emptyDict();
 
         switch (names) {
             case Symbol(name):
@@ -237,14 +231,14 @@ class HissTools {
                 for (idx in 0...l1.length) {
                     switch (l1[idx]) {
                         case List(nestedList):
-                            bindings = bindings.dictExtend(destructuringBind(l1[idx], l2[idx]));
+                            bindings = bindings.dictExtend(destructuringBind(l1[idx], interp, l2[idx]));
                         case Symbol("&optional"):
                             var numOptionalValues = l1.length - idx - 1;
                             var remainingValues = l2.slice(idx);
                             while (remainingValues.length < numOptionalValues) {
                                 remainingValues.push(Nil);
                             }
-                            bindings = bindings.dictExtend(destructuringBind(List(l1.slice(idx+1)), List(remainingValues)));
+                            bindings = bindings.dictExtend(destructuringBind(List(l1.slice(idx+1)), interp, List(remainingValues)));
                             break;
                         case Symbol("&rest"):
                             var remainingValues = l2.slice(idx);
@@ -273,7 +267,17 @@ class HissTools {
         return List(l);
     }
 
-    public static function eq(a: HValue, b: HValue): HValue {
+    public static function eq(a: HValue, interp: CCInterp, b: HValue): HValue {
+        // Throw an error if trying to compare with interpstrings
+        switch (a) {
+            case InterpString(_): a = interp.eval(a);
+            default:
+        }
+        switch (b) {
+            case InterpString(_): b = interp.eval(b);
+            default:
+        }
+
         if (Type.enumIndex(a) != Type.enumIndex(b)) {
             return Nil;
         }
@@ -286,13 +290,13 @@ class HissTools {
                 if (l1.length != l2.length) return Nil;
                 var i = 0;
                 while (i < l1.length) {
-                    if (!HissTools.truthy(eq(l1[i], l2[i]))) return Nil;
+                    if (!HissTools.truthy(eq(l1[i], interp, l2[i]))) return Nil;
                     i++;
                 }
                 return T;
             case Quote(aa) | Quasiquote(aa) | Unquote(aa) | UnquoteList(aa):
                 var bb = HaxeTools.extract(b, Quote(e) | Quasiquote(e) | Unquote(e) | UnquoteList(e) => e);
-                return eq(aa, bb);
+                return eq(aa, interp, bb);
             case SpecialForm(fun, _):
                 return switch (b) {
                     case SpecialForm(fun2, _) if (fun == fun2): T;

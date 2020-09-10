@@ -162,10 +162,16 @@ class CCInterp {
 
     var currentBeginFunction: HFunction = null;
 
+    static function emptyList() { return List([]); }
+
+    public function emptyDict() { return Dict(new HDict(this)); }
+
+    public function emptyEnv() { return List([emptyDict()]); }
+
     public function new(?printFunction: (Dynamic) -> Dynamic) {
         HissTestCase.reallyTrace = Log.trace;
 
-        globals = HissTools.emptyDict();
+        globals = emptyDict();
         reader = new HissReader(this);
 
         // When not a repl, use Sys.exit for quitting
@@ -285,7 +291,7 @@ class CCInterp {
         importFunction(HissTools.first, "first", T, ["l"]);
         importFunction(HissTools.rest, "rest", T, ["l"]);
         importFunction(HissTools.last, "last", T, ["l"]);
-        importFunction(HissTools.eq, "eq", T, ["a", "b"]);
+        importFunction(HissTools.eq.bind(_, this, _), "eq", T, ["a", "b"]);
         importFunction(HissTools.nth, "nth", T, ["l", "n"]);
         importFunction(HissTools.cons, "cons", T, ["val", "l"]);
         importFunction(HissTools.not, "not", T, ["val"]);
@@ -382,7 +388,7 @@ class CCInterp {
             }
             throw HSignal.Quit;
         }, "quit");
-        var locals = HissTools.emptyEnv(); // This allows for top-level setlocal
+        var locals = emptyEnv(); // This allows for top-level setlocal
 
         HaxeTools.println('Hiss version ${CompileInfo.version()}');
         HaxeTools.println("Type (quit) to quit the REPL");
@@ -486,7 +492,7 @@ class CCInterp {
     }
 
     public function load(file: String) {
-        _load(List([String(file)]), HissTools.emptyEnv(), noCC);
+        _load(List([String(file)]), emptyEnv(), noCC);
     }
 
     function _load(args: HValue, env: HValue, cc: Continuation) {
@@ -499,7 +505,7 @@ class CCInterp {
     }
 
     function envWithReturn(env: HValue, called: RefBool) {
-        var stackFrameWithReturn = HissTools.emptyDict();
+        var stackFrameWithReturn = emptyDict();
         stackFrameWithReturn.put("return", Function((args, env, cc) -> {
             called.b = true;
             cc(args.first());
@@ -508,7 +514,7 @@ class CCInterp {
     }
 
     function envWithBreakContinue(env: HValue, breakCalled: RefBool, continueCalled: RefBool) {
-        var stackFrameWithBreakContinue = HissTools.emptyDict();
+        var stackFrameWithBreakContinue = emptyDict();
         stackFrameWithBreakContinue.put("continue", Function((_, _, continueCC) -> {
             continueCalled.b = true; continueCC(Nil);
         }, "continue", []));
@@ -576,7 +582,7 @@ class CCInterp {
         #end
         evalAll(args, env, (values) -> {
             // trace(values.toPrint());
-            values.first().toHFunction()(values.rest(), if (callInline) env else HissTools.emptyEnv(), cc);
+            values.first().toHFunction()(values.rest(), if (callInline) env else emptyEnv(), cc);
         });
     }
 
@@ -670,7 +676,7 @@ class CCInterp {
         var body = Symbol('begin').cons(args.rest());
         var hFun: HFunction = (fArgs, innerEnv, fCC) -> {
             var callEnv = List(env.toList().concat(innerEnv.toList()));
-            callEnv = callEnv.extend(params.destructuringBind(fArgs)); // extending the outer env is how lambdas capture values
+            callEnv = callEnv.extend(params.destructuringBind(this, fArgs)); // extending the outer env is how lambdas capture values
             internalEval(body, callEnv, fCC);
         };
         var callable = if (isMacro) {
@@ -697,13 +703,13 @@ class CCInterp {
             performFunction((innerArgs, innerEnv, innerCC) -> {
                 // If it's body form, the values of the iterable need to be bound for the body
                 // (potentially with list destructuring)
-                var bodyEnv = innerEnv.extend(args.first().destructuringBind(innerArgs.first()));
+                var bodyEnv = innerEnv.extend(args.first().destructuringBind(this, innerArgs.first()));
                 internalEval(Symbol("begin").cons(body), bodyEnv, innerCC);
             }, env, cc);
         } else {
             // If it's function form, a name symbol is not necessary
             internalEval(args.second(), env, (fun) -> { 
-                performFunction(fun.toHFunction(), HissTools.emptyEnv(), cc);
+                performFunction(fun.toHFunction(), emptyEnv(), cc);
             });
         }
     }
@@ -809,7 +815,7 @@ class CCInterp {
                 }
 
                 // Recur has to be a special form so it retains the environment of the original loop call
-                internalEval(Symbol("begin").cons(body), env.extend(names.destructuringBind(SpecialForm(recur, "recur").cons(values))), (value) -> {result = value;});
+                internalEval(Symbol("begin").cons(body), env.extend(names.destructuringBind(this, SpecialForm(recur, "recur").cons(values))), (value) -> {result = value;});
                 
             } while (recurCalled);
             cc(result);
@@ -980,7 +986,7 @@ class CCInterp {
     }
 
     function makeDict(args: HValue, env: HValue, cc: Continuation) {
-        var dict = new HDict();
+        var dict = new HDict(this);
 
         var idx = 0;
         while (idx < args.length()) {
@@ -1003,7 +1009,7 @@ class CCInterp {
     /** Public, synchronous form of eval. Won't work with javascript asynchronous functions **/
     public function eval(arg: HValue, ?env: HValue) {
         var value = null;
-        if (env == null) env = HissTools.emptyEnv();
+        if (env == null) env = emptyEnv();
         internalEval(arg, env, (_value) -> {
             value = _value;
         });
@@ -1012,7 +1018,7 @@ class CCInterp {
 
     /** Asynchronos-friendly form of eval. NOTE: The args are out of order so this isn't an HFunction. **/
     public function evalCC(arg: HValue, cc: Continuation, ?env: HValue) {
-        if (env == null) env = HissTools.emptyEnv();
+        if (env == null) env = emptyEnv();
         internalEval(arg, env, cc);
     }
 
