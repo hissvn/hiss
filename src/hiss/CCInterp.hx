@@ -168,6 +168,9 @@ class CCInterp {
         globals = HissTools.emptyDict();
         reader = new HissReader(this);
 
+        // When not a repl, use Sys.exit for quitting
+        importFunction(Sys.exit.bind(0), "quit", []);
+
         // Primitives
         importSpecialForm(set.bind(Global), "defvar");
         importSpecialForm(set.bind(Local), "setlocal");
