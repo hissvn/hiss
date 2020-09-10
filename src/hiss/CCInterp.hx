@@ -206,9 +206,9 @@ class CCInterp {
         importCCFunction(_new, "new");
 
         // Error handling
-        importFunction((message) -> throw message, "error!", Nil, ["message"]);
+        importFunction(error, "error!", Nil, ["message"]);
         importSpecialForm(throwsError, "error?");
-        importSpecialForm(_try, "try");
+        importSpecialForm(hissTry, "try");
 
         // Open Pandora's box if it's available:
         #if target.threaded
@@ -328,6 +328,8 @@ class CCInterp {
         //enableTrace();
     }
 
+    function error(message: Dynamic) { throw message; }
+
     // error? will have an implicit begin
     function throwsError(args: HValue, env: HValue, cc: Continuation) {
         try {
@@ -339,7 +341,7 @@ class CCInterp {
         }
     }
 
-    function _try(args: HValue, env: HValue, cc: Continuation) {
+    function hissTry(args: HValue, env: HValue, cc: Continuation) {
         try {
             // Try cannot have an implicit begin because the second argument is the catch
             internalEval(args.first(), env, cc);
