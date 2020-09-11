@@ -34,9 +34,11 @@
         (for l lists (nth l i))))
 
 (defmacro cond (&rest forms)
-    `(and ',forms (if (eval (first (first ',forms)))
+    `(if (not ',forms)
+            (error! "cond ran out of options. add a default case")
+        (and ',forms (if (eval (first (first ',forms)))
             (eval (cons 'begin (rest (first ',forms))))
-        (eval (cons 'cond (rest ',forms))))))
+        (eval (cons 'cond (rest ',forms)))))))
 
 (defmacro let (bindings &rest body)
     (setlocal setlocal-exps 
@@ -194,7 +196,8 @@
         ((list? string-or-list)
             (for elem string-or-list (if (eq old elem) new elem)))
         ((string? string-or-list)
-            (call-haxe StringTools "replace" (list string-or-list old new)))))
+            (call-haxe StringTools "replace" (list string-or-list old new)))
+        (t (error! "replace can't be called on $string-or-list"))))
 
 (defun index-of (string-or-list part &optional start-index)
     (default! start-index 0)
@@ -207,7 +210,8 @@
                     (break)))
             found-idx)
         ((string? string-or-list)
-            (call-haxe string-or-list "indexOf" (list part start-index)))))
+            (call-haxe string-or-list "indexOf" (list part start-index)))
+        (t (error! "index-of can't be called on $string-or-list"))))
 
 (defun last-index-of (string-or-list part &optional start-index)
     (default! start-index (- (length (string-or-list)) 1))
@@ -218,7 +222,8 @@
                     (return idx)))
             -1)
         ((string? string-or-list)
-            (call-haxe string-or-list "lastIndexOf" (list part start-index)))))
+            (call-haxe string-or-list "lastIndexOf" (list part start-index)))
+        (t (error! "last-index-of can't be called on $string-or-list"))))
 
 
 (defun contains (string-or-list part)
