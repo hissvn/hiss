@@ -175,7 +175,7 @@ class CCInterp {
         reader = new HissReader(this);
 
         // When not a repl, use Sys.exit for quitting
-        #if (sys || nodejs)
+        #if (sys || hxnodejs)
         importFunction(Sys.exit.bind(0), "quit", []);
         #end
 
@@ -423,7 +423,7 @@ class CCInterp {
                         return;
                 }
             }
-            #if !throwErrors
+            #if (!throwErrors)
             catch (s: String) {
                 HaxeTools.println('Error "$s" from `${exp.toPrint()}`');
                 HaxeTools.println('Callstack depth ${CallStack.callStack().length}');

@@ -7,6 +7,10 @@ using StringTools;
 
 #if sys
 import sys.io.Process;
+#elseif hxnodejs
+import js.node.ChildProcess.spawnSync;
+import js.node.Buffer;
+import haxe.extern.EitherType;
 #end
 
 class HaxeTools {
@@ -40,8 +44,7 @@ class HaxeTools {
         #end
     }
 
-    public static function shellCommand(cmd: String) {
-        // hxnodejs doesn't implement the Process class.
+    public static function shellCommand(cmd: String): String {
         #if sys
             var process = new Process(cmd);
             if (process.exitCode() != 0) {
@@ -53,6 +56,35 @@ class HaxeTools {
             process.close();
 
             return result.toString().trim();
+        // hxnodejs doesn't implement the Process class.
+        #elseif hxnodejs
+            function stringFromChildProcessOutput(output: EitherType<Buffer, String>): String {
+                return try { 
+                    cast(output, Buffer).toString();
+                } catch (s: Dynamic) {
+                    cast(output, String);
+                };
+            }
+
+            // TODO this is more complicated than I thought. To work with pipes, it will have to loop through the calls.
+            // to write to file, >> and > will need to manually call Haxe file operations.
+
+            var parts = cmd.split(" ");
+            var cmd = parts[0];
+            var args = parts.slice(1);
+            var process = spawnSync(cmd, args);
+
+            if (process.error != null) {
+                throw 'child_process error from `$cmd`: ${process.error}';
+            }
+
+            if (process.status != 0) {
+                var message = stringFromChildProcessOutput(process.stderr);
+                throw 'Shell command error from `$cmd`: $message';
+            }
+
+            var result = stringFromChildProcessOutput(process.stdout);
+            return result.trim();
         #else
             throw "Can't run shell command on non-sys platform.";
         #end
