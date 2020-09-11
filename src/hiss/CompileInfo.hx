@@ -13,24 +13,38 @@ class CompileInfo {
         but with bells and whistles for a nice Hiss versioning convention
     **/
     public static macro function version(): ExprOf<String> {
-        #if (!display && sys)
-            var posInfos = Context.getPosInfos(Context.currentPos());
-            var directory = Path.directory(posInfos.file);
-            var hissVersion = "";
-            try {
-                var branch = HaxeTools.shellCommand('cd "$directory" && git branch --show-current');
-                var revision = HaxeTools.shellCommand('cd "$directory" && git rev-list --count HEAD');
-                var modified = HaxeTools.shellCommand('cd "$directory" && git status -s');
-                if (modified.length > 0) modified = "*";
-                var target = Context.definedValue("target.name");
-                var hissVersion = '$branch-$revision$modified (target: $target)';
-                return macro $v{hissVersion};
-            } catch (err: Dynamic) {
-                trace(err);
-                return macro $v{"ERROR GETTING VERSION"};
+        #if !display
+        var posInfos = Context.getPosInfos(Context.currentPos());
+        var directory = Path.directory(posInfos.file);
+        var branch = try {
+            HaxeTools.shellCommand('cd "$directory" && git branch --show-current');
+        } catch (err: Dynamic) { 
+            "[unknown branch]";
+        }
+        var revision = try {
+            HaxeTools.shellCommand('cd "$directory" && git rev-list --count HEAD');
+        } catch (err: Dynamic) {
+            "[unknown revision#]";
+        };
+        var modified = try {
+            if (HaxeTools.shellCommand('cd "$directory" && git status -s').length > 0) {
+                "*";
+            } else {
+                "";
             }
+        } catch (err: Dynamic) {
+            "[unknown if modified]";
+        }
+        var target = Context.definedValue("target.name");
+        if (target == "js") {
+            #if hxnodejs
+            target = "nodejs";
+            #end
+        }
+        var hissVersion = '$branch-$revision$modified (target: $target)';
+        return macro $v{hissVersion};
         #else
-            return macro $v{"CAN'T GET VERSION ON THIS TARGET"};
+        return macro $v{""}; // Return empty string if running through a language server/in IDE
         #end
     }
 }

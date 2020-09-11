@@ -69,6 +69,9 @@ class HaxeTools {
             // TODO this is more complicated than I thought. To work with pipes, it will have to loop through the calls.
             // to write to file, >> and > will need to manually call Haxe file operations.
 
+            // Also, &&, and || being ambiguous with the pipe, and nesting of parentheses, make this a headache.
+            // This might literally be a case where we need to use reader macros in a clever way.
+
             var parts = cmd.split(" ");
             var cmd = parts[0];
             var args = parts.slice(1);
