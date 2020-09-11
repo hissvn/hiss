@@ -187,6 +187,7 @@
                     (dict-set! prior-args args result)
                     result)))))
 
+; TODO if it's neither a list nor string, throw an error
 ; In cases where a function name could reasonably be expected to work the same on EITHER a string or a list, Hiss should support both:
 (defun replace (string-or-list old new)
     (cond
@@ -251,3 +252,33 @@
         ((= (length l) size)
             (list l))
         (t (cons (peek l size) (groups (slice l size) size take-remainder)))))
+
+(defvar *types* (dict))
+
+(defmacro deftype (name &rest predicates)
+    (let (predicate-values
+                (for predicate predicates (eval predicate))
+            combined-predicate
+                (lambda (val) (apply and (for predicate predicate-values (predicate val))))
+            predicate-name (symbol "$(symbol-name name)?"))
+        `(begin
+            (dict-set! *types* ',name ,combined-predicate)
+            (default! ,predicate-name ,combined-predicate)))) ; If a predicate with the given name is already defined, it will be kept as the global predicate
+
+(defmacro the (type var)
+    "Throw an error if the given variable is not the given type, else return the variable"
+    `(if ((dict-get *types* ',type) ,var)
+            ,var
+        (error! (+ ,var " is not expected type " (symbol-name ',type)))))
+
+(deftype int int?)
+(deftype float float?)
+(deftype number number?)
+(deftype symbol symbol?)
+(deftype string string?)
+(deftype list list?)
+(deftype dict dict?)
+(deftype function function?)
+(deftype macro macro?)
+(deftype callable callable?)
+(deftype object object?)
