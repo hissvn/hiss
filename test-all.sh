@@ -17,5 +17,4 @@ haxe build-scripts/repl/build-nodejs-repl.hxml && \
 haxe build-scripts/test/test-nodejs.hxml $end
 
 haxe build-scripts/repl/build-py-repl.hxml && \
-haxe build-scripts/test/test-py.hxml $end
-"
+haxe build-scripts/test/test-py.hxml"
