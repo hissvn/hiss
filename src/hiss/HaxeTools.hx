@@ -87,7 +87,9 @@ class HaxeTools {
                     {};
                 }
 
+                Sys.println('spawning sync node process $command');
                 var process = spawnSync(bin, args, options);
+                Sys.println("finished sync node process");
 
                 if (process.error != null) {
                     throw 'child_process error from `$command`: ${process.error}';
