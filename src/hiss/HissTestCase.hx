@@ -63,7 +63,7 @@ class HissTestCase extends Test {
         }
 
         if (printTestCommands) {
-            reallyTrace(functionsCoveredByUnit);
+            Sys.println(functionsCoveredByUnit.toString());
         }
 
         var assertions = args.rest();
@@ -128,6 +128,8 @@ class HissTestCase extends Test {
     static function hissPrintFail(v: HValue) {
         if (!printTestCommands) {
             Assert.fail('Tried to print ${v.toPrint()} unnecessarily');
+        } else {
+            Sys.println(v.toPrint());
         }
         return v;
     }
@@ -145,6 +147,8 @@ class HissTestCase extends Test {
             try {
                 if (!printTestCommands) {
                     Assert.fail('Traced $str to console');
+                } else {
+                    tempTrace(str, posInfo);
                 }
             } catch (_: Dynamic) {
                 // Because of asynchronous nonsense, this might be called out of context sometimes. When that happens,
