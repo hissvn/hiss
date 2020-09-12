@@ -126,7 +126,9 @@ class HissTestCase extends Test {
         Any unnecessary printing is a bug, so replace print() with this function while running tests.
     **/
     static function hissPrintFail(v: HValue) {
-        Assert.fail('Tried to print ${v.toPrint()} unnecessarily');
+        if (!printTestCommands) {
+            Assert.fail('Tried to print ${v.toPrint()} unnecessarily');
+        }
         return v;
     }
 
