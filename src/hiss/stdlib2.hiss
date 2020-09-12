@@ -264,7 +264,13 @@
     (let (predicate-values
                 (for predicate predicates (eval predicate))
             combined-predicate
-                (lambda (val) (apply and (for predicate predicate-values (predicate val))))
+                (lambda (val)
+                    (set! ret t)
+                    (do-for predicate predicate-values
+                        (when (not (predicate val))
+                            (set! ret nil)
+                            (break)))
+                    ret)
             predicate-name (symbol "$(symbol-name name)?"))
         `(begin
             (dict-set! *types* ',name ,combined-predicate)
