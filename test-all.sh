@@ -7,7 +7,7 @@ end=""
 pysuffix=""
 if [ ! -z "$1" ]; then
     end="&& \\"
-    #pysuffix="3"
+    pysuffix="3"
 fi
 
 eval "haxe build-scripts/test/test-interp.hxml $end
