@@ -1,6 +1,8 @@
 #! /bin/bash
 
-# If the first argument is supplied, test-all.sh will fail as soon as one target fails.
+# Supply the first argument if calling this script from Travis CI.
+# In that case, test-all.sh will fail as soon as one target fails.
+# python3 will also be used instead of python when running shell commands.
 end=""
 pysuffix=""
 if [ ! -z "$1" ]; then

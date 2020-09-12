@@ -333,11 +333,22 @@ class CCInterp {
         importFunction(Sys.sleep, "sleep!", ["duration"]);
         #end
 
+        importFunction(python, "python", []);
+
         StaticFiles.compileWith("stdlib2.hiss");
 
         //disableTrace();
         load("stdlib2.hiss");
         //enableTrace();
+    }
+
+    // It's absurd that we should have to provide this function...
+    function python() { 
+        #if hissUsePython3
+        return "python3";
+        #else
+        return "python";
+        #end
     }
 
     function error(message: Dynamic) { throw message; }

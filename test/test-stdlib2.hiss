@@ -4,8 +4,8 @@
     (let (version (version)
             hiss-shell-command
                 (cond
-                    ((contains version "(target: python)") "python bin/py/hiss-repl.py")
-                    ((contains version "(target: nodejs)") "node bin/js/hiss-node-repl.js") ; TODO this won't be recognized yet because both js targets return target js
+                    ((contains version "(target: python)") "$(python) bin/py/hiss-repl.py")
+                    ((contains version "(target: nodejs)") "node bin/js/hiss-node-repl.js")
                     ((contains version "(target: cpp)") nil) ; "bash -c bin/cpp/CCInterp") ; TODO for some reason, this causes read-line to hang!
                     ((contains version "(target: eval)") "haxe build-scripts/all-script-args.hxml build-scripts/repl/all-repl-args.hxml --run hiss.CCInterp")
                     (t nil)))
