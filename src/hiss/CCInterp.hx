@@ -13,7 +13,7 @@ using hx.strings.Strings;
 
 import hiss.HTypes;
 #if (sys || hxnodejs)
-import sys.io.File;
+import hiss.wrappers.HFile;
 import sys.io.FileOutput;
 import ihx.ConsoleReader;
 #end
@@ -328,8 +328,7 @@ class CCInterp {
         importFunction(HissTools.homeDir, "home-dir", []);
         importFunction(StaticFiles.getContent, "get-content", ["file"]);
         #if (sys || hxnodejs)
-        importClass(File, "File");
-        importClass(FileOutput, "FileOutput");
+        importClass(HFile, "File");
         importFunction(Sys.sleep, "sleep!", ["duration"]);
         #end
 

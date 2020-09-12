@@ -12,8 +12,9 @@
         (if hiss-shell-command
                 (let (shell-output
                             (begin
-                                (shell-command "echo ${expression} > temp.hiss")
-                                (shell-command "echo ${input}| $hiss-shell-command temp.hiss")))
+                                (File:save-content "temp.hiss" "${expression}")
+                                (File:save-content "temp.txt" input)
+                                (shell-command "cat temp.txt | $hiss-shell-command temp.hiss")))
                     (eq expected (read shell-output)))
 
             // If testing a target without a command-line interpreter, automatically pass this check. 
