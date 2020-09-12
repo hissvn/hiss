@@ -293,6 +293,7 @@ class CCInterp {
         importFunction(HissTools.last, "last", T, ["l"]);
         importFunction(HissTools.eq.bind(_, this, _), "eq", T, ["a", "b"]);
         importFunction(HissTools.nth, "nth", T, ["l", "n"]);
+        importFunction(HissTools.setNth, "set-nth!", T, ["l", "n", "val"]);
         importFunction(HissTools.cons, "cons", T, ["val", "l"]);
         importFunction(HissTools.not, "not", T, ["val"]);
         importFunction(HissTools.sort, "sort", Nil, ["l, sort-function"]);

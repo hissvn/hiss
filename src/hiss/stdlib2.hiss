@@ -268,13 +268,14 @@
             predicate-name (symbol "$(symbol-name name)?"))
         `(begin
             (dict-set! *types* ',name ,combined-predicate)
-            (default! ,predicate-name ,combined-predicate)))) ; If a predicate with the given name is already defined, it will be kept as the global predicate
+            (default! ,predicate-name ,combined-predicate)  ; If a predicate with the given name is already defined, it will be kept as the global predicate
+            t)))
 
 (defmacro the (type var)
     "Throw an error if the given variable is not the given type, else return the variable"
     `(if ((dict-get *types* ',type) ,var)
             ,var
-        (error! (+ ,var " is not expected type " (symbol-name ',type)))))
+        (error! ,"$var is not expected type $type")))
 
 (deftype int int?)
 (deftype float float?)
@@ -282,8 +283,45 @@
 (deftype symbol symbol?)
 (deftype string string?)
 (deftype list list?)
+(deftype pair list? (lambda (l) (= 2 (length l))))
 (deftype dict dict?)
 (deftype function function?)
 (deftype macro macro?)
 (deftype callable callable?)
 (deftype object object?)
+(deftype any (lambda (v) t))
+
+(defmacro defstruct (name &rest fields)
+    (let (make-function-name
+                (symbol "make-$name")
+            type-predicate-name
+                (symbol "${name}?")
+            field-names-and-types
+                (for field fields
+                    (cond
+                        ((pair? field) field)
+                        ((symbol? field) (list field 'any))
+                        (t (error! "struct fields must either be a symbol (for any type) or a pair (for a specific type)"))))
+            field-indices
+                (collect (range 1 (+ 1 (length fields))))
+            field-info
+                (zip field-indices field-names-and-types)
+            field-getters
+                (for (index (field-name _)) field-info
+                    `(defun ,(symbol "${name}-${field-name}") (instance) (nth instance ,index)))
+            all-fields-typecheck
+                (for (index (field-name field-type)) field-info
+                    `(the ,field-type (nth instance ,index)))
+            field-setters
+                (for (index (field-name field-type)) field-info
+                    `(defun ,(symbol "${name}-set-${field-name}!") (instance value) (set-nth! instance ,index (the ,field-type value)))))
+
+    `(begin
+        (defun ,make-function-name (&rest make-args) (the ,name (cons ',name make-args)))
+        (defun ,type-predicate-name (instance)
+            (and (eq ',name (first instance))
+                (not (error? (begin ,@all-fields-typecheck)))))
+
+        ,@field-getters
+        ,@field-setters
+        (deftype ,name ,type-predicate-name))))
