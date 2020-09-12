@@ -29,7 +29,7 @@ class HissTestCase extends Test {
     var useTimeout: Bool;
     var expressions: HValue = null;
 
-    static var printTestCommands: Bool = false; // Only enable this for debugging infinite loops
+    static var printTestCommands: Bool = true; // Only enable this for debugging infinite loops and mysterious hangs
 
     public function new(hissFile: String, useTimeout: Bool = false, ?ignoreFunctions: Array<String>) {
         super();
