@@ -143,7 +143,9 @@ class HissTestCase extends Test {
         #if !throwErrors
         Log.trace = (str, ?posInfo) -> {
             try {
-                Assert.fail('Traced $str to console');
+                if (!printTestCommands) {
+                    Assert.fail('Traced $str to console');
+                }
             } catch (_: Dynamic) {
                 // Because of asynchronous nonsense, this might be called out of context sometimes. When that happens,
                 // assume that things were SUPPOSED to trace normally.
