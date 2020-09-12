@@ -66,27 +66,42 @@ class HaxeTools {
                 };
             }
 
-            // TODO this is more complicated than I thought. To work with pipes, it will have to loop through the calls.
-            // to write to file, >> and > will need to manually call Haxe file operations.
+            // TODO file output redirection
+            // To write to file, >> and > will need to manually call Haxe file operations.
 
-            // Also, &&, and || being ambiguous with the pipe, and nesting of parentheses, make this a headache.
+            // TODO Also, &&, and || being ambiguous with the pipe, and nesting of parentheses, make this a headache.
             // This might literally be a case where we need to use reader macros in a clever way.
 
-            var parts = cmd.split(" ");
-            var cmd = parts[0];
-            var args = parts.slice(1);
-            var process = spawnSync(cmd, args);
+            // Making shell-command work with pipes and other shell features is more complicated than I thought.
+            var input = "";
+            var result = "";
 
-            if (process.error != null) {
-                throw 'child_process error from `$cmd`: ${process.error}';
+            for (command in cmd.split("|")) {
+                var parts = command.trim().split(" ");
+                var bin = parts[0];
+                var args = parts.slice(1);
+                
+                var options = if (input.length > 0) {
+                    { "input": input };
+                } else {
+                    {};
+                }
+
+                var process = spawnSync(bin, args, options);
+
+                if (process.error != null) {
+                    throw 'child_process error from `$command`: ${process.error}';
+                }
+
+                if (process.status != 0) {
+                    var message = stringFromChildProcessOutput(process.stderr);
+                    throw 'Shell command error from `$command`: $message';
+                }
+
+                result = stringFromChildProcessOutput(process.stdout);
+                input = result;
             }
 
-            if (process.status != 0) {
-                var message = stringFromChildProcessOutput(process.stderr);
-                throw 'Shell command error from `$cmd`: $message';
-            }
-
-            var result = stringFromChildProcessOutput(process.stdout);
             return result.trim();
         #else
             throw "Can't run shell command on non-sys platform.";
