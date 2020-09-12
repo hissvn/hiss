@@ -63,7 +63,11 @@ class HissTestCase extends Test {
         }
 
         if (printTestCommands) {
+            #if (sys || hxnodejs)
             Sys.println(functionsCoveredByUnit.toString());
+            #else
+            tempTrace(functionsCoveredByUnit.toString(), null);
+            #end
         }
 
         var assertions = args.rest();
@@ -129,12 +133,16 @@ class HissTestCase extends Test {
         if (!printTestCommands) {
             Assert.fail('Tried to print ${v.toPrint()} unnecessarily');
         } else {
+            #if (sys || hxnodejs)
             Sys.println(v.toPrint());
+            #else
+            tempTrace(v.toPrint(), null);
+            #end
         }
         return v;
     }
 
-    static var tempTrace = null;
+    static var tempTrace: (Dynamic, ?PosInfos) -> Void = null;
     /**
         Make all forms of unnecessary printing into test failures :)
     **/
