@@ -6,7 +6,9 @@
                 (cond
                     ((contains version "(target: python)") "$(python) bin/py/hiss-repl.py")
                     ((contains version "(target: nodejs)") "node bin/js/hiss-node-repl.js")
-                    ((contains version "(target: cpp)") nil) ; "bash -c bin/cpp/CCInterp") ; TODO for some reason, this causes read-line to hang!
+                    ((contains version "(target: cpp)") 
+                        (File:save-content "temp.sh" "#!/bin/bash\nbin/cpp/CCInterp \$@")
+                        "bash temp.sh") ; TODO for some reason, this causes read-line to hang!
                     ((contains version "(target: eval)") "haxe build-scripts/all-script-args.hxml build-scripts/repl/all-repl-args.hxml --run hiss.CCInterp")
                     (t nil)))
         (if hiss-shell-command
