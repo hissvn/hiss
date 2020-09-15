@@ -73,7 +73,13 @@ class CCInterp {
     // imported on each target, and if not all targets provide them, wrap them
     var debugClassImports = false;
 
-    public function importClass(clazz: Class<Dynamic>, name: String, ?methodNameFunction: String->String) {
+    public function importClass(
+            clazz: Class<Dynamic>,
+            name: String,
+            ?methodNameFunction: String->String,
+            ?getterNameFunction: String->String,
+            ?setterNameFunction: String->String) {
+
         if (debugClassImports) {
             trace('Import $name');
         }
@@ -83,6 +89,20 @@ class CCInterp {
         if (methodNameFunction == null) {
             methodNameFunction = (methodName) -> {
                 name + ":" + methodName.toLowerHyphen();
+            };
+        }
+
+        // By default, name getters in the form ClassName:get-property-to-lower-hyphen
+        if (getterNameFunction == null) {
+            getterNameFunction = (propertyName) -> {
+                name + ":get-" + propertyName.toLowerHyphen();
+            };
+        }
+
+        // By default, name setters in the form ClassName:set-property-to-lower-hyphen!
+        if (setterNameFunction == null) {
+            setterNameFunction = (propertyName) -> {
+                name + ":set-" + propertyName.toLowerHyphen() + "!";
             };
         }
 
@@ -96,7 +116,6 @@ class CCInterp {
                         trace(translatedName);
                     }
                     globals.put(translatedName, Function((args, env, cc) -> {
-                        // This has been split into more atomic steps for debugging on different hiss targets:
                         var instance = args.first().value(this);
                         var argArray = args.rest().unwrapList(this);
                         // We need an empty instance for checking the types of the properties.
@@ -107,7 +126,27 @@ class CCInterp {
                         cc(returnValue.toHValue());
                     }, translatedName));
                 default:
-                    // TODO generate getters and setters for instance fields
+                    // generate getters and setters for instance fields
+                    // TODO this approach is naive. It only finds properties that are returned by getProperty() which hopefully
+                    // excludes ones that aren't publicly readable (test that). It also generates setters for ALL publicly readable
+                    // properties, which may include some that aren't publicly writeable. Maybe trying setProperty() with a dummy
+                    // value to check if the write succeeds somehow, then setting it back, would catch that.
+
+                    // TODO test these imports
+                    var getterTranslatedName = getterNameFunction(instanceField);
+                    globals.put(getterTranslatedName, Function((args, env, cc) -> {
+                        var instance = args.first().value(this);
+                        var value : Dynamic = Reflect.getProperty(instance, instanceField);
+                        cc(value.toHValue());
+                    }, getterTranslatedName));
+
+                    var setterTranslatedName = setterNameFunction(instanceField);
+                    globals.put(setterTranslatedName, Function((args, env, cc) -> {
+                        var instance = args.first().value(this);
+                        var value = args.second().value(this);
+                        Reflect.setProperty(instance, instanceField, value);
+                        cc(args.second());
+                    }, setterTranslatedName));
             }
         }
 
