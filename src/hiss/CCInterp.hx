@@ -786,6 +786,7 @@ class CCInterp {
                         return;
                     }
                     results.push(result);
+                    return;
                 };
             } else {
                 noCC;

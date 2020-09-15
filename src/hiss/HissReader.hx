@@ -60,7 +60,7 @@ class HissReader {
         // Literals
         internalSetMacroString('"', readString);
         internalSetMacroString("#", readRawString);
-        var numberChars = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"];
+        var numberChars = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "0x", "0X"];
         for (s in numberChars) {
             internalSetMacroString(s, readNumber);
         }
