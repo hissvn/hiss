@@ -9,10 +9,16 @@ import sys.FileSystem;
 using StringTools;
 
 class StaticFiles {
-    static var files: Map<String, String> = new Map<String, String>();
+    static var files: Map<String, String> = new Map();
+    static var groups: Map<String, Array<String>> = new Map();
 
-    public static function registerFileContent(path: String, content: String) {
+    // These underscore functions are public because they have to be. You shouldn't use them
+    public static function _registerFileContent(path: String, content: String) {
         files[path] = content;
+    }
+    public static function _registerFileWithGroup(path: String, group: String) {
+        if (!groups.exists(group)) groups[group] = [];
+        groups[group].push(path);
     }
 
     public static macro function compileWith(file: String, directory: String = "") {
@@ -24,7 +30,7 @@ class StaticFiles {
         #else
         var content = "";
         #end
-        return macro StaticFiles.registerFileContent($v{file}, $v{content});
+        return macro StaticFiles._registerFileContent($v{file}, $v{content});
     }
 
     public static macro function compileWithAll(directory: String) {
@@ -36,6 +42,7 @@ class StaticFiles {
         var exprs = [];
         for (file in files) {
             exprs.push(macro StaticFiles.compileWith($v{file}, $v{dir}));
+            exprs.push(macro StaticFiles._registerFileWithGroup($v{file}, $v{directory}));
         }
 
         return macro $b{exprs}
@@ -50,6 +57,10 @@ class StaticFiles {
             #end
             throw 'File was not compiled into the program: $path';
         }
+    }
+
+    public static function getDirectoryFiles(directory: String) {
+        return groups[directory];
     }
 
     /** 
