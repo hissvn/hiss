@@ -120,13 +120,12 @@
                 (case ,form ,@case-rest))
             nil)))
 
-(defun input-expression (&optional prompt)
-    (when prompt (message prompt))
-    (eval (read (read-line))))
-
 (defun input-string (&optional prompt)
     (when prompt (message prompt))
     (read-line))
+
+(defun input-expression (&optional prompt)
+    (eval (read (input-string prompt))))
 
 (defmacro default! (var value)
     `(if (or (not (bound? ,var)) (nil? ,var)) (set! ,var ,value)))
