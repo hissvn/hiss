@@ -323,6 +323,10 @@ class CCInterp {
         importFunction(StringTools.endsWith, "ends-with");
         importFunction(StringTools.lpad, "lpad");
         importFunction(StringTools.rpad, "rpad");
+        importFunction(StringTools.trim, "trim");
+        importFunction(StringTools.ltrim, "ltrim");
+        importFunction(StringTools.rtrim, "rtrim");
+
 
         // Debug info
         importFunction(HissTools.version, "version", []);
