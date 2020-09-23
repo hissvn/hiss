@@ -24,6 +24,7 @@
 // String functions:
 (register-method "split" split)
 (register-method "substr" substring)
+(defun char-at (str idx) (substring str idx 1))
 
 (defun list (&rest args) args)
 
