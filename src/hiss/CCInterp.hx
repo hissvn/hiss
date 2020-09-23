@@ -47,6 +47,20 @@ class CCInterp {
     var tempTrace: Dynamic = null;
     var readingProgram = false;
     var maxStackDepth = 0;
+    
+    var errorHandler: (Dynamic) -> Void = null;
+
+    public function setErrorHandler(handler: (Dynamic) -> Void) {
+        errorHandler = handler;
+    }
+
+    function error(message: Dynamic) {
+        if (errorHandler != null) {
+            errorHandler(message);
+        } else {
+            throw message;
+        }
+    }
 
     function disableTrace() {
         // On non-sys targets, trace is the only option
@@ -389,8 +403,6 @@ class CCInterp {
         #end
     }
 
-    function error(message: Dynamic) { throw message; }
-
     // error? will have an implicit begin
     function throwsError(args: HValue, env: HValue, cc: Continuation) {
         try {
@@ -471,6 +483,7 @@ class CCInterp {
                 switch (e) {
                     case Quit:
                         return;
+                    // TODO handle other haxe errors through error()?
                 }
             }
             #if (!throwErrors)
@@ -484,7 +497,7 @@ class CCInterp {
             #end
         }
         #else
-        throw "This Hiss interpreter is not compiled with REPL support.";
+        error("This Hiss interpreter is not compiled with REPL support.");
         #end
     }
 
@@ -684,7 +697,7 @@ class CCInterp {
 
     function _if(args: HValue, env: HValue, cc: Continuation) {
         if (args.length() > 3) {
-            throw '(if) called with too many arguments. Try wrapping the cases in (begin)';
+            error('(if) called with too many arguments. Try wrapping the cases in (begin)');
         }
         internalEval(args.first(), env, (val) -> {
             if (val.truthy()) {
@@ -711,13 +724,13 @@ class CCInterp {
                 break;
             }
         }
-        cc(if (v != null) {
-            v;
+        if (v != null) {
+            cc(v);
         } else if (g.exists(name)) {
-            g.get(name);
+            cc(g.get(name));
         } else {
-            throw '$name is undefined';
-        });
+            error('$name is undefined');
+        };
     }
 
     function lambda(isMacro: Bool, args: HValue, env: HValue, cc: Continuation, name = "[anonymous lambda]") {
@@ -929,7 +942,7 @@ class CCInterp {
         var method = Reflect.getProperty(caller, methodName);
 
         if (method == null) {
-            throw 'There is no haxe method called $methodName on ${args.first().toPrint()}';
+            error('There is no haxe method called $methodName on ${args.first().toPrint()}');
         } else {
             cc(Reflect.callMethod(caller, method, haxeCallArgs).toHValue());
         }
@@ -1067,7 +1080,7 @@ class CCInterp {
         return value;
     }
 
-    /** Asynchronos-friendly form of eval. NOTE: The args are out of order so this isn't an HFunction. **/
+    /** Asynchronous-friendly form of eval. NOTE: The args are out of order so this isn't an HFunction. **/
     public function evalCC(arg: HValue, cc: Continuation, ?env: HValue) {
         if (env == null) env = emptyEnv();
         internalEval(arg, env, cc);
@@ -1145,11 +1158,11 @@ class CCInterp {
                             inline macroCall(callable.cons(exp.rest()), env, cc);
                         case SpecialForm(_):
                             inline specialForm(callable.cons(exp.rest()), env, cc);
-                        default: throw 'Hiss cannot call $callable from ${exp.first().toPrint()}';
+                        default: error('Hiss cannot call $callable from ${exp.first().toPrint()}');
                     }
                 });
             default:
-                throw 'Cannot evaluate $exp yet';
+                error('Cannot evaluate $exp yet');
         }
     }
 }
