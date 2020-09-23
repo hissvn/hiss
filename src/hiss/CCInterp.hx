@@ -483,7 +483,6 @@ class CCInterp {
                 switch (e) {
                     case Quit:
                         return;
-                    // TODO handle other haxe errors through error()?
                 }
             }
             #if (!throwErrors)
@@ -1088,6 +1087,8 @@ class CCInterp {
 
     /** Core form of eval -- continuation-based, takes one expression **/
     private function internalEval(exp: HValue, env: HValue, cc: Continuation) {
+        // TODO if there's an error handler, handle exceptions from haxe code through that
+
         switch (exp) {
             case Symbol(_):
                 inline getVar(exp, env, cc);
