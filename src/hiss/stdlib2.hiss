@@ -16,6 +16,9 @@
     l)
 (defun slice (l start &optional end)
     (call-haxe l "slice" (list start (or end (length l)))))
+(defun rslice (l start &optional end)
+    (let (len (length l))
+        (slice l (- len (or end len)) (- len start))))
 (defun peek (l num)
     (slice l 0 num))
 
