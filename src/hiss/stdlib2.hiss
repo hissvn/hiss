@@ -30,6 +30,7 @@
 (defun char-at (str idx) (substring str idx 1))
 
 (defun list (&rest args) args)
+(defun empty? (list-or-string) (= 0 (length list-or-string)))
 
 (defun zip (&rest lists)
     "Create a list of tuples by grouping all same-nth elements in the given lists. Discards elements with no corresponding element in all other lists"
