@@ -4,6 +4,7 @@ import Type;
 using Type;
 import Reflect;
 using Reflect;
+import Std;
 import haxe.CallStack;
 import haxe.Constraints.Function;
 import haxe.io.Path;
@@ -376,10 +377,15 @@ class CCInterp {
         importCCFunction(VariadicFunctions.numCompare.bind(Greater), ">");
         importCCFunction(VariadicFunctions.numCompare.bind(GreaterEqual), ">=");
         importCCFunction(VariadicFunctions.numCompare.bind(Equal), "=");
+        
+        // Std
+        importFunction(Std.random, "random");
+        importFunction(Std.parseInt, "int");
+        importFunction(Std.parseFloat, "float");
 
         importCCFunction(VariadicFunctions.append, "append");
 
-        importFunction((a, b) -> { return a % b;}, "%");
+        importFunction((a, b) -> { return a % b; }, "%");
 
         importFunction(HaxeTools.readLine, "read-line");
 
