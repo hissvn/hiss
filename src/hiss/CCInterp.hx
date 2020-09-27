@@ -11,6 +11,8 @@ import haxe.Log;
 import hx.strings.Strings;
 using hx.strings.Strings;
 
+import hiss.wrappers.HHttp;
+
 import hiss.HTypes;
 #if (sys || hxnodejs)
 import hiss.wrappers.HFile;
@@ -54,7 +56,7 @@ class CCInterp {
         errorHandler = handler;
     }
 
-    function error(message: Dynamic) {
+    public function error(message: Dynamic) {
         if (errorHandler != null) {
             errorHandler(message);
         } else {
@@ -389,6 +391,12 @@ class CCInterp {
         importFunction(Sys.sleep, "sleep!", ["duration"]);
         #end
 
+        // Take special care when importing this one because it also contains cc functions that importClass() would handle wrong
+        importClass(HHttp, "Http");
+        // CC function which shouldn't be imported normally:
+        globals.toDict().erase(String("Http:request"));
+        importCCFunction(HHttp.request.bind(this), "request");
+
         importFunction(python, "python", []);
 
         StaticFiles.compileWith("stdlib2.hiss");
@@ -481,6 +489,8 @@ class CCInterp {
                 continue;
             }
             //interp.enableTrace();
+
+            // TODO use errorHandler instead of try-catch so async errors can be handled through synchronous Hiss code
             try {
                 internalEval(exp, locals, HissTools.print);
             }
