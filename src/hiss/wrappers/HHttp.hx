@@ -21,6 +21,8 @@ class HHttp {
         instance.setHeader(name, value);
     }
 
+    // TODO a setHeader helper for sending UTF-8 json
+
     public function setParameter(name:String, value:String) {
         instance.setParameter(name, value);
     }
@@ -31,14 +33,18 @@ class HHttp {
         instance.setPostData(data);
     }
 
+    // TODO this method is conditionally defined for now, but requestUrl() should probably be added to HttpNodeJs upstream.
+    // https://github.com/HaxeFoundation/haxe/issues/9896
+    #if !nodejs
     public static function requestUrl(url:String) : String {
         return Http.requestUrl(url);
     }
+    #end
 
     public static function request(interp: CCInterp, args: HValue, env: HValue, cc: Continuation) {
         // First arg: an HHttp object
+        var http: Http = args.first().value(interp).instance;
         // Second (optional) arg: whether to send as POST request
-        var http = args.first().value(interp).instance;
         var post = if (args.length() > 1) args.second().value(interp) else false;
 
         http.onData = (dataString: String) -> {

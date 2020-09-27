@@ -393,9 +393,8 @@ class CCInterp {
 
         // Take special care when importing this one because it also contains cc functions that importClass() would handle wrong
         importClass(HHttp, "Http");
-        // CC function which shouldn't be imported normally:
-        globals.toDict().erase(String("Http:request"));
-        importCCFunction(HHttp.request.bind(this), "request");
+        // Just re-import to overwrite the CC function which shouldn't be imported normally:
+        importCCFunction(HHttp.request.bind(this), "Http:request");
 
         importFunction(python, "python", []);
 
