@@ -218,6 +218,7 @@ class CCInterp {
     public static function noCC (arg: HValue) { }
 
     var currentBeginFunction: HFunction = null;
+    var currentEvalAllFunction: HFunction = null;
 
     static function emptyList() { return List([]); }
 
@@ -255,13 +256,13 @@ class CCInterp {
         importSpecialForm(and, "and");
 
         // Use tail-recursive begin and iterate by default:
-        useBeginAndIterate(trBegin, iterate);
+        useFunctions(trBegin, trEvalAll, iterate);
 
         // Allow switching at runtime:
-        importFunction(useBeginAndIterate.bind(trBegin, iterate), "enable-tail-recursion");
-        importFunction(useBeginAndIterate.bind(trBegin, iterate), "disable-continuations");
-        importFunction(useBeginAndIterate.bind(begin, iterateCC), "enable-continuations");
-        importFunction(useBeginAndIterate.bind(begin, iterateCC), "disable-tail-recursion");
+        importFunction(useFunctions.bind(trBegin, trEvalAll, iterate), "enable-tail-recursion");
+        importFunction(useFunctions.bind(trBegin, trEvalAll, iterate), "disable-continuations");
+        importFunction(useFunctions.bind(begin, evalAll, iterateCC), "enable-continuations");
+        importFunction(useFunctions.bind(begin, evalAll, iterateCC), "disable-tail-recursion");
 
         // First-class unit testing:
         importSpecialForm(HissTestCase.testAtRuntime.bind(this), "test");
@@ -448,8 +449,9 @@ class CCInterp {
         }
     }
 
-    function useBeginAndIterate(beginFunction: HFunction, iterateFunction: IterateFunction) {
+    function useFunctions(beginFunction: HFunction, evalAllFunction: HFunction, iterateFunction: IterateFunction) {
         currentBeginFunction = beginFunction;
+        currentEvalAllFunction = evalAllFunction;
         globals.put("begin", SpecialForm(beginFunction, "begin"));
         importSpecialForm(iterateFunction.bind(true, true), "for");
         importSpecialForm(iterateFunction.bind(false, true), "do-for");
@@ -665,7 +667,7 @@ class CCInterp {
         #if traceCallstack
         HaxeTools.println('${CallStack.callStack().length}: ${args.toPrint()}');
         #end
-        evalAll(args, env, (values) -> {
+        currentEvalAllFunction(args, env, (values) -> {
             // trace(values.toPrint());
             values.first().toHFunction()(values.rest(), if (callInline) env else emptyEnv(), cc);
         });
@@ -680,6 +682,14 @@ class CCInterp {
                     cc(value.cons(value2));
                 });
             });
+        }
+    }
+
+    function trEvalAll(args: HValue, env: HValue, cc: Continuation) {
+        if (!args.truthy()) {
+            cc(Nil);
+        } else {
+            cc(List([for (arg in args.toList()) eval(arg, env)]));
         }
     }
 
