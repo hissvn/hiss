@@ -308,3 +308,12 @@
 (test groups
     (eq '((6 5)) (groups '(6 5 3) 2))
     (eq '((6 5) (3)) (groups '(6 5 3) 2 t)))
+
+(test case
+    (eq 'good (case (length '(one two three))
+        (0 (error! "bad"))
+        (3 'good)
+        (default (error! "bad"))))
+    (eq 'good (case (length '(one two three))
+        (2 (error! "bad"))
+        (default 'good))))

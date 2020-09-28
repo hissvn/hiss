@@ -120,7 +120,7 @@
     (let (case-first (first case-list)
             case-rest (rest case-list))
         (if case-first
-            `(if (or (eq ,(first case-first) t) (eq ,(first case-first) ,form))
+            `(if (or (eq ',(first case-first) 'default) (eq ,(first case-first) ,form))
                 (begin ,@(rest case-first))
                 (case ,form ,@case-rest))
             nil)))
@@ -174,14 +174,14 @@
                                     (let (value (Deque:pop __deque__ t))
                                         (case value
                                             (__done-signal__ (set! __done__ t) nil)
-                                            (t value))))))
+                                            (default value))))))
                     has-next (lambda ()
                                 (if __done__ nil
                                     (if __next__ t
                                         (let (could-be-next (next))
                                             (case could-be-next
                                                 (nil (not __done__))
-                                                (t (set! __next__ could-be-next) t)))))))
+                                                (default (set! __next__ could-be-next) t)))))))
                 (iterable next has-next)))))
 
 (defun memoize (f)
