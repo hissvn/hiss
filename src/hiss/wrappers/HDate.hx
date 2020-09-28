@@ -25,40 +25,50 @@ class HDate {
         return fromHaxeDate(Date.now());
     }
 
-    public function getDate():Int {
-        return instance.getDate();
+    // To be more ergonomic, by default these all call on now() if no instance is provided:
+    public static function getDate(?date: HDate):Int {
+        if (date == null) date = now();
+        return date.instance.getDate();
     }
 
-    public function getDay():Int {
-        return instance.getDay();
+    public static function getDay(?date: HDate):Int {
+        if (date == null) date = now();
+        return date.instance.getDay();
     }
 
-    public function getFullYear():Int {
-        return instance.getFullYear();
+    public static function getFullYear(?date: HDate):Int {
+        if (date == null) date = now();
+        return date.instance.getFullYear();
     }
 
-    public function getHours():Int {
-        return instance.getHours();
+    public static function getHours(?date: HDate):Int {
+        if (date == null) date = now();
+        return date.instance.getHours();
     }
 
-    public function getMinutes():Int {
-        return instance.getMinutes();
+    public static function getMinutes(?date: HDate):Int {
+        if (date == null) date = now();
+        return date.instance.getMinutes();
     }
 
-    public function getMonth():Int {
-        return instance.getMonth();
+    public static function getMonth(?date: HDate):Int {
+        if (date == null) date = now();
+        return date.instance.getMonth();
     }
 
-    public function getSeconds():Int {
-        return instance.getSeconds();
+    public static function getSeconds(?date: HDate):Int {
+        if (date == null) date = now();
+        return date.instance.getSeconds();
     }
 
-    public function getTime():Float {
-        return instance.getTime();
+    public static function getTime(?date: HDate):Float {
+        if (date == null) date = now();
+        return date.instance.getTime();
     }
 
-    public function getTimezoneOffset():Int {
-        return instance.getTimezoneOffset();
+    public static function getTimezoneOffset(?date: HDate):Int {
+        if (date == null) date = now();
+        return date.instance.getTimezoneOffset();
     }
 
     // TODO the UTC functions might be useful someday
