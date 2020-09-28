@@ -13,6 +13,7 @@ import hx.strings.Strings;
 using hx.strings.Strings;
 
 import hiss.wrappers.HHttp;
+import hiss.wrappers.HDate;
 
 import hiss.HTypes;
 #if (sys || hxnodejs)
@@ -401,6 +402,8 @@ class CCInterp {
         importClass(HHttp, "Http");
         // Just re-import to overwrite the CC function which shouldn't be imported normally:
         importCCFunction(HHttp.request.bind(this), "Http:request");
+
+        importClass(HDate, "Date");
 
         importFunction(python, "python", []);
 
