@@ -287,7 +287,11 @@ class HissReader {
         var pos = stream.position();
         var startingStream = stream.toString();
         try {
-            return interp.eval(func.cons(List([String(start), Object("HStream", stream)])));
+            var result = interp.eval(func.cons(List([String(start), Object("HStream", stream)])));
+            #if traceReader
+            HissTools.print(result);
+            #end
+            return result;
         }
         #if !throwErrors
         catch (s: Dynamic) {

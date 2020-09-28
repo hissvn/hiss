@@ -17,3 +17,4 @@ A minimal embedded Lisp for Haxe programs.
 * throwErrors
 * traceCallstack
 * traceMacros
+* traceReader

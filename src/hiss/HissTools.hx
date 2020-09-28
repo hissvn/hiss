@@ -370,6 +370,10 @@ class HissTools {
                 return ',${e.toPrint(recursiveCall+1)}';
             case UnquoteList(e):
                 return ',@${e.toPrint(recursiveCall+1)}';
+            #if traceReader
+            case Comment:
+                'comment';
+            #end
             default:
                 throw 'Not clear why $v is being converted to string';
         }
