@@ -396,7 +396,7 @@ class CCInterp {
         importFunction(StaticFiles.getContent, "get-content", ["file"]);
         #if (sys || hxnodejs)
         importClass(HFile, "File");
-        importFunction(Sys.sleep, "sleep!", ["duration"]);
+        importFunction(Sys.sleep, "sleep!", ["seconds"]);
         #end
 
         // Take special care when importing this one because it also contains cc functions that importClass() would handle wrong
