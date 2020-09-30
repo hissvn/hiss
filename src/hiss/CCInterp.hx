@@ -345,7 +345,11 @@ class CCInterp {
             importFunction(HissTools.print, "print", T, ["value"]);
         }
 
+        // TODO this should take its behavior from the user-provided print
         importFunction(HissTools.message, "message", T, ["value"]);
+
+        importFunction(HissTools.toPrint, "to-print", T, ["value"]);
+        importFunction(HissTools.toMessage, "to-message", T, ["value"]);
 
         // Functions/forms that could be bootstrapped with register-function, but save stack frames if not:
         importFunction(HissTools.length, "length", T, ["seq"]);
