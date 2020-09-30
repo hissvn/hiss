@@ -279,6 +279,10 @@ class CCInterp {
         importSpecialForm(throwsError, "error?");
         importSpecialForm(hissTry, "try");
 
+        importClass(HStream, "HStream");
+        importFunction(reader.setMacroString, "_set-macro-string", List([Int(1)]), ["string", "read-function"]);
+        importFunction(reader.readDelimitedList, "read-delimited-list", Nil, ["terminator", "delimiters", "start", "stream"]);
+
         // Open Pandora's box if it's available:
         #if target.threaded
         importClass(HDeque, "Deque");

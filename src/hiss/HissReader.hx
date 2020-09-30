@@ -69,7 +69,7 @@ class HissReader {
         internalSetMacroString(".", readSymbolOrSign);
 
         // Lists
-        internalSetMacroString("(", readDelimitedList.bind(")", null));
+        internalSetMacroString("(", readDelimitedList.bind(")", []));
 
         // Quotes
         for (symbol in ["`", "'", ",", ",@"]) {
@@ -253,11 +253,11 @@ class HissReader {
         return Symbol(symbolName);
     }
 
-    function readDelimitedList(terminator: String, delimiters: Array<String>, start: String, stream: HStream): HValue {
+    public function readDelimitedList(terminator: String, delimiters: Array<String>, start: String, stream: HStream): HValue {
         // While reading a delimited list we will use different terminators
         var oldTerminators = terminators.copy();
         
-        if (delimiters == null) {
+        if (delimiters.length == 0) {
             delimiters = HStream.WHITESPACE.copy();
         } else {
             delimiters = delimiters.copy();
