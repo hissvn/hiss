@@ -149,10 +149,10 @@
     (eval (read (input-string prompt))))
 
 (defun input-choice (choices &optional prompt)
-        (when prompt (message prompt))
-        (do-for (idx choice) (enumerate choices)
-            (message "${idx}. $(to-print choice)"))
-        (nth choices (input-int "> ")))
+    (when prompt (message prompt))
+    (do-for (idx choice) (enumerate choices)
+        (message "${idx}. $(to-print choice)"))
+    (nth choices (input-int "> ")))
 
 (defmacro default! (var value)
     `(if (or (not (bound? ,var)) (nil? ,var)) (set! ,var ,value)))
