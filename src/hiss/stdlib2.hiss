@@ -131,14 +131,28 @@
     (when prompt (message prompt))
     (read-line))
 
+(defun input-int (&optional prompt)
+    (int (input-string prompt)))
+
+(defun input-float (&optional prompt)
+    (float (input-string prompt)))
+
+(defun input-symbol (&optional prompt)
+    (let (name 
+                (input-string prompt))
+        // don't return a gensym if the input is blank
+        (if (empty? name) nil (symbol name))))
+
+
+// Very dangerous function:
 (defun input-expression (&optional prompt)
     (eval (read (input-string prompt))))
 
 (defun input-choice (choices &optional prompt)
         (when prompt (message prompt))
         (do-for (idx choice) (enumerate choices)
-            (message "${idx}. ${choice}")) // TODO this will omit quotes on strings because they interpolate through toMessage
-        (nth choices (input-expression "> "))) // TODO this allows expression injection
+            (message "${idx}. $(to-print choice)"))
+        (nth choices (input-int "> ")))
 
 (defmacro default! (var value)
     `(if (or (not (bound? ,var)) (nil? ,var)) (set! ,var ,value)))
