@@ -10,6 +10,8 @@ typedef HKeyValuePair = {
 
 /**
     Allows mapping any Hiss type to any other Hiss type in constant time.
+
+    Is an Iterable and key-value iterable
 **/
 class HDict {
     var map: Map<String, Array<HKeyValuePair>> = [];
