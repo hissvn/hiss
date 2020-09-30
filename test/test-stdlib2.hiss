@@ -316,4 +316,8 @@
         (default (error! "bad"))))
     (eq 'good (case (length '(one two three))
         (2 (error! "bad"))
-        (default 'good))))
+        (default 'good)))
+    // Catch the multiple evaluation bug:
+    (prints "once" (case (print 'once)
+        ('twice "nope")
+        ('thrice "also nope"))))

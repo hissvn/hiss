@@ -116,14 +116,16 @@
     (call/cc (lambda (cc) 
         (cc cc))))
 
-(defmacro case (form &rest case-list)
+(defmacro _case (value &rest case-list)
     (let (case-first (first case-list)
             case-rest (rest case-list))
         (if case-first
-            `(if (or (eq ',(first case-first) 'default) (eq ,(first case-first) ,form))
+            `(if (or (eq ',(first case-first) 'default) (eq ,(first case-first) ,value))
                 (begin ,@(rest case-first))
-                (case ,form ,@case-rest))
+                (case ,value ,@case-rest))
             nil)))
+(defmacro case (form &rest case-list)
+    `(let (value ,form) (_case value ,@case-list)))
 
 (defun input-string (&optional prompt)
     (when prompt (message prompt))
