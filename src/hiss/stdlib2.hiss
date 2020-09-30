@@ -358,6 +358,12 @@
         ,@field-setters
         (deftype ,name ,type-predicate-name))))
 
+// redefine take-until to return a list instead of an object
+(defvar _take-until HStream:take-until)
+(defun HStream:take-until (stream terminators)
+    (let (output-object (_take-until stream terminators))
+        (list (get-property output-object "output") (get-property output-object "terminator"))))
+
 (defmacro def-reader-macro (str arg-names &rest body)
     `(_set-macro-string ,str (lambda (,(first arg-names) ,(second arg-names)) ,@body)))
 

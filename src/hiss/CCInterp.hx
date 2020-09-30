@@ -281,6 +281,9 @@ class CCInterp {
 
         importClass(HStream, "HStream");
         importFunction(reader.setMacroString, "_set-macro-string", List([Int(1)]), ["string", "read-function"]);
+        importFunction(reader.readNumber, "read-number");
+        importFunction(reader.readString, "read-string");
+        importFunction(reader.nextToken, "next-token");
         importFunction(reader.readDelimitedList, "read-delimited-list", Nil, ["terminator", "delimiters", "start", "stream"]);
 
         // Open Pandora's box if it's available:
@@ -470,9 +473,19 @@ class CCInterp {
 
     /** Run a Hiss REPL from this interpreter instance **/
     public function repl(useConsoleReader=true) {
+        StaticFiles.compileWith("repl-lib.hiss");
+        load("repl-lib.hiss");
+
+        
+        var history = [];
+        importFunction(() -> history, "history");
+        importFunction((str) -> history[history.length-1] = str, "rewrite-history");
         #if (sys || hxnodejs)
+        var historyFile = Path.join([HissTools.homeDir(), ".hisstory"]);
+        history = sys.io.File.getContent(historyFile).split("\n");
+
         var cReader = null;
-        if (useConsoleReader) cReader = new ConsoleReader(-1, Path.join([HissTools.homeDir(), ".hisstory"]));
+        if (useConsoleReader) cReader = new ConsoleReader(-1, historyFile);
         // The REPL needs to make sure its ConsoleReader actually saves the history on exit, so quit() is provided here
         // differently than the version in stdlib2.hiss :)
         importFunction(() -> {
@@ -497,6 +510,7 @@ class CCInterp {
             } else {
                 next = Sys.stdin().readLine();
             }
+            history.push(next);
 
             //interp.disableTrace();
             var exp = null;

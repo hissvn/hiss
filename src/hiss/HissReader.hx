@@ -112,7 +112,7 @@ class HissReader {
         }
     }
 
-    function readNumber(start: String, stream: HStream): HValue {
+    public function readNumber(start: String, stream: HStream): HValue {
         stream.putBack(start);
 
         var token = nextToken(stream);
@@ -159,7 +159,7 @@ class HissReader {
         }
     }
 
-    function readString(start: String, str: HStream): HValue {
+    public function readString(start: String, str: HStream): HValue {
         // Quotes inside Interpolated expressions shouldn't terminate the literal
 
         var literal = "";
@@ -224,7 +224,7 @@ class HissReader {
         return InterpString(escaped);
     }
 
-    function nextToken(str: HStream): String {
+    public function nextToken(str: HStream): String {
         var whitespaceOrTerminator = HStream.WHITESPACE.concat(terminators);
 
         var token = try {
@@ -240,7 +240,7 @@ class HissReader {
         return token;
     }
 
-    function readSymbol(start: String, str: HStream): HValue {
+    public function readSymbol(start: String, str: HStream): HValue {
         if (str.peek(1) == ")") throw "Unmatched closing paren";
         var symbolName = nextToken(str);
         // braces are not allowed in symbols because they would break string interpolation
