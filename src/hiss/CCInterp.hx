@@ -282,9 +282,10 @@ class CCInterp {
         importClass(HStream, "HStream");
         importFunction(reader.setMacroString, "_set-macro-string", List([Int(1)]), ["string", "read-function"]);
         importFunction(reader.setDefaultReadFunction, "set-default-read-function", T, ["read-function"]);
-        importFunction(reader.readNumber, "read-number");
-        importFunction(reader.readString, "read-string");
-        importFunction(reader.nextToken, "next-token");
+        importFunction(reader.readNumber, "read-number", Nil, ["start", "stream"]);
+        importFunction(reader.readString, "read-string", Nil, ["start", "stream"]);
+        importFunction(reader.readSymbol, "read-symbol", Nil, ["start", "stream"]);
+        importFunction(reader.nextToken, "next-token", Nil, ["stream"]);
         importFunction(reader.readDelimitedList, "read-delimited-list", Nil, ["terminator", "delimiters", "start", "stream"]);
 
         // Open Pandora's box if it's available:
@@ -375,7 +376,8 @@ class CCInterp {
         importFunction(HissTools.alternates.bind(_, false), "even-alternates", T);
         importFunction(HissTools.alternates.bind(_, true), "odd-alternates", T);
         importFunction(HaxeTools.shellCommand, "shell-command", Nil, ["cmd"]);
-        importFunction(read, "read", Nil, ["str"]);
+        importFunction(read, "read", Nil, ["string"]);
+        importFunction(readAll, "read-all", Nil, ["string"]);
 
         importFunction(HissTools.symbolName, "symbol-name", T, ["sym"]);
         importFunction(HissTools.symbol, "symbol", T, ["sym-name"]);
@@ -1078,6 +1080,10 @@ class CCInterp {
 
     public function read(str: String) {
         return reader.read("", HStream.FromString(str));
+    }
+
+    public function readAll(str: String) {
+        return reader.readAll(String(str));
     }
 
     function or(args: HValue, env: HValue, cc: Continuation) {

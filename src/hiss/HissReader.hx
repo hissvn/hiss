@@ -225,6 +225,8 @@ class HissReader {
     }
 
     public function nextToken(str: HStream): String {
+        str.dropWhitespace();
+
         var whitespaceOrTerminator = HStream.WHITESPACE.concat(terminators);
 
         var token = try {
