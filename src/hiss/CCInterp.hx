@@ -1018,7 +1018,9 @@ class CCInterp {
                 innerArgs.first();
             };
 
+            #if traceContinuations
             trace('calling cc#$ccId with ${arg.toPrint()}');
+            #end
 
             cc(arg);
         }, "cc", ["result"]);
