@@ -280,7 +280,7 @@ class CCInterp {
         importSpecialForm(hissTry, "try");
 
         importClass(HStream, "HStream");
-        importFunction(reader, reader.setMacroString, "_set-macro-string", List([Int(1)]), ["string", "read-function"]);
+        importFunction(reader, reader.setMacroString, "set-macro-string", List([Int(1)]), ["string", "read-function"]);
         importFunction(reader, reader.setDefaultReadFunction, "set-default-read-function", T, ["read-function"]);
         importFunction(reader, reader.readNumber, "read-number", Nil, ["start", "stream"]);
         importFunction(reader, reader.readString, "read-string", Nil, ["start", "stream"]);

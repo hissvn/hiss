@@ -373,6 +373,6 @@
         (list (get-property output-object "output") (get-property output-object "terminator"))))
 
 (defmacro def-reader-macro (str arg-names &rest body)
-    `(_set-macro-string ,str (lambda (,(first arg-names) ,(second arg-names)) ,@body)))
+    `(set-macro-string ,str (lambda (,(first arg-names) ,(second arg-names)) ,@body)))
 
 (def-reader-macro "[" (start stream) (cons 'list (read-delimited-list "]" '() start stream)))
