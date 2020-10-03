@@ -281,6 +281,7 @@ class CCInterp {
 
         importClass(HStream, "HStream");
         importFunction(reader.setMacroString, "_set-macro-string", List([Int(1)]), ["string", "read-function"]);
+        importFunction(reader.setDefaultReadFunction, "set-default-read-function", T, ["read-function"]);
         importFunction(reader.readNumber, "read-number");
         importFunction(reader.readString, "read-string");
         importFunction(reader.nextToken, "next-token");
