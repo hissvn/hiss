@@ -105,17 +105,17 @@ class HissTestCase extends Test {
 
         var actualPrint = "";
 
-        interp.importFunction((val: HValue) -> {
+        interp.importFunction(HissTestCase, (val: HValue) -> {
             actualPrint += val.toPrint() + "\n";
         }, "print", T);
 
-        interp.importFunction((val: HValue) -> {
+        interp.importFunction(HissTestCase, (val: HValue) -> {
             actualPrint += val.toMessage() + "\n";
         }, "message", T);
 
         interp.eval(expression, env);
-        interp.importFunction(hissPrintFail, "print", T);
-        interp.importFunction(HissTools.message, "message", T); // It's ok to send messages from the standard library, just not to print raw HValues
+        interp.importFunction(HissTestCase, hissPrintFail, "print", T);
+        interp.importFunction(HissTools, HissTools.message, "message", T); // It's ok to send messages from the standard library, just not to print raw HValues
         cc(if (expectedPrint == actualPrint
                 // Forgive a missing newline in the `prints` statement
                 || (actualPrint.charAt(actualPrint.length-1) == '\n' && expectedPrint == actualPrint.substr(0, actualPrint.length-1))) {
@@ -167,7 +167,7 @@ class HissTestCase extends Test {
         #end
 
         if (interp != null) {
-            interp.importFunction(hissPrintFail, "print", T);
+            interp.importFunction(HissTestCase, hissPrintFail, "print", T);
         }
     }
 
@@ -176,7 +176,7 @@ class HissTestCase extends Test {
         Log.trace = tempTrace;
         #end
 
-        interp.importFunction(HissTools.print, "print", T);
+        interp.importFunction(HissTools, HissTools.print, "print", T);
     }
 
     function testWithoutTimeout() {

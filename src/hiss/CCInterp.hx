@@ -193,9 +193,9 @@ class CCInterp {
         cc(instance.toHValue());
     }
 
-    public function importFunction(func: Function, name: String, keepArgsWrapped: HValue = Nil, ?args: Array<String>) {
+    public function importFunction(instance: Dynamic, func: Function, name: String, keepArgsWrapped: HValue = Nil, ?args: Array<String>) {
         globals.put(name, Function((args: HValue, env: HValue, cc: Continuation) -> {
-            cc(Reflect.callMethod(null, func, args.unwrapList(this, keepArgsWrapped)).toHValue());
+            cc(Reflect.callMethod(instance, func, args.unwrapList(this, keepArgsWrapped)).toHValue());
         }, name, args));
     }
 
@@ -234,7 +234,7 @@ class CCInterp {
 
         // When not a repl, use Sys.exit for quitting
         #if (sys || hxnodejs)
-        importFunction(Sys.exit.bind(0), "quit", []);
+        importFunction(Sys, Sys.exit.bind(0), "quit", []);
         #end
 
         // Primitives
@@ -259,10 +259,10 @@ class CCInterp {
         useFunctions(trBegin, trEvalAll, iterate);
 
         // Allow switching at runtime:
-        importFunction(useFunctions.bind(trBegin, trEvalAll, iterate), "enable-tail-recursion");
-        importFunction(useFunctions.bind(trBegin, trEvalAll, iterate), "disable-continuations");
-        importFunction(useFunctions.bind(begin, evalAll, iterateCC), "enable-continuations");
-        importFunction(useFunctions.bind(begin, evalAll, iterateCC), "disable-tail-recursion");
+        importFunction(this, useFunctions.bind(trBegin, trEvalAll, iterate), "enable-tail-recursion");
+        importFunction(this, useFunctions.bind(trBegin, trEvalAll, iterate), "disable-continuations");
+        importFunction(this, useFunctions.bind(begin, evalAll, iterateCC), "enable-continuations");
+        importFunction(this, useFunctions.bind(begin, evalAll, iterateCC), "disable-tail-recursion");
 
         // First-class unit testing:
         importSpecialForm(HissTestCase.testAtRuntime.bind(this), "test");
@@ -275,18 +275,18 @@ class CCInterp {
         importCCFunction(_new, "new");
 
         // Error handling
-        importFunction(error, "error!", Nil, ["message"]);
+        importFunction(this, error, "error!", Nil, ["message"]);
         importSpecialForm(throwsError, "error?");
         importSpecialForm(hissTry, "try");
 
         importClass(HStream, "HStream");
-        importFunction(reader.setMacroString, "_set-macro-string", List([Int(1)]), ["string", "read-function"]);
-        importFunction(reader.setDefaultReadFunction, "set-default-read-function", T, ["read-function"]);
-        importFunction(reader.readNumber, "read-number", Nil, ["start", "stream"]);
-        importFunction(reader.readString, "read-string", Nil, ["start", "stream"]);
-        importFunction(reader.readSymbol, "read-symbol", Nil, ["start", "stream"]);
-        importFunction(reader.nextToken, "next-token", Nil, ["stream"]);
-        importFunction(reader.readDelimitedList, "read-delimited-list", Nil, ["terminator", "delimiters", "start", "stream"]);
+        importFunction(reader, reader.setMacroString, "_set-macro-string", List([Int(1)]), ["string", "read-function"]);
+        importFunction(reader, reader.setDefaultReadFunction, "set-default-read-function", T, ["read-function"]);
+        importFunction(reader, reader.readNumber, "read-number", Nil, ["start", "stream"]);
+        importFunction(reader, reader.readString, "read-string", Nil, ["start", "stream"]);
+        importFunction(reader, reader.readSymbol, "read-symbol", Nil, ["start", "stream"]);
+        importFunction(reader, reader.nextToken, "next-token", Nil, ["stream"]);
+        importFunction(reader, reader.readDelimitedList, "read-delimited-list", Nil, ["terminator", "delimiters", "start", "stream"]);
 
         // Open Pandora's box if it's available:
         #if target.threaded
@@ -297,90 +297,90 @@ class CCInterp {
         //importClass(Threading.Tls, "Tls");
         #end
 
-        importFunction(repl, "repl");
+        importFunction(this, repl, "repl");
 
         // TODO could handle all HissTools imports with an importClass() that doesn't apply a function prefix and converts is{Thing} to thing?
         // The only problem with that some functions need args wrapped and others don't
 
         // Dictionaries
         importCCFunction(makeDict, "dict");
-        importFunction((dict: HValue, key) -> dict.toDict().get(key), "dict-get", T);
-        importFunction((dict: HValue, key, value) -> dict.toDict().put(key, value), "dict-set!", T);
-        importFunction((dict: HValue, key) -> dict.toDict().exists(key), "dict-contains", T);
-        importFunction((dict: HValue, key) -> dict.toDict().erase(key), "dict-erase!", T);
+        importFunction(this, (dict: HValue, key) -> dict.toDict().get(key), "dict-get", T);
+        importFunction(this, (dict: HValue, key, value) -> dict.toDict().put(key, value), "dict-set!", T);
+        importFunction(this, (dict: HValue, key) -> dict.toDict().exists(key), "dict-contains", T);
+        importFunction(this, (dict: HValue, key) -> dict.toDict().erase(key), "dict-erase!", T);
 
         // command-line args
-        importFunction(() -> List(scriptArgs), "args");
+        importFunction(this, () -> List(scriptArgs), "args");
 
         // Primitive type predicates
-        importFunction(HissTools.isInt, "int?", T);
-        importFunction(HissTools.isFloat, "float?", T);
-        importFunction(HissTools.isNumber, "number?", T);
-        importFunction(HissTools.isSymbol, "symbol?", T);
-        importFunction(HissTools.isString, "string?", T);
-        importFunction(HissTools.isList, "list?", T);
-        importFunction(HissTools.isDict, "dict?", T);
-        importFunction(HissTools.isFunction, "function?", T);
-        importFunction(HissTools.isMacro, "macro?", T);
-        importFunction(HissTools.isCallable, "callable?", T);
-        importFunction(HissTools.isObject, "object?", T);
+        importFunction(HissTools, HissTools.isInt, "int?", T);
+        importFunction(HissTools, HissTools.isFloat, "float?", T);
+        importFunction(HissTools, HissTools.isNumber, "number?", T);
+        importFunction(HissTools, HissTools.isSymbol, "symbol?", T);
+        importFunction(HissTools, HissTools.isString, "string?", T);
+        importFunction(HissTools, HissTools.isList, "list?", T);
+        importFunction(HissTools, HissTools.isDict, "dict?", T);
+        importFunction(HissTools, HissTools.isFunction, "function?", T);
+        importFunction(HissTools, HissTools.isMacro, "macro?", T);
+        importFunction(HissTools, HissTools.isCallable, "callable?", T);
+        importFunction(HissTools, HissTools.isObject, "object?", T);
 
-        importFunction(HissTools.clear, "clear!", T);
+        importFunction(HissTools, HissTools.clear, "clear!", T);
 
         // Iterator tools
-        importFunction(HissTools.iterable, "iterable", Nil, ["next", "has-next"]);
-        importFunction(HissTools.iteratorToIterable, "iterator->iterable", Nil, ["haxe-iterator"]);
+        importFunction(HissTools, HissTools.iterable, "iterable", Nil, ["next", "has-next"]);
+        importFunction(HissTools, HissTools.iteratorToIterable, "iterator->iterable", Nil, ["haxe-iterator"]);
 
         // String functions:
         globals.put("StringTools", Object("Class", StringTools));
-        importFunction(StringTools.startsWith, "starts-with");
-        importFunction(StringTools.endsWith, "ends-with");
-        importFunction(StringTools.lpad, "lpad");
-        importFunction(StringTools.rpad, "rpad");
-        importFunction(StringTools.trim, "trim");
-        importFunction(StringTools.ltrim, "ltrim");
-        importFunction(StringTools.rtrim, "rtrim");
+        importFunction(StringTools, StringTools.startsWith, "starts-with");
+        importFunction(StringTools, StringTools.endsWith, "ends-with");
+        importFunction(StringTools, StringTools.lpad, "lpad");
+        importFunction(StringTools, StringTools.rpad, "rpad");
+        importFunction(StringTools, StringTools.trim, "trim");
+        importFunction(StringTools, StringTools.ltrim, "ltrim");
+        importFunction(StringTools, StringTools.rtrim, "rtrim");
 
 
         // Debug info
-        importFunction(HissTools.version, "version", []);
+        importFunction(HissTools, HissTools.version, "version", []);
 
         // Sometimes it's useful to provide the interpreter with your own target-native print function
         // so they will be used while the standard library is being loaded.
         if (printFunction != null) {
-            importFunction(printFunction, "print", Nil, ["value"]);
+            importFunction(this, printFunction, "print", Nil, ["value"]);
         }
         else {
-            importFunction(HissTools.print, "print", T, ["value"]);
+            importFunction(HissTools, HissTools.print, "print", T, ["value"]);
         }
 
         // TODO this should take its behavior from the user-provided print
-        importFunction(HissTools.message, "message", T, ["value"]);
+        importFunction(HissTools, HissTools.message, "message", T, ["value"]);
 
-        importFunction(HissTools.toPrint, "to-print", T, ["value"]);
-        importFunction(HissTools.toMessage, "to-message", T, ["value"]);
+        importFunction(HissTools, HissTools.toPrint, "to-print", T, ["value"]);
+        importFunction(HissTools, HissTools.toMessage, "to-message", T, ["value"]);
 
         // Functions/forms that could be bootstrapped with register-function, but save stack frames if not:
-        importFunction(HissTools.length, "length", T, ["seq"]);
-        importFunction(HissTools.reverse, "reverse", T, ["l"]);
-        importFunction(HissTools.first, "first", T, ["l"]);
-        importFunction(HissTools.rest, "rest", T, ["l"]);
-        importFunction(HissTools.last, "last", T, ["l"]);
-        importFunction(HissTools.eq.bind(_, this, _), "eq", T, ["a", "b"]);
-        importFunction(HissTools.nth, "nth", T, ["l", "n"]);
-        importFunction(HissTools.setNth, "set-nth!", T, ["l", "n", "val"]);
-        importFunction(HissTools.cons, "cons", T, ["val", "l"]);
-        importFunction(HissTools.not, "not", T, ["val"]);
-        importFunction(HissTools.sort, "sort", Nil, ["l, sort-function"]);
-        importFunction(HissTools.range, "range", Nil, ["start", "end"]);
-        importFunction(HissTools.alternates.bind(_, false), "even-alternates", T);
-        importFunction(HissTools.alternates.bind(_, true), "odd-alternates", T);
-        importFunction(HaxeTools.shellCommand, "shell-command", Nil, ["cmd"]);
-        importFunction(read, "read", Nil, ["string"]);
-        importFunction(readAll, "read-all", Nil, ["string"]);
+        importFunction(HissTools, HissTools.length, "length", T, ["seq"]);
+        importFunction(HissTools, HissTools.reverse, "reverse", T, ["l"]);
+        importFunction(HissTools, HissTools.first, "first", T, ["l"]);
+        importFunction(HissTools, HissTools.rest, "rest", T, ["l"]);
+        importFunction(HissTools, HissTools.last, "last", T, ["l"]);
+        importFunction(HissTools, HissTools.eq.bind(_, this, _), "eq", T, ["a", "b"]);
+        importFunction(HissTools, HissTools.nth, "nth", T, ["l", "n"]);
+        importFunction(HissTools, HissTools.setNth, "set-nth!", T, ["l", "n", "val"]);
+        importFunction(HissTools, HissTools.cons, "cons", T, ["val", "l"]);
+        importFunction(HissTools, HissTools.not, "not", T, ["val"]);
+        importFunction(HissTools, HissTools.sort, "sort", Nil, ["l, sort-function"]);
+        importFunction(HissTools, HissTools.range, "range", Nil, ["start", "end"]);
+        importFunction(HissTools, HissTools.alternates.bind(_, false), "even-alternates", T);
+        importFunction(HissTools, HissTools.alternates.bind(_, true), "odd-alternates", T);
+        importFunction(HaxeTools, HaxeTools.shellCommand, "shell-command", Nil, ["cmd"]);
+        importFunction(this, read, "read", Nil, ["string"]);
+        importFunction(this, readAll, "read-all", Nil, ["string"]);
 
-        importFunction(HissTools.symbolName, "symbol-name", T, ["sym"]);
-        importFunction(HissTools.symbol, "symbol", T, ["sym-name"]);
+        importFunction(HissTools, HissTools.symbolName, "symbol-name", T, ["sym"]);
+        importFunction(HissTools, HissTools.symbol, "symbol", T, ["sym-name"]);
 
         importSpecialForm(quote, "quote");
 
@@ -395,22 +395,23 @@ class CCInterp {
         importCCFunction(VariadicFunctions.numCompare.bind(Equal), "=");
         
         // Std
-        importFunction(Std.random, "random");
-        importFunction(Std.parseInt, "int");
-        importFunction(Std.parseFloat, "float");
+        importFunction(Std, Std.random, "random");
+        importFunction(Std, Std.parseInt, "int");
+        importFunction(Std, Std.parseFloat, "float");
 
         importCCFunction(VariadicFunctions.append, "append");
 
-        importFunction((a, b) -> { return a % b; }, "%");
+        importFunction(this, (a, b) -> { return a % b; }, "%");
 
-        importFunction(HaxeTools.readLine, "read-line");
+        importFunction(HaxeTools, HaxeTools.readLine, "read-line");
 
         // Operating system
-        importFunction(HissTools.homeDir, "home-dir", []);
-        importFunction(StaticFiles.getContent, "get-content", ["file"]);
+        importFunction(HissTools, HissTools.homeDir, "home-dir", []);
+        importFunction(StaticFiles, StaticFiles.getContent, "get-content", ["file"]);
         #if (sys || hxnodejs)
         importClass(HFile, "File");
-        importFunction(Sys.sleep, "sleep!", ["seconds"]);
+        importFunction(Sys, Sys.sleep, "sleep!", ["seconds"]);
+        // TODO browser javascript can implement sleep! with a settimeout cc function
         #end
 
         // Take special care when importing this one because it also contains cc functions that importClass() would handle wrong
@@ -420,7 +421,7 @@ class CCInterp {
 
         importClass(HDate, "Date");
 
-        importFunction(python, "python", []);
+        importFunction(this, python, "python", []);
 
         StaticFiles.compileWith("stdlib2.hiss");
 
@@ -481,8 +482,8 @@ class CCInterp {
 
         
         var history = [];
-        importFunction(() -> history, "history");
-        importFunction((str) -> history[history.length-1] = str, "rewrite-history");
+        importFunction(this, () -> history, "history");
+        importFunction(this, (str) -> history[history.length-1] = str, "rewrite-history");
         #if (sys || hxnodejs)
         var historyFile = Path.join([HissTools.homeDir(), ".hisstory"]);
         history = sys.io.File.getContent(historyFile).split("\n");
@@ -491,7 +492,7 @@ class CCInterp {
         if (useConsoleReader) cReader = new ConsoleReader(-1, historyFile);
         // The REPL needs to make sure its ConsoleReader actually saves the history on exit, so quit() is provided here
         // differently than the version in stdlib2.hiss :)
-        importFunction(() -> {
+        importFunction(this, () -> {
             if (useConsoleReader) {
                 cReader.saveHistory();
             }
@@ -1020,7 +1021,7 @@ class CCInterp {
             trace('calling cc#$ccId with ${arg.toPrint()}');
 
             cc(arg);
-        }, "cc");
+        }, "cc", ["result"]);
 
         funcall(true,
             List([

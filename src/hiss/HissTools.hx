@@ -485,6 +485,7 @@ class HissTools {
      * Behind the scenes function to HaxeTools.extract a haxe-compatible value from an HValue
      **/
      public static function value(hv: HValue, ?interp: CCInterp, reference: Bool = false): Dynamic {
+        if (hv == null) return Nil;
         return switch (hv) {
             case Nil: false;
             case T: true;

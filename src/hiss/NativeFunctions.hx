@@ -53,7 +53,7 @@ class NativeFunctions {
             funcallExpr += "]), emptyEnv(), (_val) -> {val = _val;})";
 
             fullBodyExpr += 'case Function(_, _, args) if (args != null && args.length == $argCount):
-                                return $argListExpr -> { var val = null; $funcallExpr; return val.value(true);};\n';
+                                return $argListExpr -> { var val = null; $funcallExpr; return val.value(this, true);};\n';
         }
 
         fullBodyExpr += "case Function(_, _, args) if (args != null && args.length >" + maxArgCount + "):
