@@ -305,9 +305,10 @@
 
 (defmacro the (type var)
     "Throw an error if the given variable is not the given type, else return the variable"
-    `(if ((dict-get *types* ',type) ,var)
-            ,var
-        (error! ,"$var is not expected type $type")))
+    `(let (value ,var)
+        (if (funcall (dict-get *types* ',type) value)
+                value
+            (error! (+ "$value is not expected type " ',type)))))
 
 (defun bool? (v)
     (case v
