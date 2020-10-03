@@ -309,6 +309,13 @@
             ,var
         (error! ,"$var is not expected type $type")))
 
+(defun bool? (v)
+    (case v
+        (t t)
+        (nil t)
+        (default nil)))
+
+(deftype bool bool?)
 (deftype int int?)
 (deftype float float?)
 (deftype number number?)
