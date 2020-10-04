@@ -356,6 +356,8 @@ class HissTools {
                 '$name';
             case Nil:
                 'nil';
+            case Null:
+                'null';
             case T:
                 't';
             case Dict(hdict):

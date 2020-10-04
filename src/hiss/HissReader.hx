@@ -262,6 +262,9 @@ class HissReader {
         // While reading a delimited list we will use different terminators
         var oldTerminators = terminators.copy();
         
+        var whitespaceForThesePurposes = HStream.WHITESPACE.copy();
+        whitespaceForThesePurposes.remove(terminator);
+
         if (delimiters.length == 0) {
             delimiters = HStream.WHITESPACE.copy();
         } else {
@@ -274,14 +277,19 @@ class HissReader {
         var values = [];
 
         while (stream.length() >= terminator.length && stream.peek(terminator.length) != terminator) {
-            if (stream.nextIsOneOf(delimiters)) {
-                if (blankElements != null) {
+            if (stream.nextIsOneOf(delimiters) || stream.nextIsOneOf([terminator]) || (eofTerminates && stream.isEmpty())) {
+                if (blankElements != Null) {
                     values.push(blankElements);
+                    trace(values);
                 }
             } else {
                 values.push(read("", stream));
+                if (eofTerminates) { 
+                    trace(values);
+                }
             }
             stream.dropIfOneOf(delimiters);
+            stream.dropWhileOneOf(whitespaceForThesePurposes);
         }
         
         // require the terminator unless eofTerminates
