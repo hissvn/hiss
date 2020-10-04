@@ -262,6 +262,8 @@ class HissReader {
         // While reading a delimited list we will use different terminators
         var oldTerminators = terminators.copy();
         
+        // We want to skip any whitespace that follows a delimiter, but if the terminator is a whitespace character, that will
+        // cause an error, so for these purposes, don't treat the terminator as whitespace no matter what.
         var whitespaceForThesePurposes = HStream.WHITESPACE.copy();
         whitespaceForThesePurposes.remove(terminator);
 
@@ -284,9 +286,6 @@ class HissReader {
                 }
             } else {
                 values.push(read("", stream));
-                if (eofTerminates) { 
-                    trace(values);
-                }
             }
             stream.dropIfOneOf(delimiters);
             stream.dropWhileOneOf(whitespaceForThesePurposes);
