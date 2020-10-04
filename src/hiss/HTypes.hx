@@ -12,6 +12,9 @@ enum HValue {
     String(value: String);
 
     Nil;
+    Null;
+    // yuck...
+
     T;
 
     List(l: HList);

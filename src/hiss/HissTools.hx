@@ -488,6 +488,7 @@ class HissTools {
         if (hv == null) return Nil;
         return switch (hv) {
             case Nil: false;
+            case Null: null;
             case T: true;
             case Int(v):
                 v;

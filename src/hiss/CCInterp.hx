@@ -1204,7 +1204,7 @@ class CCInterp {
             case Quasiquote(e):
                 cc(inline evalUnquotes(e, env));
 
-            case Function(_) | SpecialForm(_) | Macro(_) | T | Nil | Object(_, _):
+            case Function(_) | SpecialForm(_) | Macro(_) | T | Nil | Null | Object(_, _):
                 cc(exp);
 
             case List(_):
