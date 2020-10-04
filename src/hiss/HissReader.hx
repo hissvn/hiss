@@ -282,7 +282,6 @@ class HissReader {
             if (stream.nextIsOneOf(delimiters) || stream.nextIsOneOf([terminator]) || (eofTerminates && stream.isEmpty())) {
                 if (blankElements != Null) {
                     values.push(blankElements);
-                    trace(values);
                 }
             } else {
                 values.push(read("", stream));
@@ -295,7 +294,13 @@ class HissReader {
         if (eofTerminates && stream.isEmpty()) {
         } else {
             // Always drop the terminator if it's there
-            stream.drop(terminator);
+            try {
+                stream.drop(terminator);
+            } catch (s: Dynamic) {
+                trace(eofTerminates);
+                trace(stream.isEmpty());
+                throw 'terminator $terminator not found while reading $delimiters delimited list from $stream';
+            }
         }
 
         terminators = oldTerminators;
