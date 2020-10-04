@@ -321,3 +321,7 @@
     (prints "once" (case (print 'once)
         ('twice "nope")
         ('thrice "also nope"))))
+
+(test list-bracket-syntax
+    (eq (list 1 2 3) [1 2 3])
+    (eq (list 1 2 3) [  1 2    3 ]))

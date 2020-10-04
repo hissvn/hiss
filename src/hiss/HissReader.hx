@@ -69,7 +69,7 @@ class HissReader {
         internalSetMacroString(".", readSymbolOrSign);
 
         // Lists
-        internalSetMacroString("(", readDelimitedList.bind(")", []));
+        internalSetMacroString("(", readDelimitedList.bind(")", [], false, null));
 
         // Quotes
         for (symbol in ["`", "'", ",", ",@"]) {
@@ -249,20 +249,23 @@ class HissReader {
         if (symbolName.indexOf("{") != -1 || symbolName.indexOf("}") != -1) {
             throw 'Cannot have braces in symbol $symbolName';
         }
-        // We mustn't return Symbol(nil) because it creates an annoying logical edge case
+        // We mustn't return Symbol(nil) or Symbol(null) or Symbol(t) because it creates annoying logical edge cases
         if (symbolName == "nil") return Nil;
+        if (symbolName == "null") return Null;
         if (symbolName == "t") return T;
         return Symbol(symbolName);
     }
 
-    public function readDelimitedList(terminator: String, delimiters: Array<String>, start: String, stream: HStream): HValue {
+    // blankElements specifies a value to return for blank elements (i.e. if there are two delimiters in a row).
+    // if blankElements is null, consecutive delimiters are skipped as a group
+    public function readDelimitedList(terminator: String, delimiters: Array<String>, eofTerminates: Bool, ?blankElements: HValue, start: String, stream: HStream): HValue {
         // While reading a delimited list we will use different terminators
         var oldTerminators = terminators.copy();
         
         if (delimiters.length == 0) {
             delimiters = HStream.WHITESPACE.copy();
         } else {
-            delimiters = delimiters.copy();
+            delimiters = delimiters.copy(); // TODO why?
             terminators = terminators.concat(delimiters);
         }
 
@@ -270,15 +273,23 @@ class HissReader {
 
         var values = [];
 
-        stream.dropWhile(delimiters);
-        
         while (stream.length() >= terminator.length && stream.peek(terminator.length) != terminator) {
-            values.push(read("", stream));
-            
-            stream.dropWhile(delimiters);
+            if (stream.nextIsOneOf(delimiters)) {
+                if (blankElements != null) {
+                    values.push(blankElements);
+                }
+            } else {
+                values.push(read("", stream));
+            }
+            stream.dropIfOneOf(delimiters);
         }
-
-        stream.drop(terminator);
+        
+        // require the terminator unless eofTerminates
+        if (eofTerminates && stream.isEmpty()) {
+        } else {
+            // Always drop the terminator if it's there
+            stream.drop(terminator);
+        }
 
         terminators = oldTerminators;
 

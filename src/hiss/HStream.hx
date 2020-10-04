@@ -257,14 +257,40 @@ class HStream {
 
 	public static var WHITESPACE = [" ", "\n", "\t"];
 
-	public function dropWhile(oneOf: Array<String>) {
-		while (rawString.length > 0 && oneOf.indexOf(peek(1)) != -1) {
-			drop(peek(1));
+	// This function is more complicated than nextIsOneOf() because it needs to give longer strings precedence
+	public function dropWhileOneOf(stringsToDrop: Array<String>, limit: Int = -1) {
+		var lengths: Map<Int, Bool> = [];
+		var stringsToDropMap: Map<String, Bool> = [];
+		for (str in stringsToDrop) {
+			lengths[str.length] = true;
+			stringsToDropMap[str] = true;
+		}
+		var lengthsDescending = [for (l in lengths.keys()) l];
+		lengthsDescending.sort(Reflect.compare);
+		lengthsDescending.reverse();
+		while (limit == -1 || limit-- > 0) {
+			var dropped = false;
+			for (l in lengthsDescending) {
+				if (length() >= l) {
+					var couldBeOneOf = peek(l);
+					if (stringsToDropMap.exists(couldBeOneOf)) {
+						drop(couldBeOneOf);
+						dropped = true;
+						break; // out of the for loop
+					}
+				}
+			}
+			if (dropped) continue;
+			break; 
 		}
 	}
 
+	public function dropIfOneOf(stringsToDrop: Array<String>) {
+		dropWhileOneOf(stringsToDrop, 1);
+	}
+
 	public function dropWhitespace() {
-		dropWhile(WHITESPACE);
+		dropWhileOneOf(WHITESPACE);
 	}
 
 	public function takeUntilWhitespace() {
