@@ -1009,6 +1009,16 @@ class CCInterp {
     static var ccNum = 0;
     function callCC(args: HValue, env: HValue, cc: Continuation) {
         var ccId = ccNum++;
+        var message = "";
+        var functionToCall = null;
+
+        if (args.length() > 1) {
+            message = eval(args.first(), env).toHaxeString();
+            functionToCall = args.second();
+        } else {
+            functionToCall = args.first();
+        }
+
         // Convert the continuation to a hiss function accepting one argument
         var ccHFunction = Function((innerArgs: HValue, innerEnv: HValue, innerCC: Continuation) -> {
             var arg = if (!innerArgs.truthy()) {
@@ -1019,7 +1029,7 @@ class CCInterp {
             };
 
             #if traceContinuations
-            trace('calling cc#$ccId with ${arg.toPrint()}');
+            Sys.println('calling $message(cc#$ccId) with ${arg.toPrint()}');
             #end
 
             cc(arg);
@@ -1027,8 +1037,9 @@ class CCInterp {
 
         funcall(true,
             List([
-                args.first(),
-                ccHFunction]),
+                functionToCall,
+                ccHFunction
+            ]),
             env, 
             cc);
     }

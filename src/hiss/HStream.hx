@@ -256,6 +256,7 @@ class HStream {
 	}
 
 	public static var WHITESPACE = [" ", "\n", "\t"];
+	// \r doesn't need to be considered whitespace because HStream removes \r before doing anything else
 
 	// This function is more complicated than nextIsOneOf() because it needs to give longer strings precedence
 	public function dropWhileOneOf(stringsToDrop: Array<String>, limit: Int = -1) {
