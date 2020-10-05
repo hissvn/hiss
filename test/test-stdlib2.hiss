@@ -325,3 +325,7 @@
 (test list-bracket-syntax
     (eq (list 1 2 3) [1 2 3])
     (eq (list 1 2 3) [  1 2    3 ]))
+
+(test if-let
+    (eq "me" (if-let (fork "me") fork "buns"))
+    (eq "buns" (if-let (fork nil) fork "buns")))

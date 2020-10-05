@@ -383,3 +383,11 @@
     `(set-macro-string ,str (lambda (,(first arg-names) ,(second arg-names)) ,@body)))
 
 (def-reader-macro "[" (start stream) (cons 'list (read-delimited-list "]" '() nil null start stream)))
+
+(defmacro if-let ((name expression) then &optional else)
+    `(let (,name ,expression)
+        (if ,name ,then ,else)))
+
+(defmacro when-let ((name expression) &rest body)
+    `(if-let (,name ,expression)
+        (begin ,@body)))
