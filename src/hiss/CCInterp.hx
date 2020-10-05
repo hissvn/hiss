@@ -213,7 +213,7 @@ class CCInterp {
 
     function importMethod(method: String, name: String, callOnReference: Bool, keepArgsWrapped: HValue, returnInstance: Bool) {
         globals.put(name, Function((args: HValue, env: HValue, cc: Continuation) -> {
-            var instance = args.first().value(callOnReference);
+            var instance = args.first().value(this, callOnReference);
             cc(instance.callMethod(instance.getProperty(method), args.rest().unwrapList(this, keepArgsWrapped)).toHValue());
         }, name));
     }
@@ -388,15 +388,15 @@ class CCInterp {
 
         importSpecialForm(quote, "quote");
 
-        importCCFunction(VariadicFunctions.add, "+");
-        importCCFunction(VariadicFunctions.subtract, "-");
-        importCCFunction(VariadicFunctions.divide, "/");
-        importCCFunction(VariadicFunctions.multiply, "*");
-        importCCFunction(VariadicFunctions.numCompare.bind(Lesser), "<");
-        importCCFunction(VariadicFunctions.numCompare.bind(LesserEqual), "<=");
-        importCCFunction(VariadicFunctions.numCompare.bind(Greater), ">");
-        importCCFunction(VariadicFunctions.numCompare.bind(GreaterEqual), ">=");
-        importCCFunction(VariadicFunctions.numCompare.bind(Equal), "=");
+        importCCFunction(VariadicFunctions.add.bind(this), "+");
+        importCCFunction(VariadicFunctions.subtract.bind(this), "-");
+        importCCFunction(VariadicFunctions.divide.bind(this), "/");
+        importCCFunction(VariadicFunctions.multiply.bind(this), "*");
+        importCCFunction(VariadicFunctions.numCompare.bind(this, Lesser), "<");
+        importCCFunction(VariadicFunctions.numCompare.bind(this, LesserEqual), "<=");
+        importCCFunction(VariadicFunctions.numCompare.bind(this, Greater), ">");
+        importCCFunction(VariadicFunctions.numCompare.bind(this, GreaterEqual), ">=");
+        importCCFunction(VariadicFunctions.numCompare.bind(this, Equal), "=");
         
         // Std
         importFunction(Std, Std.random, "random");
@@ -618,7 +618,7 @@ class CCInterp {
 
     function _load(args: HValue, env: HValue, cc: Continuation) {
         readingProgram = true;
-        var exps = reader.readAll(String(StaticFiles.getContent(args.first().value())));
+        var exps = reader.readAll(String(StaticFiles.getContent(args.first().value(this))));
         readingProgram = false;
 
         // Let the user decide whether to load tail-recursively or not:
@@ -849,7 +849,7 @@ class CCInterp {
     function iterate(collect: Bool, bodyForm: Bool, args: HValue, env: HValue, cc: Continuation) {
         var it: HValue = Nil;
         iterable(bodyForm, args, env, (_iterable) -> { it = _iterable; });
-        var iterable: Iterable<HValue> = it.value(true);
+        var iterable: Iterable<HValue> = it.value(this, true);
 
         function synchronousIteration(operation: HFunction, innerEnv: HValue, outerCC: Continuation) {
             var results = [];
@@ -887,7 +887,7 @@ class CCInterp {
     **/
     function iterateCC(collect: Bool, bodyForm: Bool, args: HValue, env: HValue, cc: Continuation) {
         iterable(bodyForm, args, env, (it) -> {
-            var iterable: Iterable<HValue> = it.value(true);
+            var iterable: Iterable<HValue> = it.value(this, true);
             var iterator = iterable.iterator();
 
             var results = [];
@@ -972,7 +972,7 @@ class CCInterp {
     }
 
     function getProperty(args: HValue, env: HValue, cc: Continuation) {
-        cc(Reflect.getProperty(args.first().value(true), args.second().toHaxeString()).toHValue());
+        cc(Reflect.getProperty(args.first().value(this, true), args.second().toHaxeString()).toHValue());
     }
 
     /**
@@ -1003,7 +1003,7 @@ class CCInterp {
             args.third().unwrapList(this, keepArgsWrapped);
         };
 
-        var caller = args.first().value(callOnReference);
+        var caller = args.first().value(this, callOnReference);
         var methodName = args.second().toHaxeString();
         var method = Reflect.getProperty(caller, methodName);
 

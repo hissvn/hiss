@@ -24,7 +24,7 @@ class VariadicFunctions {
         cc(List(result));
     }
 
-    public static function add(args: HValue, env: HValue, cc: Continuation) {
+    public static function add(interp: CCInterp, args: HValue, env: HValue, cc: Continuation) {
         var sum:Dynamic = switch (args.first()) {
             case Int(_): 0;
             case Float(_): 0;
@@ -37,19 +37,19 @@ class VariadicFunctions {
             case List(_): (i) -> sum = sum.concat(i);
             default: null; // The error should already have been thrown.
         }
-        for (i in args.unwrapList()) {
+        for (i in args.unwrapList(interp)) {
             addNext(i);
         }
         cc(HissTools.toHValue(sum));
     }
 
-    public static function subtract(args: HValue, env: HValue, cc: Continuation) {
+    public static function subtract(interp: CCInterp, args: HValue, env: HValue, cc: Continuation) {
         switch (args.length()) {
             case 0: cc(Int(0));
-            case 1: cc(HissTools.toHValue(0 - args.first().value()));
+            case 1: cc(HissTools.toHValue(0 - args.first().value(interp)));
             default:
-                var first: Dynamic = args.first().value();
-                for (val in args.rest().unwrapList()) {
+                var first: Dynamic = args.first().value(interp);
+                for (val in args.rest().unwrapList(interp)) {
                     first -= val;
                 }
                 cc(HissTools.toHValue(first));
@@ -57,28 +57,28 @@ class VariadicFunctions {
         
     }
 
-    public static function divide(args: HValue, env: HValue, cc: Continuation) {
+    public static function divide(interp: CCInterp, args: HValue, env: HValue, cc: Continuation) {
         switch (args.length()) {
             case 0: throw "Can't divide without operands";
-            case 1: cc(HissTools.toHValue(1 / args.first().value()));
+            case 1: cc(HissTools.toHValue(1 / args.first().value(interp)));
             default:
-                var first: Dynamic = args.first().value();
-                for (val in args.rest().unwrapList()) {
+                var first: Dynamic = args.first().value(interp);
+                for (val in args.rest().unwrapList(interp)) {
                     first /= val;
                 }
                 cc(HissTools.toHValue(first));
         }
     }
 
-    public static function multiply(args: HValue, env: HValue, cc: Continuation) {
+    public static function multiply(interp: CCInterp, args: HValue, env: HValue, cc: Continuation) {
         switch (args.first()) {
             case Int(_) | Float(_):
                 var product: Dynamic = 1;
-                var operands = args.unwrapList();
+                var operands = args.unwrapList(interp);
 
                 switch (args.last()) {
                     case List(_) | String(_):
-                        multiply(operands[operands.length-1].toHValue().cons(operands.slice(0, operands.length-1).toHList()), env, cc);
+                        multiply(interp, operands[operands.length-1].toHValue().cons(operands.slice(0, operands.length-1).toHList()), env, cc);
                         return;
                     default:
                 }
@@ -96,7 +96,7 @@ class VariadicFunctions {
                 if (args.length() == 2) {
                     cc(String(product));
                 } else {
-                    multiply(String(product).cons(args.slice(2)), env, cc);
+                    multiply(interp, String(product).cons(args.slice(2)), env, cc);
                 }
             case List(l):
                 var product = [];
@@ -108,19 +108,19 @@ class VariadicFunctions {
                 if (args.length() == 2) {
                     cc(List(product));
                 } else {
-                    multiply(List(product).cons(args.slice(2)), env, cc);
+                    multiply(interp, List(product).cons(args.slice(2)), env, cc);
                 }
             default: throw 'Cannot multiply with first operand ${args.first().toPrint()}';
         }
     }
 
-    public static function numCompare(type: Comparison, args: HValue, env: HValue, cc: Continuation) {
+    public static function numCompare(interp: CCInterp, type: Comparison, args: HValue, env: HValue, cc: Continuation) {
         switch (args.length()) {
             case 0: throw "Can't compare without operands";
             case 1: cc(T);
             default:
-                var leftSide: Dynamic = args.first().value();
-                for (val in args.rest().unwrapList()) {
+                var leftSide: Dynamic = args.first().value(interp);
+                for (val in args.rest().unwrapList(interp)) {
                     var rightSide: Dynamic = val;
                     var pass = switch (type) {
                         case Lesser:

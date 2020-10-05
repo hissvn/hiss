@@ -39,7 +39,7 @@ class HissReader {
     function hissReadFunction(f: HaxeReadFunction, s: String) {
         return Function((args: HValue, env: HValue, cc: Continuation) -> {
             var start = args.first().toHaxeString();
-            var str = toStream(args.second());
+            var str = toStream(interp, args.second());
             cc(f(start, str));
         }, s, ["start", "stream"]);
     }
@@ -83,8 +83,8 @@ class HissReader {
         
     }
     
-    static function toStream(stringOrStream: HValue, ?pos: HValue) {
-        var position = if (pos != null) pos.value() else null;
+    static function toStream(interp: CCInterp, stringOrStream: HValue, ?pos: HValue) {
+        var position = if (pos != null) pos.value(interp) else null;
 
         return switch (stringOrStream) {
             case String(s):
@@ -362,7 +362,7 @@ class HissReader {
     }
 
     public function readAll(str: HValue, ?dropWhitespace: HValue, ?terminators: HValue, ?pos: HValue): HValue {
-        var stream: HStream = toStream(str, pos);
+        var stream: HStream = toStream(interp, str, pos);
 
         if (dropWhitespace == null) dropWhitespace = T;
 

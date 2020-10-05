@@ -434,7 +434,7 @@ class HissTools {
         Unwrap hvalues in a hiss list to their underlying types. Don't unwrap values whose indices
         are contained in keepWrapped, an optional list or T/Nil value.
     **/
-    public static function unwrapList(hl: HValue, ?interp: CCInterp, keepWrapped: HValue = Nil): Array<Dynamic> {
+    public static function unwrapList(hl: HValue, interp: CCInterp, keepWrapped: HValue = Nil): Array<Dynamic> {
         var indices: Array<Dynamic> = if (keepWrapped == Nil) {
             [];
         } else if (keepWrapped == T) {
@@ -470,7 +470,8 @@ class HissTools {
     /**
      * Behind the scenes function to HaxeTools.extract a haxe-compatible value from an HValue
      **/
-     public static function value(hv: HValue, ?interp: CCInterp, reference: Bool = false): Dynamic {
+     public static function value(hv: HValue, interp: CCInterp, reference: Bool = false): Dynamic {
+        if (interp == null) trace(hv);
         if (hv == null) return Nil;
         return switch (hv) {
             case Nil | T:
