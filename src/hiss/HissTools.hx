@@ -261,7 +261,7 @@ class HissTools {
     // Since the variadic binop macro uses cons and it's one of the first
     // things in the Hiss prelude, might as well let this one stand as a Haxe function.
     public static function cons(hv: HValue, hl: HValue): HValue {
-        if (!hl.truthy()) return List([hv]);
+        if (hl == Nil || hl.length() == 0) return List([hv]);
         var l = hl.toList().copy();
         l.insert(0, hv);
         return List(l);
@@ -290,7 +290,7 @@ class HissTools {
                 if (l1.length != l2.length) return Nil;
                 var i = 0;
                 while (i < l1.length) {
-                    if (!HissTools.truthy(eq(l1[i], interp, l2[i]))) return Nil;
+                    if (!interp.truthy(eq(l1[i], interp, l2[i]))) return Nil;
                     i++;
                 }
                 return T;
@@ -305,10 +305,6 @@ class HissTools {
             default:
                 throw 'eq is not implemented for $a and $b';
         }
-    }
-
-    public static function not(v: HValue) {
-        return if (v.truthy()) Nil else T;
     }
 
     static var recursivePrintDepth = 100;
@@ -472,26 +468,14 @@ class HissTools {
     }
 
     /**
-     * Behind the scenes, this function evaluates the truthiness of an HValue
-     **/
-     public static function truthy(cond: HValue): Bool {
-        return switch (cond) {
-            case Nil: false;
-            //case Int(i) if (i == 0): false; /* 0 being falsy would be useful for Hank read-counts */
-            case List([]): false;
-            default: true;
-        }
-    }
-
-    /**
      * Behind the scenes function to HaxeTools.extract a haxe-compatible value from an HValue
      **/
      public static function value(hv: HValue, ?interp: CCInterp, reference: Bool = false): Dynamic {
         if (hv == null) return Nil;
         return switch (hv) {
-            case Nil: false;
+            case Nil | T:
+                interp.truthy(hv);
             case Null: null;
-            case T: true;
             case Int(v):
                 v;
             case Float(v):

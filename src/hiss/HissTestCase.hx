@@ -78,7 +78,7 @@ class HissTestCase extends Test {
             var errorMessage = 'Error testing $functionsCoveredByUnit: ${ass.toPrint()}: ';
             try {
                 var val = interp.eval(ass, freshEnv);
-                Assert.isTrue(val.truthy(), failureMessage + val.toPrint());
+                Assert.isTrue(interp.truthy(val), failureMessage + val.toPrint());
             }
             #if !throwErrors
             catch (err: Dynamic) {

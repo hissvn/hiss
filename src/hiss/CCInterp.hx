@@ -374,7 +374,7 @@ class CCInterp {
         importFunction(HissTools, HissTools.nth, "nth", T, ["l", "n"]);
         importFunction(HissTools, HissTools.setNth, "set-nth!", T, ["l", "n", "val"]);
         importFunction(HissTools, HissTools.cons, "cons", T, ["val", "l"]);
-        importFunction(HissTools, HissTools.not, "not", T, ["val"]);
+        importFunction(this, not, "not", T, ["val"]);
         importFunction(HissTools, HissTools.sort, "sort", Nil, ["l, sort-function"]);
         importFunction(HissTools, HissTools.range, "range", Nil, ["start", "end"]);
         importFunction(HissTools, HissTools.alternates.bind(_, false), "even-alternates", T);
@@ -432,6 +432,10 @@ class CCInterp {
         //disableTrace();
         load("stdlib2.hiss");
         //enableTrace();
+    }
+
+    function not(v: HValue) {
+        return if (truthy(v)) Nil else T;
     }
 
     // It's absurd that we should have to provide this function...
@@ -655,7 +659,7 @@ class CCInterp {
         env = envWithReturn(env, returnCalled);
         var value = eval(exps.first(), env);
 
-        if (returnCalled.b || !exps.rest().truthy()) {
+        if (returnCalled.b || !truthy(exps.rest())) {
             cc(value);
         }
         else {
@@ -668,7 +672,7 @@ class CCInterp {
         env = envWithReturn(env, returnCalled);
 
         internalEval(exps.first(), env, (result) -> {
-            if (returnCalled.b || !exps.rest().truthy()) {
+            if (returnCalled.b || !truthy(exps.rest())) {
                 cc(result);
             }
             else {
@@ -704,7 +708,7 @@ class CCInterp {
     }
 
     function evalAll(args: HValue, env: HValue, cc: Continuation) {
-        if (!args.truthy()) {
+        if (!truthy(args)) {
             cc(Nil);
         } else {
             internalEval(args.first(), env, (value) -> {
@@ -716,7 +720,7 @@ class CCInterp {
     }
 
     function trEvalAll(args: HValue, env: HValue, cc: Continuation) {
-        if (!args.truthy()) {
+        if (!truthy(args)) {
             cc(Nil);
         } else {
             cc(List([for (arg in args.toList()) eval(arg, env)]));
@@ -762,7 +766,7 @@ class CCInterp {
             error('(if) called with too many arguments. Try wrapping the cases in (begin)');
         }
         internalEval(args.first(), env, (val) -> {
-            if (val.truthy()) {
+            if (truthy(val)) {
                 internalEval(args.second(), env, cc);
             } else if (args.length() > 2) {
                 internalEval(args.third(), env, cc);
@@ -986,7 +990,7 @@ class CCInterp {
         var callOnReference = if (args.length() < 4) {
             false;
         } else {
-            args.nth(Int(3)).truthy();
+            truthy(args.nth(Int(3)));
         };
         var keepArgsWrapped = if (args.length() < 5) {
             Nil;
@@ -1025,7 +1029,7 @@ class CCInterp {
 
         // Convert the continuation to a hiss function accepting one argument
         var ccHFunction = Function((innerArgs: HValue, innerEnv: HValue, innerCC: Continuation) -> {
-            var arg = if (!innerArgs.truthy()) {
+            var arg = if (!truthy(innerArgs)) {
                 // It's typical to JUST want to break out of a sequence, not return a value to it.
                 Nil;
             } else {
@@ -1108,7 +1112,7 @@ class CCInterp {
         for (arg in args.toList()) {
             var argVal = Nil;
             internalEval(arg, env, (val) -> {argVal = val;});
-            if (argVal.truthy()) {
+            if (truthy(argVal)) {
                 cc(argVal);
                 return;
             }
@@ -1120,7 +1124,7 @@ class CCInterp {
         var argVal = T;
         for (arg in args.toList()) {
             internalEval(arg, env, (val) -> {argVal = val;});
-            if (!argVal.truthy()) {
+            if (!truthy(argVal)) {
                 cc(Nil);
                 return;
             }
@@ -1163,6 +1167,19 @@ class CCInterp {
     public function evalCC(arg: HValue, cc: Continuation, ?env: HValue) {
         if (env == null) env = emptyEnv();
         internalEval(arg, env, cc);
+    }
+
+    /**
+     * Behind the scenes, this function evaluates the truthiness of an HValue.
+     * Its behavior can be overridden, but don't do it unless you know what you're getting into.
+     **/
+    public dynamic function truthy(cond: HValue): Bool {
+        return switch (cond) {
+            case Nil: false;
+            //case Int(i) if (i == 0): false; /* 0 being falsy would be useful for Hank read-counts */
+            case List([]): false;
+            default: true;
+        }
     }
 
     /** Core form of eval -- continuation-based, takes one expression **/
