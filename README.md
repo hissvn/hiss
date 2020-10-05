@@ -19,3 +19,4 @@ A minimal embedded Lisp for Haxe programs.
 * traceMacros
 * traceReader
 * traceContinuations
+* traceClassImports

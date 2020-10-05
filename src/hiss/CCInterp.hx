@@ -89,7 +89,11 @@ class CCInterp {
     // Sometimes Haxe stdlib classes are implemented differently from target to target,
     // so it's important to see whether all the methods Hiss relies on are actually
     // imported on each target, and if not all targets provide them, wrap them
+    #if traceClassImports
+    var debugClassImports = true;
+    #else
     var debugClassImports = false;
+    #end
 
     public function importClass(
             clazz: Class<Dynamic>,
