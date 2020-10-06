@@ -9,6 +9,7 @@ import haxe.CallStack;
 import haxe.Constraints.Function;
 import haxe.io.Path;
 import haxe.Log;
+import haxe.Timer;
 import hx.strings.Strings;
 using hx.strings.Strings;
 
@@ -418,7 +419,8 @@ class CCInterp {
         #if (sys || hxnodejs)
         importClass(HFile, "File");
         importFunction(Sys, Sys.sleep, "sleep!", ["seconds"]);
-        // TODO browser javascript can implement sleep! with a settimeout cc function
+        #else
+        importCCFunction(sleepCC, "sleep!", ["seconds"]);
         #end
 
         // Take special care when importing this one because it also contains cc functions that importClass() would handle wrong
@@ -539,7 +541,7 @@ class CCInterp {
             }
             //interp.enableTrace();
 
-            // TODO use errorHandler instead of try-catch so async errors can be handled through synchronous Hiss code
+            // TODO errors from async functions won't be caught by this, so use errorHandler instead of try-catch
             try {
                 internalEval(exp, locals, HissTools.print);
             }
@@ -734,6 +736,10 @@ class CCInterp {
 
     function quote(args: HValue, env: HValue, cc: Continuation) {
         cc(args.first());
+    }
+
+    function sleepCC(args: HValue, env: HValue, cc: Continuation) {
+        Timer.delay(cc.bind(Nil), Math.round(args.first().toFloat() * 1000));
     }
 
     function set(type: SetType, args: HValue, env: HValue, cc: Continuation) {
