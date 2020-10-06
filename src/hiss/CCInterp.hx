@@ -465,6 +465,8 @@ class CCInterp {
         try {
             // Try cannot have an implicit begin because the second argument is the catch
             internalEval(args.first(), env, cc);
+        } catch (sig: HSignal) {
+            throw sig;
         } catch (err: Dynamic) {
             // TODO let the catch access the error message
             if (args.length() > 1) {
