@@ -290,7 +290,10 @@ class CCInterp {
         importFunction(reader, reader.readString, "read-string", Nil, ["start", "stream"]);
         importFunction(reader, reader.readSymbol, "read-symbol", Nil, ["start", "stream"]);
         importFunction(reader, reader.nextToken, "next-token", Nil, ["stream"]);
-        importFunction(reader, reader.readDelimitedList, "read-delimited-list", List([Int(3)]) /* keep blankELements wrapped */, ["terminator", "delimiters", "start", "stream"]);
+        importFunction(reader, reader.readDelimitedList, "read-delimited-list", List([Int(3)]) /* keep blankElements wrapped */, ["terminator", "delimiters", "start", "stream"]);
+        importFunction(reader, reader.copyReadtable, "copy-readtable");
+        importFunction(reader, reader.useReadtable, "use-readtable");
+        importFunction(this, () -> new HDict(this), "empty-readtable");
 
         // Open Pandora's box if it's available:
         #if target.threaded

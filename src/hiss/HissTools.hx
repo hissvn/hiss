@@ -405,6 +405,8 @@ class HissTools {
                     case "Array":
                         var va = cast(v, Array<Dynamic>);
                         List([for (e in va) HissTools.toHValue(e)]);
+                    case "hiss.HDict":
+                        return Dict(v);
                     default:
                         Object(name, v);
                 };

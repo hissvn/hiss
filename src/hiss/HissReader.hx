@@ -4,6 +4,7 @@ import haxe.ds.Either;
 
 using hx.strings.Strings;
 
+import hiss.HDict;
 using hiss.HissReader;
 
 import hiss.HTypes;
@@ -17,14 +18,21 @@ import hiss.HStream.HPosition;
 typedef HaxeReadFunction = (start: String, stream: HStream) -> HValue;
 
 class HissReader {
-    var readTable: Map<String, HValue> = new Map();
-    var defaultReadFunction: HValue;
+    var readTable: HDict;
 
     var macroLengths = [];
     var interp: CCInterp;
 
+    public function copyReadtable(): HDict {
+        return readTable.copy();
+    }
+
+    public function useReadtable(table: HDict) {
+        this.readTable = table;
+    }
+
     public function setMacroString(s: String, f: HValue) {
-        readTable.set(s, f);
+        readTable.put(String(s), f);
         if (macroLengths.indexOf(s.length) == -1) {
             macroLengths.push(s.length);
         }
@@ -33,7 +41,7 @@ class HissReader {
     }
 
     public function setDefaultReadFunction(f: HValue) {
-        defaultReadFunction = f;
+        readTable.put(String(""), f);
     }
 
     function hissReadFunction(f: HaxeReadFunction, s: String) {
@@ -45,7 +53,7 @@ class HissReader {
     }
 
     function internalSetMacroString(s: String, f: HaxeReadFunction) {
-        readTable.set(s, hissReadFunction(f, 'read-$s'));
+        readTable.put(String(s), hissReadFunction(f, 'read-$s'));
         if (macroLengths.indexOf(s.length) == -1) {
             macroLengths.push(s.length);
         }
@@ -55,7 +63,8 @@ class HissReader {
     public function new(interp: CCInterp) {
         this.interp = interp;
 
-        defaultReadFunction = hissReadFunction(readSymbol, "read-symbol");
+        readTable = new HDict(interp);
+        setDefaultReadFunction(hissReadFunction(readSymbol, "read-symbol"));
 
         // Literals
         internalSetMacroString('"', readString);
@@ -336,12 +345,12 @@ class HissReader {
         for (length in macroLengths) {
             if (stream.length() < length) continue;
             var couldBeAMacro = stream.peek(length);
-            if (readTable.exists(couldBeAMacro)) {
+            if (readTable.exists(String(couldBeAMacro))) {
                 stream.drop(couldBeAMacro);
                 var pos = stream.position();
                 var expression = null;
                 
-                expression = callReadFunction(readTable[couldBeAMacro], couldBeAMacro, stream);
+                expression = callReadFunction(readTable.get(String(couldBeAMacro)), couldBeAMacro, stream);
 
                 // If the expression is a comment, try to read the next one
                 return switch (expression) {
@@ -358,7 +367,7 @@ class HissReader {
         }
 
         // Call default read function
-        return callReadFunction(defaultReadFunction, "", stream);
+        return callReadFunction(readTable.get(String("")), "", stream);
     }
 
     public function readAll(str: HValue, ?dropWhitespace: HValue, ?terminators: HValue, ?pos: HValue): HValue {
