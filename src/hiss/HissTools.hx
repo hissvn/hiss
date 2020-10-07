@@ -69,7 +69,11 @@ class HissTools {
     }
 
     public static function toFloat(v: HValue): Float {
-        return HaxeTools.extract(v, Float(f) => f, "float");
+        return switch(v) {
+            case Float(f): f;
+            case Int(i): i;
+            default: throw 'can\'t extract float from $v';
+        };
     }
 
     public static function toHFunction(hv: HValue): HFunction {
