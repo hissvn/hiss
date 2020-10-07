@@ -11,6 +11,7 @@ A minimal embedded Lisp for Haxe programs.
 ### Production
 
 * nativeFunctionMaxArgs
+* ignoreWarnings
 
 ### Debugging
 

@@ -698,7 +698,16 @@ class CCInterp {
         #if traceCallstack
         HaxeTools.println('${CallStack.callStack().length}: ${args.toPrint()}');
         #end
-        args.first().toCallable()(args.rest(), env, cc);
+        switch(args.first()) {
+            case Macro(func, meta) | SpecialForm(func, meta):
+                #if !ignoreWarnings
+                if (meta.deprecated) {
+                    String('Warning! Macro ${meta.name} is deprecated.').message();
+                }
+                #end
+                func(args.rest(), env, cc);
+            default: throw '${args.first()} is not a macro or special form';
+        }
     }
 
     function macroCall(args: HValue, env: HValue, cc: Continuation) {
@@ -714,9 +723,22 @@ class CCInterp {
         #if traceCallstack
         HaxeTools.println('${CallStack.callStack().length}: ${args.toPrint()}');
         #end
+        
         currentEvalAllFunction(args, env, (values) -> {
             // trace(values.toPrint());
-            values.first().toHFunction()(values.rest(), if (callInline) env else emptyEnv(), cc);
+            
+            switch (values.first()) {
+                case Function(func, meta):
+                    #if !ignoreWarnings
+                    if (meta.deprecated) {
+                        String('Warning! Function ${meta.name} is deprecated.').message();
+                    }
+                    #end
+                    func(values.rest(), if (callInline) env else emptyEnv(), cc);
+                default: throw 'Cannot funcall ${values.first()}';
+            }
+            
+            
         });
     }
 
