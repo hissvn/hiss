@@ -251,6 +251,7 @@ class CCInterp {
         importSpecialForm(set.bind(Destructive), { name: "set!" });
         importSpecialForm(setCallable.bind(false), { name: "defun" });
         importSpecialForm(setCallable.bind(true), { name: "defmacro" });
+        importFunction(this, docs, {name: "docs", argNames: ["callable"]}, T);
         importSpecialForm(_if, { name: "if" });
         importSpecialForm(lambda.bind(false), { name: "lambda" });
         importSpecialForm(callCC, { name: "call/cc" });
@@ -825,12 +826,7 @@ class CCInterp {
     function lambda(isMacro: Bool, args: HValue, env: HValue, cc: Continuation, name = "[anonymous lambda]") {
         var params = args.first();
 
-        var body = Symbol('begin').cons(args.rest());
-        var hFun: HFunction = (fArgs, innerEnv, fCC) -> {
-            var callEnv = List(env.toList().concat(innerEnv.toList()));
-            callEnv = callEnv.extend(params.destructuringBind(this, fArgs)); // extending the outer env is how lambdas capture values
-            internalEval(body, callEnv, fCC);
-        };
+        // Check for metadata
         var meta = {
             name: name,
             argNames: [for (paramSymbol in params.toList()) try {
@@ -839,14 +835,51 @@ class CCInterp {
             } catch (s: Dynamic){
                 // nested list args cannot
                 "[nested list]";
-            }]      
+            }],
+            docstring: "",
+            deprecated: false,
+            async: false
         };
+
+        var body = args.rest().toList();
+        
+        for (exp in body) {
+            switch (exp) {
+                case String(d) | InterpString(d):
+                    meta.docstring = d;
+                    body.shift();
+                case Symbol("@deprecated"):
+                    meta.deprecated = true;
+                    body.shift();
+                case Symbol("@async"):
+                    meta.async = true;
+                    body.shift();
+                default:
+                    break;
+            }
+        }
+
+        var hFun: HFunction = (fArgs, innerEnv, fCC) -> {
+            var callEnv = List(env.toList().concat(innerEnv.toList()));
+            callEnv = callEnv.extend(params.destructuringBind(this, fArgs)); // extending the outer env is how lambdas capture values
+            internalEval(Symbol('begin').cons(List(body)), callEnv, fCC);
+        };
+        
         var callable = if (isMacro) {
             Macro(hFun, meta);
         } else {
             Function(hFun, meta);
         };
         cc(callable);
+    }
+
+    function docs(func: HValue) {
+        switch (func) {
+            case Function(_, meta) | Macro(_, meta) | SpecialForm(_, meta):
+                return meta.docstring;
+            default:
+                throw '$func has no docs';
+        }
     }
 
     // Helper function to get the iterable object in iterate() and iterateCC()
