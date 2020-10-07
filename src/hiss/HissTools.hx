@@ -348,12 +348,8 @@ class HissTools {
                 "'" + e.toPrint(recursiveCall+1);
             case Object(t, o):
                 '[$t: ${Std.string(o)}]';
-            case Function(_, name, args):
-                '$name($args)';
-            case Macro(_, name):
-                '$name';
-            case SpecialForm(_, name):
-                '$name';
+            case Function(_, meta) | Macro(_, meta) | SpecialForm(_, meta):
+                '${meta.name}(${meta.argNames})';
             case Nil:
                 'nil';
             case Null:
@@ -499,7 +495,7 @@ class HissTools {
                 }
             case Dict(d):
                 d;
-            case Function(_, _, _):
+            case Function(_, _):
                 interp.toNativeFunction(hv);
             default:
                 hv;
@@ -560,22 +556,21 @@ class HissTools {
 
     public static function isFunction(hv: HValue) {
         return switch (hv) {
-            case Function(_, _, _): T;
+            case Function(_, _): T;
             default: Nil;
         };
     }
 
     public static function isMacro(hv: HValue) {
         return switch (hv) {
-            case Macro(_) | SpecialForm(_): T;
+            case Macro(_, _) | SpecialForm(_, _): T;
             default: Nil;
         };
     }
 
     public static function isCallable(hv: HValue) {
         return switch (hv) {
-            case Function(_, _, _): T;
-            case Macro(_) | SpecialForm(_): T;
+            case Function(_, _) | Macro(_, _) | SpecialForm(_, _): T;
             default: Nil;
         };
     }

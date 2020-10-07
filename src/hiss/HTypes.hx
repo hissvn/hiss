@@ -19,9 +19,9 @@ enum HValue {
 
     List(l: HList);
     Dict(n: HDict);
-    Function(f: HFunction, name: String, ?args: Array<String>);
-    Macro(f: HFunction, name: String);
-    SpecialForm(f: HFunction, name: String);
+    Function(f: HFunction, meta: CallableMeta);
+    Macro(f: HFunction, meta: CallableMeta);
+    SpecialForm(f: HFunction, meta: CallableMeta);
     // If you're going to store arbitrary objects in Hiss variables, do yourself a favor and give them a descriptive label because Haxe runtime type info can be squirrely on different platforms
     Object(t: String, v: Dynamic);
 
@@ -34,6 +34,14 @@ enum HValue {
 
     Comment;
 }
+
+typedef CallableMeta = {
+    var name: String;
+    var ?docstring: String;
+    var ?argNames: Array<String>;
+    var ?deprecated: Bool;
+    var ?async: Bool;
+};
 
 typedef Continuation = (HValue) -> Void;
 

@@ -52,14 +52,14 @@ class NativeFunctions {
             funcallExpr = funcallExpr.substr(0, funcallExpr.length - 1);
             funcallExpr += "]), emptyEnv(), (_val) -> {val = _val;})";
 
-            fullBodyExpr += 'case Function(_, _, args) if (args != null && args.length == $argCount):
+            fullBodyExpr += 'case Function(_, meta) if (meta.argNames != null && meta.argNames.length == $argCount):
                                 return $argListExpr -> { var val = null; $funcallExpr; return val.value(this, true);};\n';
         }
 
-        fullBodyExpr += "case Function(_, _, args) if (args != null && args.length >" + maxArgCount + "):
+        fullBodyExpr += "case Function(_, meta) if (meta.argNames != null && meta.argNames.length >" + maxArgCount + "):
                             throw 'Function has too many args for conversion to native function';
-                        case Function(_, _, args) if (args == null):
-                            throw 'Function has no args specified, cannot be converted';
+                        case Function(_, meta) if (meta.argNames):
+                            throw 'Function $meta.name has no args specified, cannot be converted';
                         default:
                             throw 'Cannot convert non-function $fun to native function';
                         }";

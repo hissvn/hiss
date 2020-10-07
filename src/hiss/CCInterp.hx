@@ -147,7 +147,7 @@ class CCInterp {
                         var methodPointer = Reflect.getProperty(instance, instanceField);
                         var returnValue: Dynamic = Reflect.callMethod(instance, methodPointer, argArray);
                         cc(returnValue.toHValue());
-                    }, translatedName));
+                    }, {name:translatedName}));
                 default:
                     // generate getters and setters for instance fields
                     // TODO this approach is naive. It only finds properties that are returned by getProperty() which hopefully
@@ -161,7 +161,7 @@ class CCInterp {
                         var instance = args.first().value(this);
                         var value : Dynamic = Reflect.getProperty(instance, instanceField);
                         cc(value.toHValue());
-                    }, getterTranslatedName));
+                    }, {name:getterTranslatedName}));
 
                     var setterTranslatedName = setterNameFunction(instanceField);
                     globals.put(setterTranslatedName, Function((args, env, cc) -> {
@@ -169,7 +169,7 @@ class CCInterp {
                         var value = args.second().value(this);
                         Reflect.setProperty(instance, instanceField, value);
                         cc(args.second());
-                    }, setterTranslatedName));
+                    }, {name:setterTranslatedName}));
             }
         }
 
@@ -184,7 +184,7 @@ class CCInterp {
                     }
                     globals.put(translatedName, Function((args, env, cc) -> {
                         cc(Reflect.callMethod(null, fieldValue, args.unwrapList(this)).toHValue());
-                    }, translatedName));
+                    }, {name:translatedName}));
                 default:
                     // TODO generate getters and setters for static properties
             }
@@ -198,25 +198,25 @@ class CCInterp {
         cc(instance.toHValue());
     }
 
-    public function importFunction(instance: Dynamic, func: Function, name: String, keepArgsWrapped: HValue = Nil, ?args: Array<String>) {
-        globals.put(name, Function((args: HValue, env: HValue, cc: Continuation) -> {
+    public function importFunction(instance: Dynamic, func: Function, meta: CallableMeta, keepArgsWrapped: HValue = Nil) {
+        globals.put(meta.name, Function((args: HValue, env: HValue, cc: Continuation) -> {
             cc(Reflect.callMethod(instance, func, args.unwrapList(this, keepArgsWrapped)).toHValue());
-        }, name, args));
+        }, meta));
     }
 
-    public function importCCFunction(func: HFunction, name: String, ?args: Array<String>) {
-        globals.put(name, Function(func, name, args));
+    public function importCCFunction(func: HFunction, meta: CallableMeta) {
+        globals.put(meta.name, Function(func, meta));
     }
 
-    public function importSpecialForm(func: HFunction, name: String) {
-        globals.put(name, SpecialForm(func, name));
+    public function importSpecialForm(func: HFunction, meta: CallableMeta) {
+        globals.put(meta.name, SpecialForm(func, meta));
     }
 
-    function importMethod(method: String, name: String, callOnReference: Bool, keepArgsWrapped: HValue, returnInstance: Bool) {
-        globals.put(name, Function((args: HValue, env: HValue, cc: Continuation) -> {
+    function importMethod(method: String, meta: CallableMeta, callOnReference: Bool, keepArgsWrapped: HValue, returnInstance: Bool) {
+        globals.put(meta.name, Function((args: HValue, env: HValue, cc: Continuation) -> {
             var instance = args.first().value(this, callOnReference);
             cc(instance.callMethod(instance.getProperty(method), args.rest().unwrapList(this, keepArgsWrapped)).toHValue());
-        }, name));
+        }, meta));
     }
 
     public static function noOp (args: HValue, env: HValue, cc: Continuation) { }
@@ -237,64 +237,67 @@ class CCInterp {
         globals = emptyDict();
         reader = new HissReader(this);
 
+        // convention: functions with side effects end with ! unless they start with def
+        
         // When not a repl, use Sys.exit for quitting
         #if (sys || hxnodejs)
-        importFunction(Sys, Sys.exit.bind(0), "quit", []);
+        // TODO call it quit!
+        importFunction(Sys, Sys.exit.bind(0), { name: "quit", argNames: [] });
         #end
 
         // Primitives
-        importSpecialForm(set.bind(Global), "defvar");
-        importSpecialForm(set.bind(Local), "setlocal");
-        importSpecialForm(set.bind(Destructive), "set!");
-        importSpecialForm(setCallable.bind(false), "defun");
-        importSpecialForm(setCallable.bind(true), "defmacro");
-        importSpecialForm(_if, "if");
-        importSpecialForm(lambda.bind(false), "lambda");
-        importSpecialForm(callCC, "call/cc");
-        importSpecialForm(_eval, "eval");
-        importSpecialForm(bound, "bound?");
-        importCCFunction(_load, "load", ["file"]);
-        importSpecialForm(funcall.bind(false), "funcall");
-        importSpecialForm(funcall.bind(true), "funcall-inline");
-        importSpecialForm(loop, "loop");
-        importSpecialForm(or, "or");
-        importSpecialForm(and, "and");
+        importSpecialForm(set.bind(Global), { name: "defvar" });
+        importSpecialForm(set.bind(Local), { name: "setlocal" });
+        importSpecialForm(set.bind(Destructive), { name: "set!" });
+        importSpecialForm(setCallable.bind(false), { name: "defun" });
+        importSpecialForm(setCallable.bind(true), { name: "defmacro" });
+        importSpecialForm(_if, { name: "if" });
+        importSpecialForm(lambda.bind(false), { name: "lambda" });
+        importSpecialForm(callCC, { name: "call/cc" });
+        importSpecialForm(_eval, { name: "eval" });
+        importSpecialForm(bound, { name: "bound?" });
+        importCCFunction(_load, { name: "load", argNames: ["file"] });
+        importSpecialForm(funcall.bind(false), { name: "funcall" });
+        importSpecialForm(funcall.bind(true), { name: "funcall-inline" });
+        importSpecialForm(loop, { name: "loop" });
+        importSpecialForm(or, { name: "or" });
+        importSpecialForm(and, { name: "and" });
 
         // Use tail-recursive begin and iterate by default:
         useFunctions(trBegin, trEvalAll, iterate);
 
         // Allow switching at runtime:
-        importFunction(this, useFunctions.bind(trBegin, trEvalAll, iterate), "enable-tail-recursion");
-        importFunction(this, useFunctions.bind(trBegin, trEvalAll, iterate), "disable-continuations");
-        importFunction(this, useFunctions.bind(begin, evalAll, iterateCC), "enable-continuations");
-        importFunction(this, useFunctions.bind(begin, evalAll, iterateCC), "disable-tail-recursion");
+        importFunction(this, useFunctions.bind(trBegin, trEvalAll, iterate), { name: "enable-tail-recursion" });
+        importFunction(this, useFunctions.bind(trBegin, trEvalAll, iterate), { name: "disable-continuations" });
+        importFunction(this, useFunctions.bind(begin, evalAll, iterateCC), { name: "enable-continuations" });
+        importFunction(this, useFunctions.bind(begin, evalAll, iterateCC), { name: "disable-tail-recursion" });
 
         // First-class unit testing:
-        importSpecialForm(HissTestCase.testAtRuntime.bind(this), "test");
-        importCCFunction(HissTestCase.hissPrints.bind(this), "prints");
+        importSpecialForm(HissTestCase.testAtRuntime.bind(this), { name: "test" });
+        importCCFunction(HissTestCase.hissPrints.bind(this), { name: "prints" });
 
         // Haxe interop -- We could bootstrap the rest from these if we had unlimited stack frames:
         importClass(HType, "Type");
-        importCCFunction(getProperty, "get-property");
-        importCCFunction(callHaxe, "call-haxe");
-        importCCFunction(_new, "new");
+        importCCFunction(getProperty, { name: "get-property" });
+        importCCFunction(callHaxe, { name: "call-haxe" });
+        importCCFunction(_new, { name: "new" });
 
         // Error handling
-        importFunction(this, error, "error!", Nil, ["message"]);
-        importSpecialForm(throwsError, "error?");
-        importSpecialForm(hissTry, "try");
+        importFunction(this, error, { name: "error!", argNames: ["message"] }, Nil);
+        importSpecialForm(throwsError, { name: "error?" });
+        importSpecialForm(hissTry, { name: "try" });
 
         importClass(HStream, "HStream");
-        importFunction(reader, reader.setMacroString, "set-macro-string", List([Int(1)]), ["string", "read-function"]);
-        importFunction(reader, reader.setDefaultReadFunction, "set-default-read-function", T, ["read-function"]);
-        importFunction(reader, reader.readNumber, "read-number", Nil, ["start", "stream"]);
-        importFunction(reader, reader.readString, "read-string", Nil, ["start", "stream"]);
-        importFunction(reader, reader.readSymbol, "read-symbol", Nil, ["start", "stream"]);
-        importFunction(reader, reader.nextToken, "next-token", Nil, ["stream"]);
-        importFunction(reader, reader.readDelimitedList, "read-delimited-list", List([Int(3)]) /* keep blankElements wrapped */, ["terminator", "delimiters", "start", "stream"]);
-        importFunction(reader, reader.copyReadtable, "copy-readtable");
-        importFunction(reader, reader.useReadtable, "use-readtable");
-        importFunction(this, () -> new HDict(this), "empty-readtable");
+        importFunction(reader, reader.setMacroString, {name: "set-macro-string", argNames:  ["string", "read-function"]}, List([Int(1)]));
+        importFunction(reader, reader.setDefaultReadFunction, {name: "set-default-read-function", argNames: ["read-function"]}, T);
+        importFunction(reader, reader.readNumber, {name: "read-number", argNames: ["start", "stream"]}, Nil);
+        importFunction(reader, reader.readString, {name: "read-string", argNames: ["start", "stream"]}, Nil);
+        importFunction(reader, reader.readSymbol, {name: "read-symbol", argNames: ["start", "stream"]}, Nil);
+        importFunction(reader, reader.nextToken, {name: "next-token", argNames: ["stream"]}, Nil);
+        importFunction(reader, reader.readDelimitedList, {name: "read-delimited-list", argNames: ["terminator", "delimiters", "eof-terminates", "blank-elements", "start", "stream"]}, List([Int(3)]) /* keep blankElements wrapped */);
+        importFunction(reader, reader.copyReadtable, {name: "copy-readtable"});
+        importFunction(reader, reader.useReadtable, {name: "use-readtable"});
+        importFunction(this, () -> new HDict(this), {name: "empty-readtable"});
 
         // Open Pandora's box if it's available:
         #if target.threaded
@@ -305,134 +308,134 @@ class CCInterp {
         //importClass(Threading.Tls, "Tls");
         #end
 
-        importFunction(this, repl, "repl");
+        importFunction(this, repl, {name:"repl"});
 
         // TODO could handle all HissTools imports with an importClass() that doesn't apply a function prefix and converts is{Thing} to thing?
         // The only problem with that some functions need args wrapped and others don't
 
         // Dictionaries
-        importCCFunction(makeDict, "dict");
-        importFunction(this, (dict: HValue, key) -> dict.toDict().get(key), "dict-get", T);
-        importFunction(this, (dict: HValue, key, value) -> dict.toDict().put(key, value), "dict-set!", T);
-        importFunction(this, (dict: HValue, key) -> dict.toDict().exists(key), "dict-contains", T);
-        importFunction(this, (dict: HValue, key) -> dict.toDict().erase(key), "dict-erase!", T);
+        importCCFunction(makeDict, {name:"dict"});
+        importFunction(this, (dict: HValue, key) -> dict.toDict().get(key), {name: "dict-get"}, T);
+        importFunction(this, (dict: HValue, key, value) -> dict.toDict().put(key, value), {name: "dict-set!"}, T);
+        importFunction(this, (dict: HValue, key) -> dict.toDict().exists(key), {name: "dict-contains"}, T);
+        importFunction(this, (dict: HValue, key) -> dict.toDict().erase(key), {name: "dict-erase!"}, T);
 
         // command-line args
-        importFunction(this, () -> List(scriptArgs), "args");
+        importFunction(this, () -> List(scriptArgs), {name: "args"});
 
         // Primitive type predicates
-        importFunction(HissTools, HissTools.isInt, "int?", T);
-        importFunction(HissTools, HissTools.isFloat, "float?", T);
-        importFunction(HissTools, HissTools.isNumber, "number?", T);
-        importFunction(HissTools, HissTools.isSymbol, "symbol?", T);
-        importFunction(HissTools, HissTools.isString, "string?", T);
-        importFunction(HissTools, HissTools.isList, "list?", T);
-        importFunction(HissTools, HissTools.isDict, "dict?", T);
-        importFunction(HissTools, HissTools.isFunction, "function?", T);
-        importFunction(HissTools, HissTools.isMacro, "macro?", T);
-        importFunction(HissTools, HissTools.isCallable, "callable?", T);
-        importFunction(HissTools, HissTools.isObject, "object?", T);
+        importFunction(HissTools, HissTools.isInt, {name: "int?"}, T);
+        importFunction(HissTools, HissTools.isFloat, {name: "float?"}, T);
+        importFunction(HissTools, HissTools.isNumber, {name: "number?"}, T);
+        importFunction(HissTools, HissTools.isSymbol, {name: "symbol?"}, T);
+        importFunction(HissTools, HissTools.isString, {name: "string?"}, T);
+        importFunction(HissTools, HissTools.isList, {name: "list?"}, T);
+        importFunction(HissTools, HissTools.isDict, {name: "dict?"}, T);
+        importFunction(HissTools, HissTools.isFunction, {name: "function?"}, T);
+        importFunction(HissTools, HissTools.isMacro, {name: "macro?"}, T);
+        importFunction(HissTools, HissTools.isCallable, {name: "callable?"}, T);
+        importFunction(HissTools, HissTools.isObject, {name: "object?"}, T);
 
-        importFunction(HissTools, HissTools.clear, "clear!", T);
+        importFunction(HissTools, HissTools.clear, {name: "clear!"}, T);
 
         // Iterator tools
-        importFunction(HissTools, HissTools.iterable, "iterable", Nil, ["next", "has-next"]);
-        importFunction(HissTools, HissTools.iteratorToIterable, "iterator->iterable", Nil, ["haxe-iterator"]);
+        importFunction(HissTools, HissTools.iterable, {name: "iterable", argNames: ["next", "has-next"]}, Nil);
+        importFunction(HissTools, HissTools.iteratorToIterable, {name: "iterator->iterable", argNames: ["haxe-iterator"]}, Nil);
 
         // String functions:
         globals.put("StringTools", Object("Class", StringTools));
-        importFunction(StringTools, StringTools.startsWith, "starts-with");
-        importFunction(StringTools, StringTools.endsWith, "ends-with");
-        importFunction(StringTools, StringTools.lpad, "lpad");
-        importFunction(StringTools, StringTools.rpad, "rpad");
-        importFunction(StringTools, StringTools.trim, "trim");
-        importFunction(StringTools, StringTools.ltrim, "ltrim");
-        importFunction(StringTools, StringTools.rtrim, "rtrim");
+        importFunction(StringTools, StringTools.startsWith, {name: "starts-with"});
+        importFunction(StringTools, StringTools.endsWith, {name: "ends-with"});
+        importFunction(StringTools, StringTools.lpad, {name: "lpad"});
+        importFunction(StringTools, StringTools.rpad, {name: "rpad"});
+        importFunction(StringTools, StringTools.trim, {name: "trim"});
+        importFunction(StringTools, StringTools.ltrim, {name: "ltrim"});
+        importFunction(StringTools, StringTools.rtrim, {name: "rtrim"});
 
 
         // Debug info
-        importFunction(HissTools, HissTools.version, "version", []);
+        importFunction(HissTools, HissTools.version, {name: "version"});
 
         // Sometimes it's useful to provide the interpreter with your own target-native print function
         // so they will be used while the standard library is being loaded.
         if (printFunction != null) {
-            importFunction(this, printFunction, "print", Nil, ["value"]);
+            importFunction(this, printFunction, {name: "print", argNames: ["value"]},Nil);
         }
         else {
-            importFunction(HissTools, HissTools.print, "print", T, ["value"]);
+            importFunction(HissTools, HissTools.print, {name: "print", argNames: ["value"]}, T);
         }
 
         // TODO this should take its behavior from the user-provided print
-        importFunction(HissTools, HissTools.message, "message", T, ["value"]);
+        importFunction(HissTools, HissTools.message, {name: "message", argNames: ["value"]}, T);
 
-        importFunction(HissTools, HissTools.toPrint, "to-print", T, ["value"]);
-        importFunction(HissTools, HissTools.toMessage, "to-message", T, ["value"]);
+        importFunction(HissTools, HissTools.toPrint, {name: "to-print", argNames: ["value"]}, T);
+        importFunction(HissTools, HissTools.toMessage, {name: "to-message", argNames: ["value"]}, T);
 
         // Functions/forms that could be bootstrapped with register-function, but save stack frames if not:
-        importFunction(HissTools, HissTools.length, "length", T, ["seq"]);
-        importFunction(HissTools, HissTools.reverse, "reverse", T, ["l"]);
-        importFunction(HissTools, HissTools.first, "first", T, ["l"]);
-        importFunction(HissTools, HissTools.rest, "rest", T, ["l"]);
-        importFunction(HissTools, HissTools.last, "last", T, ["l"]);
-        importFunction(HissTools, HissTools.eq.bind(_, this, _), "eq", T, ["a", "b"]);
-        importFunction(HissTools, HissTools.nth, "nth", T, ["l", "n"]);
-        importFunction(HissTools, HissTools.setNth, "set-nth!", T, ["l", "n", "val"]);
-        importFunction(HissTools, HissTools.cons, "cons", T, ["val", "l"]);
-        importFunction(this, not, "not", T, ["val"]);
-        importFunction(HissTools, HissTools.sort, "sort", Nil, ["l, sort-function"]);
-        importFunction(HissTools, HissTools.range, "range", Nil, ["start", "end"]);
-        importFunction(HissTools, HissTools.alternates.bind(_, false), "even-alternates", T);
-        importFunction(HissTools, HissTools.alternates.bind(_, true), "odd-alternates", T);
-        importFunction(HaxeTools, HaxeTools.shellCommand, "shell-command", Nil, ["cmd"]);
-        importFunction(this, read, "read", Nil, ["string"]);
-        importFunction(this, readAll, "read-all", Nil, ["string"]);
+        importFunction(HissTools, HissTools.length, {name: "length", argNames: ["seq"]}, T);
+        importFunction(HissTools, HissTools.reverse, {name: "reverse", argNames: ["l"]}, T);
+        importFunction(HissTools, HissTools.first, {name: "first",argNames: ["l"]}, T);
+        importFunction(HissTools, HissTools.rest, {name: "rest",argNames: ["l"]}, T);
+        importFunction(HissTools, HissTools.last, {name: "last",argNames: ["l"]}, T);
+        importFunction(HissTools, HissTools.eq.bind(_, this, _), {name: "eq", argNames: ["a", "b"]}, T);
+        importFunction(HissTools, HissTools.nth, {name: "nth", argNames:  ["l", "n"]}, T);
+        importFunction(HissTools, HissTools.setNth, {name: "set-nth!", argNames: ["l", "n", "val"]}, T);
+        importFunction(HissTools, HissTools.cons, {name: "cons", argNames: ["val", "l"]}, T);
+        importFunction(this, not, {name: "not", argNames: ["val"]}, T);
+        importFunction(HissTools, HissTools.sort, {name: "sort", argNames: ["l", "sort-function"]}, Nil);
+        importFunction(HissTools, HissTools.range, {name: "range", argNames: ["start", "end"]}, Nil);
+        importFunction(HissTools, HissTools.alternates.bind(_, false), {name: "even-alternates"}, T);
+        importFunction(HissTools, HissTools.alternates.bind(_, true), {name: "odd-alternates"}, T);
+        importFunction(HaxeTools, HaxeTools.shellCommand, {name: "shell-command", argNames: ["cmd"]}, Nil);
+        importFunction(this, read, {name: "read", argNames: ["string"]}, Nil);
+        importFunction(this, readAll, {name: "read-all", argNames: ["string"]}, Nil);
 
-        importFunction(HissTools, HissTools.symbolName, "symbol-name", T, ["sym"]);
-        importFunction(HissTools, HissTools.symbol, "symbol", T, ["sym-name"]);
+        importFunction(HissTools, HissTools.symbolName, {name: "symbol-name", argNames: ["sym"]}, T);
+        importFunction(HissTools, HissTools.symbol, {name: "symbol", argNames: ["sym-name"]}, T);
 
-        importSpecialForm(quote, "quote");
+        importSpecialForm(quote, {name:"quote"});
 
-        importCCFunction(VariadicFunctions.add.bind(this), "+");
-        importCCFunction(VariadicFunctions.subtract.bind(this), "-");
-        importCCFunction(VariadicFunctions.divide.bind(this), "/");
-        importCCFunction(VariadicFunctions.multiply.bind(this), "*");
-        importCCFunction(VariadicFunctions.numCompare.bind(this, Lesser), "<");
-        importCCFunction(VariadicFunctions.numCompare.bind(this, LesserEqual), "<=");
-        importCCFunction(VariadicFunctions.numCompare.bind(this, Greater), ">");
-        importCCFunction(VariadicFunctions.numCompare.bind(this, GreaterEqual), ">=");
-        importCCFunction(VariadicFunctions.numCompare.bind(this, Equal), "=");
+        importCCFunction(VariadicFunctions.add.bind(this), {name: "+"});
+        importCCFunction(VariadicFunctions.subtract.bind(this), {name: "-"});
+        importCCFunction(VariadicFunctions.divide.bind(this), {name: "/"});
+        importCCFunction(VariadicFunctions.multiply.bind(this), {name: "*"});
+        importCCFunction(VariadicFunctions.numCompare.bind(this, Lesser), {name: "<"});
+        importCCFunction(VariadicFunctions.numCompare.bind(this, LesserEqual), {name: "<="});
+        importCCFunction(VariadicFunctions.numCompare.bind(this, Greater), {name: ">"});
+        importCCFunction(VariadicFunctions.numCompare.bind(this, GreaterEqual), {name: ">="});
+        importCCFunction(VariadicFunctions.numCompare.bind(this, Equal), {name: "="});
         
         // Std
-        importFunction(Std, Std.random, "random");
-        importFunction(Std, Std.parseInt, "int");
-        importFunction(Std, Std.parseFloat, "float");
+        importFunction(Std, Std.random, {name:"random"});
+        importFunction(Std, Std.parseInt, {name: "int"});
+        importFunction(Std, Std.parseFloat, {name: "float"});
 
-        importCCFunction(VariadicFunctions.append, "append");
+        importCCFunction(VariadicFunctions.append, {name: "append"});
 
-        importFunction(this, (a, b) -> { return a % b; }, "%");
+        importFunction(this, (a, b) -> { return a % b; }, {name: "%"});
 
-        importFunction(HaxeTools, HaxeTools.readLine, "read-line");
+        importFunction(HaxeTools, HaxeTools.readLine, {name: "read-line", argNames: []});
 
         // Operating system
-        importFunction(HissTools, HissTools.homeDir, "home-dir", []);
-        importFunction(StaticFiles, StaticFiles.getContent, "get-content", ["file"]);
+        importFunction(HissTools, HissTools.homeDir, {name: "home-dir", argNames: []});
+        importFunction(StaticFiles, StaticFiles.getContent, { name: "get-content", argNames: ["file"] });
         #if (sys || hxnodejs)
         importClass(HFile, "File");
-        importFunction(Sys, Sys.sleep, "sleep!", ["seconds"]);
+        importFunction(Sys, Sys.sleep, { name: "sleep!", argNames: ["seconds"] });
         #else
-        importCCFunction(sleepCC, "sleep!", ["seconds"]);
+        importCCFunction(sleepCC, { name: "sleep!", argNames: ["seconds"] });
         #end
 
-        importCCFunction(delay, "delay!", ["func", "seconds"]);
+        importCCFunction(delay, { name: "delay!", argNames: ["func", "seconds"] });
 
         // Take special care when importing this one because it also contains cc functions that importClass() would handle wrong
         importClass(HHttp, "Http");
         // Just re-import to overwrite the CC function which shouldn't be imported normally:
-        importCCFunction(HHttp.request.bind(this), "Http:request");
+        importCCFunction(HHttp.request.bind(this), { name: "Http:request" });
 
         importClass(HDate, "Date");
 
-        importFunction(this, python, "python", []);
+        importFunction(this, python, { name: "python", argNames: [] });
 
         StaticFiles.compileWith("stdlib2.hiss");
 
@@ -484,11 +487,11 @@ class CCInterp {
     function useFunctions(beginFunction: HFunction, evalAllFunction: HFunction, iterateFunction: IterateFunction) {
         currentBeginFunction = beginFunction;
         currentEvalAllFunction = evalAllFunction;
-        globals.put("begin", SpecialForm(beginFunction, "begin"));
-        importSpecialForm(iterateFunction.bind(true, true), "for");
-        importSpecialForm(iterateFunction.bind(false, true), "do-for");
-        importSpecialForm(iterateFunction.bind(true, false), "map");
-        importSpecialForm(iterateFunction.bind(false, false), "do-map");
+        globals.put("begin", SpecialForm(beginFunction,{name:"begin"}));
+        importSpecialForm(iterateFunction.bind(true, true), {name:"for"});
+        importSpecialForm(iterateFunction.bind(false, true), {name:"do-for"});
+        importSpecialForm(iterateFunction.bind(true, false), {name:"map"});
+        importSpecialForm(iterateFunction.bind(false, false), {name:"do-map"});
         return Nil;
     }
 
@@ -499,8 +502,8 @@ class CCInterp {
 
         
         var history = [];
-        importFunction(this, () -> history, "history");
-        importFunction(this, (str) -> history[history.length-1] = str, "rewrite-history");
+        importFunction(this, () -> history, {name:"history"});
+        importFunction(this, (str) -> history[history.length-1] = str, {name:"rewrite-history"});
         #if (sys || hxnodejs)
         var historyFile = Path.join([HissTools.homeDir(), ".hisstory"]);
         history = sys.io.File.getContent(historyFile).split("\n");
@@ -514,7 +517,7 @@ class CCInterp {
                 cReader.saveHistory();
             }
             throw HSignal.Quit;
-        }, "quit");
+        }, {name:"quit"}); // TODO rename to quit!
         var locals = emptyEnv(); // This allows for top-level setlocal
 
         HaxeTools.println('Hiss version ${CompileInfo.version()}');
@@ -639,7 +642,7 @@ class CCInterp {
         stackFrameWithReturn.put("return", Function((args, env, cc) -> {
             called.b = true;
             cc(args.first());
-        }, "return"));
+        }, {name:"return"}));
         return env.extend(stackFrameWithReturn);
     }
 
@@ -647,10 +650,10 @@ class CCInterp {
         var stackFrameWithBreakContinue = emptyDict();
         stackFrameWithBreakContinue.put("continue", Function((_, _, continueCC) -> {
             continueCalled.b = true; continueCC(Nil);
-        }, "continue", []));
+        }, {name:"continue"}));
         stackFrameWithBreakContinue.put("break", Function((_, _, breakCC) -> {
             breakCalled.b = true; breakCC(Nil);
-        }, "break", []));
+        }, {name: "break"}));
         return env.extend(stackFrameWithBreakContinue);
     }
 
@@ -828,11 +831,20 @@ class CCInterp {
             callEnv = callEnv.extend(params.destructuringBind(this, fArgs)); // extending the outer env is how lambdas capture values
             internalEval(body, callEnv, fCC);
         };
+        var meta = {
+            name: name,
+            argNames: [for (paramSymbol in params.toList()) try {
+                // simple functions args can be imported with names
+                paramSymbol.symbolName();
+            } catch (s: Dynamic){
+                // nested list args cannot
+                "[nested list]";
+            }]      
+        };
         var callable = if (isMacro) {
-            Macro(hFun, "[anonymous macro]");
+            Macro(hFun, meta);
         } else {
-            var paramNames = [for (paramSymbol in params.toList()) paramSymbol.symbolName()];
-            Function(hFun, "[anonymous lambda]", paramNames);
+            Function(hFun, meta);
         };
         cc(callable);
     }
@@ -965,7 +977,7 @@ class CCInterp {
                 }
 
                 // Recur has to be a special form so it retains the environment of the original loop call
-                internalEval(Symbol("begin").cons(body), env.extend(names.destructuringBind(this, SpecialForm(recur, "recur").cons(values))), (value) -> {result = value;});
+                internalEval(Symbol("begin").cons(body), env.extend(names.destructuringBind(this, SpecialForm(recur, {name: "recur"}).cons(values))), (value) -> {result = value;});
                 
             } while (recurCalled);
             cc(result);
@@ -1061,7 +1073,7 @@ class CCInterp {
             #end
 
             cc(arg);
-        }, "cc", ["result"]);
+        }, { name: "cc", argNames: ["result"] });
 
         funcall(true,
             List([

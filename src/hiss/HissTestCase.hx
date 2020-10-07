@@ -107,15 +107,15 @@ class HissTestCase extends Test {
 
         interp.importFunction(HissTestCase, (val: HValue) -> {
             actualPrint += val.toPrint() + "\n";
-        }, "print", T);
+        }, { name: "print" }, T);
 
         interp.importFunction(HissTestCase, (val: HValue) -> {
             actualPrint += val.toMessage() + "\n";
-        }, "message", T);
+        }, { name: "message" }, T);
 
         interp.eval(expression, env);
-        interp.importFunction(HissTestCase, hissPrintFail, "print", T);
-        interp.importFunction(HissTools, HissTools.message, "message", T); // It's ok to send messages from the standard library, just not to print raw HValues
+        interp.importFunction(HissTestCase, hissPrintFail, { name: "print" }, T);
+        interp.importFunction(HissTools, HissTools.message, { name: "message" }, T); // It's ok to send messages from the standard library, just not to print raw HValues
         cc(if (expectedPrint == actualPrint
                 // Forgive a missing newline in the `prints` statement
                 || (actualPrint.charAt(actualPrint.length-1) == '\n' && expectedPrint == actualPrint.substr(0, actualPrint.length-1))) {
@@ -167,7 +167,7 @@ class HissTestCase extends Test {
         #end
 
         if (interp != null) {
-            interp.importFunction(HissTestCase, hissPrintFail, "print", T);
+            interp.importFunction(HissTestCase, hissPrintFail, { name: "print" }, T);
         }
     }
 
@@ -176,7 +176,7 @@ class HissTestCase extends Test {
         Log.trace = tempTrace;
         #end
 
-        interp.importFunction(HissTools, HissTools.print, "print", T);
+        interp.importFunction(HissTools, HissTools.print, { name: "print" }, T);
     }
 
     function testWithoutTimeout() {
@@ -220,8 +220,8 @@ class HissTestCase extends Test {
             }
             // We don't want to be accountable for testing functions defined IN the tests.
 
-            interp.globals.put("test", SpecialForm(hissTest.bind(interp), "test"));
-            interp.globals.put("prints", SpecialForm(hissPrints.bind(interp), "prints"));
+            interp.globals.put("test", SpecialForm(hissTest.bind(interp), { name: "test" }));
+            interp.globals.put("prints", SpecialForm(hissPrints.bind(interp), { name: "prints" }));
 
             for (f in ignoreFunctions) {
                 functionsTested[f] = true;

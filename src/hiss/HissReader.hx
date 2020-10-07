@@ -49,7 +49,7 @@ class HissReader {
             var start = args.first().toHaxeString();
             var str = toStream(interp, args.second());
             cc(f(start, str));
-        }, s, ["start", "stream"]);
+        }, { name: s, argNames: ["start", "stream"] });
     }
 
     function internalSetMacroString(s: String, f: HaxeReadFunction) {
