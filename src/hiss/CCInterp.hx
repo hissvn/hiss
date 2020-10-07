@@ -423,6 +423,8 @@ class CCInterp {
         importCCFunction(sleepCC, "sleep!", ["seconds"]);
         #end
 
+        importCCFunction(delay, "delay!", ["func", "seconds"]);
+
         // Take special care when importing this one because it also contains cc functions that importClass() would handle wrong
         importClass(HHttp, "Http");
         // Just re-import to overwrite the CC function which shouldn't be imported normally:
@@ -740,6 +742,13 @@ class CCInterp {
 
     function sleepCC(args: HValue, env: HValue, cc: Continuation) {
         Timer.delay(cc.bind(Nil), Math.round(args.first().toFloat() * 1000));
+    }
+
+    // This won't work in the repl, I THINK because the main thread is always occupied
+    function delay(args: HValue, env: HValue, cc: Continuation) {
+        Timer.delay(() -> {
+            funcall(false, List([args.first()]), env, noCC);
+        }, Math.round(args.second().toFloat() * 1000));
     }
 
     function set(type: SetType, args: HValue, env: HValue, cc: Continuation) {
