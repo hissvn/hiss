@@ -47,4 +47,13 @@ class CompileInfo {
         return macro $v{""}; // Return empty string if running through a language server/in IDE
         #end
     }
+
+    public static macro function generatorChecksPerSecond(): ExprOf<Int> {
+        var checksPerSecond = 60;
+        var checksPerSecondFlag = Context.definedValue("generatorChecksPerSecond");
+        if (checksPerSecondFlag != null) {
+            checksPerSecond = Std.parseInt(checksPerSecondFlag);
+        }
+        return macro $v{checksPerSecond};
+    }
 }

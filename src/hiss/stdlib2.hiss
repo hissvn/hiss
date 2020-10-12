@@ -168,7 +168,8 @@
 (defun has-next (iterable-or-iterator)
     (call-haxe (iterator iterable-or-iterator) "hasNext"))
 
-(if (bound? Thread)
+(if nil // (bound? Thread)
+    // Multi-threaded generators:
     (defmacro defgen (name args &rest body)
         `(defun ,name ,args
             (let (__lock__ (new Lock)
@@ -180,7 +181,7 @@
                     yield (lambda (value)
                                 (Deque:add __deque__ value)
                                 (Lock:wait __lock__))
-                    next (lambda ()
+                    __next__ (lambda ()
                             (if __done__ nil
                                 (begin
                                     (if __next__
@@ -197,14 +198,49 @@
                                         (case value
                                             (__done-signal__ (set! __done__ t) nil)
                                             (default value))))))
-                    has-next (lambda ()
+                    __has-next__ (lambda ()
                                 (if __done__ nil
                                     (if __next__ t
                                         (let (could-be-next (next))
                                             (case could-be-next
                                                 (nil (not __done__))
                                                 (default (set! __next__ could-be-next) t)))))))
-                (iterable next has-next)))))
+                (iterable __next__ __has-next__))))
+    // Single-threaded generators:
+	(defmacro defgen (name args &rest body)
+        `(defun ,name ,args
+            (let (__next__ nil
+					__started__ nil
+                    __done__ nil
+                    __next-cc__ nil
+					__start__ (lambda ()
+                                (print "slit")
+								,@body
+								(set! done t))
+					__check__ (lambda (cc)
+								(if __next-cc__
+										(cc)
+									(unless __done__ (delay! (bind __check__ cc) *generator-delay*))))
+					yield (lambda (value)
+								(__next-cc__ value)
+								(set! __next-cc__ nil)
+								(call/cc (lambda (cc)
+												(__check__ cc))))
+                    __next__ (lambda () 
+                                (call/cc (lambda (cc)
+                                                (set! __next-cc__ cc)
+												(unless __started__
+													(set! __started__ t)
+													(__start__)))))
+                    __has-next__ (lambda ()
+                                (if __done__ nil
+                                    (if __next__ t
+                                        (let (could-be-next (next))
+                                            (case could-be-next
+                                                (nil (not __done__))
+                                                (default (set! __next__ could-be-next) t)))))))
+				(iterable __next__ __has-next__)))))
+
 
 (defun memoize (f)
     "Return a version of the given function that caches return values for different argument lists"

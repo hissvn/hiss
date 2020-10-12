@@ -9,6 +9,7 @@ An embedded Lisp compatible with Haxe, C++, JavaScript, and Python.
 ### Production
 
 * nativeFunctionMaxArgs - Hiss functions can be converted to native functions of your target language. Functions with more than this number of arguments will fail to convert. Default: 5
+* generatorChecksPerSecond - Hiss supports Python-style generator functions. On single-threaded targets, they work by checking for iterator calls on an interval specified by this number. Default: 60
 * ignoreWarnings - If defined, Hiss won't print any warning messages
 
 ### Debugging

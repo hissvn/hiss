@@ -440,6 +440,8 @@ class CCInterp {
 
         StaticFiles.compileWith("stdlib2.hiss");
 
+        importVar(1.0 / CompileInfo.generatorChecksPerSecond(), "*generator-delay*");
+
         //disableTrace();
         load("stdlib2.hiss");
         //enableTrace();
