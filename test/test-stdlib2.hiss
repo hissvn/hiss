@@ -1,30 +1,5 @@
 (message "Testing Hiss standard library for version $(version)")
 
-(defun eq-with-input (input expected expression)
-    (let (version (version)
-            hiss-shell-command
-                (cond
-                    ((contains version "(target: python)") "$(python) bin/py/hiss-repl.py")
-                    ((contains version "(target: nodejs)") "node bin/js/hiss-node-repl.js")
-                    ((contains version "(target: cpp)") 
-                        (File:save-content "temp.sh" "#!/bin/bash\nbin/cpp/CCInterp \$@")
-                        "bash temp.sh") ; TODO for some reason, this causes read-line to hang!
-                    ((contains version "(target: eval)") "haxe build-scripts/all-script-args.hxml build-scripts/repl/all-repl-args.hxml --run hiss.CCInterp")
-                    (t nil)))
-        (if hiss-shell-command
-                (let (shell-output
-                            (begin
-                                (File:save-content "temp.hiss" "${expression}")
-                                (File:save-content "temp.txt" input)
-                                (shell-command "cat temp.txt | $hiss-shell-command temp.hiss")))
-                    (eq expected (read shell-output)))
-
-            // If testing a target without a command-line interpreter, automatically pass this check. 
-            t)))
-
-(test read-line
-    (eq-with-input "sup" "sup" '(print (read-line))))
-
 (test or
     // Test with booleans:
     (eq nil (or))
@@ -114,9 +89,9 @@
 (test continuation-iteration
     (defun one-three-five () (for i (range 8) (cond ((= 1 (% i 2)) i) ((= 6 i) (break)) (t (continue)))))
     (eq (list 1 3 5) (one-three-five))
-    (nil? (enable-continuations))
+    (nil? (enable-cc!))
     (eq (list 1 3 5) (one-three-five))
-    (nil? (disable-continuations))
+    (nil? (disable-cc!))
     (eq (list 1 3 5) (one-three-five)))
 
 (test eval
@@ -273,8 +248,8 @@
         (setlocal! c (counter 5))
         (has-next c)
         (has-next c)
-        (= 0 (next c))
-        (= 1 (next c))
+        (= 0 (next! c))
+        (= 1 (next! c))
         (has-next c)
         (eq (list 2 3 4) (collect c))))
 

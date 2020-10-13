@@ -18,7 +18,6 @@ haxe build-scripts/test/test-py$pysuffix.hxml $end
 haxe build-scripts/test/test-js.hxml $end
 
 haxe build-scripts/repl/build-nodejs-repl.hxml && \
-echo 'done building nodejs repl' && \
 haxe build-scripts/test/test-nodejs.hxml $end
 
 haxe build-scripts/repl/build-cpp-repl.hxml && \

@@ -410,7 +410,7 @@
 
 (defalias sleep! sleep @deprecated)
 (defalias error! error @deprecated)
-(defalias quit! quit)
+(when (bound? quit!) (defalias quit! quit))
 
 (defalias use-readtable! use-readtable @deprecated)
 (defalias set-macro-string! set-macro-string @deprecated)
