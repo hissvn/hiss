@@ -7,7 +7,7 @@ end=""
 pysuffix=""
 if [ ! -z "$1" ]; then
     end="&& \\"
-    if [ "${TRAVIS_OS_NAME}" = "linux" ]; then
+    if [ "${TRAVIS_OS_NAME}" != "windows" ]; then
         pysuffix="3"
     fi
 fi
