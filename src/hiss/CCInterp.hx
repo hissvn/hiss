@@ -251,6 +251,7 @@ class CCInterp {
         importSpecialForm(set.bind(Destructive), { name: "set!" });
         importSpecialForm(setCallable.bind(false), { name: "defun" });
         importSpecialForm(setCallable.bind(true), { name: "defmacro" });
+        importSpecialForm(defAlias, {name: "defalias"});
         importFunction(this, docs, {name: "docs", argNames: ["callable"]}, T);
         importFunction(this, help, {name: "help", argNames: []});
         importSpecialForm(_if, { name: "if" });
@@ -806,6 +807,26 @@ class CCInterp {
         lambda(isMacro, args.rest(), env, (fun: HValue) -> {
             set(Global, args.first().cons(List([fun])), env, cc);
         }, args.first().symbolName());
+    }
+
+    function defAlias(args: HValue, env: HValue, cc: Continuation) {
+        var func = args.first();
+        var alias = args.second();
+        var metaSymbols = [for (symbol in args.toList().slice(2)) symbol.symbolName()];
+
+        internalEval(func, env, (funcVal) -> {
+            var hFunc = funcVal.toCallable();
+            var meta = Reflect.copy(metadata(funcVal));
+
+            meta.name = alias.symbolName();
+            if (metaSymbols.indexOf("@deprecated") != -1) {
+                meta.deprecated = true;
+            }
+
+            var newFunc = Function(hFunc, meta);
+            globals.put(alias.symbolName(), newFunc);
+            cc(newFunc);
+        });
     }
 
     function _if(args: HValue, env: HValue, cc: Continuation) {
