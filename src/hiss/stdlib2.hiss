@@ -1,19 +1,30 @@
-(defmacro register-method (method name &optional call-on-reference keep-args-wrapped return-instance)
+(defmacro register-method! (method name &optional call-on-reference keep-args-wrapped return-instance)
     "Register a method call as an unqualified global function. Unlike CCInterp.importClass, there won't be a Class: prefix"
     `(defun ,name (instance &rest args)
         (setlocal! result (call-haxe instance ,method args ,call-on-reference ,keep-args-wrapped))
         (if ,return-instance instance result)))
+(defalias register-method! register-method @deprecated)
 
-(register-method "push" push! t t t)
-(register-method "shift" shift! t)
+(register-method! "push" push! t t t)
+(defalias push! push @deprecated)
 
-(register-method "pop" pop! t)
+(register-method! "shift" shift! t)
+(defalias shift! shift @deprecated)
+
+(register-method! "pop" pop! t)
+(defalias pop! pop @deprecated)
 
 (defun take! (l num)
+    "Destructively take the first num elements from l as a new list"
     (call-haxe l "splice" (list 0 num) t))
+(defalias take! take @deprecated)
+
 (defun drop! (l num)
+    "Destructively remove the first num elements from l"
     (call-haxe l "splice" (list 0 num) t)
     l)
+(defalias drop! drop @deprecated)
+
 (defun slice (l start &optional end)
     (call-haxe l "slice" (list start (or end (length l)))))
 (defun rslice (l start &optional end)
@@ -22,11 +33,15 @@
 (defun peek (l num)
     (slice l 0 num))
 
+(defalias setlocal! setlocal @deprecated)
+(defalias set! set @deprecated)
+(defalias set-nth! set-nth @deprecated) 
+
 (defun nil? (v) (eq nil v))
 
 // String functions:
-(register-method "split" split)
-(register-method "substr" substring)
+(register-method! "split" split)
+(register-method! "substr" substring)
 (defun char-at (str idx) (substring str idx 1))
 
 (defun list (&rest args) args)
@@ -154,7 +169,7 @@
         (message "${idx}. $(to-print choice)"))
     (nth choices (input-int "> ")))
 
-(defmacro default! (var value)
+(defmacro set-default! (var value)
     `(if (or (not (bound? ,var)) (nil? ,var)) (set! ,var ,value)))
 
 // (next) and (has-next) should work on Iterables AND Iterators, for convenience
@@ -162,8 +177,9 @@
     (if (get-property iterable-or-iterator "iterator")
         (call-haxe iterable-or-iterator "iterator") iterator-or-iterable))
 
-(defun next (iterable-or-iterator)
+(defun next! (iterable-or-iterator)
     (call-haxe (iterator iterable-or-iterator) "next"))
+(defalias next! next @deprecated)
 
 (defun has-next (iterable-or-iterator)
     (call-haxe (iterator iterable-or-iterator) "hasNext"))
@@ -226,7 +242,7 @@
         (t (error! "replace can't be called on $string-or-list"))))
 
 (defun index-of (string-or-list part &optional start-index)
-    (default! start-index 0)
+    (set-default! start-index 0)
     (cond
         ((list? string-or-list)
             (setlocal! found-idx -1)
@@ -240,7 +256,7 @@
         (t (error! "index-of can't be called on $string-or-list"))))
 
 (defun last-index-of (string-or-list part &optional start-index)
-    (default! start-index (- (length (string-or-list)) 1))
+    (set-default! start-index (- (length (string-or-list)) 1))
     (cond
         ((list? string-or-list)
             (do-for (idx elem) (reverse (enumerate string-or-list))
@@ -300,7 +316,7 @@
             predicate-name (symbol "$(symbol-name name)?"))
         `(begin
             (dict-set! *types* ',name ,combined-predicate)
-            (default! ,predicate-name ,combined-predicate)  ; If a predicate with the given name is already defined, it will be kept as the global predicate
+            (set-default! ,predicate-name ,combined-predicate)  ; If a predicate with the given name is already defined, it will be kept as the global predicate
             t)))
 
 (defmacro the (type var)
@@ -380,7 +396,7 @@
 // TODO when catch statements change, those ^ will change
 
 (defmacro def-reader-macro (str arg-names &rest body)
-    `(set-macro-string ,str (lambda (,(first arg-names) ,(second arg-names)) ,@body)))
+    `(set-macro-string! ,str (lambda (,(first arg-names) ,(second arg-names)) ,@body)))
 
 (def-reader-macro "[" (start stream) (cons 'list (read-delimited-list "]" '() nil null start stream)))
 
@@ -391,3 +407,29 @@
 (defmacro when-let ((name expression) &rest body)
     `(if-let (,name ,expression)
         (begin ,@body)))
+
+(defalias sleep! sleep @deprecated)
+(defalias error! error @deprecated)
+(defalias quit! quit)
+
+(defalias use-readtable! use-readtable @deprecated)
+(defalias set-macro-string! set-macro-string @deprecated)
+(defalias set-default-read-function! set-default-read-function @deprecated)
+(defalias HStream:next-token! next-token @deprecated)
+
+(defalias print! print @deprecated)
+(defalias message! message @deprecated)
+(defalias load! load @deprecated)
+
+(defalias enable-cc! enable-continuations @deprecated)
+(defalias enable-cc! disable-tail-recursion @deprecated)
+(defalias disable-cc! disable-continuations @deprecated)
+(defalias disable-cc! enable-tail-recursion @deprecated)
+
+(defalias dict-set! dict-set @deprecated)
+(defalias dict-erase! dict-erase @deprecated)
+(defalias delay! delay @deprecated)
+(defalias set-default! default! @deprecated)
+(defalias set-default! default @deprecated)
+
+(defalias clear! clear @deprecated)

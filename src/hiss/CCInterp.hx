@@ -241,8 +241,7 @@ class CCInterp {
         
         // When not a repl, use Sys.exit for quitting
         #if (sys || hxnodejs)
-        // TODO call it quit!
-        importFunction(Sys, Sys.exit.bind(0), { name: "quit", argNames: [] });
+        importFunction(Sys, Sys.exit.bind(0), { name: "quit!", argNames: [] });
         #end
 
         // Primitives
@@ -259,7 +258,7 @@ class CCInterp {
         importSpecialForm(callCC, { name: "call/cc" });
         importSpecialForm(_eval, { name: "eval" });
         importSpecialForm(bound, { name: "bound?" });
-        importCCFunction(_load, { name: "load", argNames: ["file"] });
+        importCCFunction(_load, { name: "load!", argNames: ["file"] });
         importSpecialForm(funcall.bind(false), { name: "funcall" });
         importSpecialForm(funcall.bind(true), { name: "funcall-inline" });
         importSpecialForm(loop, { name: "loop" });
@@ -270,9 +269,8 @@ class CCInterp {
         useFunctions(trBegin, trEvalAll, iterate);
 
         // Allow switching at runtime:
-        importFunction(this, useFunctions.bind(trBegin, trEvalAll, iterate), { name: "enable-tail-recursion" });
-        importFunction(this, useFunctions.bind(trBegin, trEvalAll, iterate), { name: "disable-continuations" });
-        importFunction(this, useFunctions.bind(begin, evalAll, iterateCC), { name: "enable-continuations" });
+        importFunction(this, useFunctions.bind(trBegin, trEvalAll, iterate), { name: "disable-cc!" });
+        importFunction(this, useFunctions.bind(begin, evalAll, iterateCC), { name: "enable-cc!" });
         importFunction(this, useFunctions.bind(begin, evalAll, iterateCC), { name: "disable-tail-recursion" });
 
         // First-class unit testing:
@@ -291,15 +289,15 @@ class CCInterp {
         importSpecialForm(hissTry, { name: "try" });
 
         importClass(HStream, "HStream");
-        importFunction(reader, reader.setMacroString, {name: "set-macro-string", argNames:  ["string", "read-function"]}, List([Int(1)]));
-        importFunction(reader, reader.setDefaultReadFunction, {name: "set-default-read-function", argNames: ["read-function"]}, T);
+        importFunction(reader, reader.setMacroString, {name: "set-macro-string!", argNames:  ["string", "read-function"]}, List([Int(1)]));
+        importFunction(reader, reader.setDefaultReadFunction, {name: "set-default-read-function!", argNames: ["read-function"]}, T);
         importFunction(reader, reader.readNumber, {name: "read-number", argNames: ["start", "stream"]}, Nil);
         importFunction(reader, reader.readString, {name: "read-string", argNames: ["start", "stream"]}, Nil);
         importFunction(reader, reader.readSymbol, {name: "read-symbol", argNames: ["start", "stream"]}, Nil);
-        importFunction(reader, reader.nextToken, {name: "next-token", argNames: ["stream"]}, Nil);
+        importFunction(reader, reader.nextToken, {name: "HStream:next-token!", argNames: ["stream"]}, Nil);
         importFunction(reader, reader.readDelimitedList, {name: "read-delimited-list", argNames: ["terminator", "delimiters", "eof-terminates", "blank-elements", "start", "stream"]}, List([Int(3)]) /* keep blankElements wrapped */);
         importFunction(reader, reader.copyReadtable, {name: "copy-readtable"});
-        importFunction(reader, reader.useReadtable, {name: "use-readtable"});
+        importFunction(reader, reader.useReadtable, {name: "use-readtable!"});
         importFunction(this, () -> new HDict(this), {name: "empty-readtable"});
 
         // Open Pandora's box if it's available:
@@ -362,14 +360,14 @@ class CCInterp {
         // Sometimes it's useful to provide the interpreter with your own target-native print function
         // so they will be used while the standard library is being loaded.
         if (printFunction != null) {
-            importFunction(this, printFunction, {name: "print", argNames: ["value"]},Nil);
+            importFunction(this, printFunction, {name: "print!", argNames: ["value"]},Nil);
         }
         else {
-            importFunction(HissTools, HissTools.print, {name: "print", argNames: ["value"]}, T);
+            importFunction(HissTools, HissTools.print, {name: "print!", argNames: ["value"]}, T);
         }
 
         // TODO this should take its behavior from the user-provided print
-        importFunction(HissTools, HissTools.message, {name: "message", argNames: ["value"]}, T);
+        importFunction(HissTools, HissTools.message, {name: "message!", argNames: ["value"]}, T);
 
         importFunction(HissTools, HissTools.toPrint, {name: "to-print", argNames: ["value"]}, T);
         importFunction(HissTools, HissTools.toMessage, {name: "to-message", argNames: ["value"]}, T);
@@ -520,7 +518,7 @@ class CCInterp {
                 cReader.saveHistory();
             }
             throw HSignal.Quit;
-        }, {name:"quit"}); // TODO rename to quit!
+        }, {name:"quit!"});
         var locals = emptyEnv(); // This allows for top-level setlocal
 
         HaxeTools.println('Hiss version ${CompileInfo.version()}');
