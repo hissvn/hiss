@@ -896,13 +896,12 @@ class CCInterp {
         cc(callable);
     }
 
+    function metadata(callable: HValue) {
+        return HaxeTools.extract(callable, Function(_, meta) | Macro(_, meta) | SpecialForm(_, meta) => meta);
+    }
+
     function docs(func: HValue) {
-        switch (func) {
-            case Function(_, meta) | Macro(_, meta) | SpecialForm(_, meta):
-                return meta.docstring;
-            default:
-                throw '$func has no docs';
-        }
+        return metadata(func).docstring;
     }
 
     function help() {
