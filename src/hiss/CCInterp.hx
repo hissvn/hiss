@@ -252,6 +252,7 @@ class CCInterp {
         importSpecialForm(setCallable.bind(false), { name: "defun" });
         importSpecialForm(setCallable.bind(true), { name: "defmacro" });
         importFunction(this, docs, {name: "docs", argNames: ["callable"]}, T);
+        importFunction(this, help, {name: "help", argNames: []});
         importSpecialForm(_if, { name: "if" });
         importSpecialForm(lambda.bind(false), { name: "lambda" });
         importSpecialForm(callCC, { name: "call/cc" });
@@ -522,7 +523,7 @@ class CCInterp {
         var locals = emptyEnv(); // This allows for top-level setlocal
 
         HaxeTools.println('Hiss version ${CompileInfo.version()}');
-        HaxeTools.println("Type (quit) to quit the REPL");
+        HaxeTools.println("Type (help) for a list of functions, or (quit) to quit the REPL");
 
         while (true) {
             HaxeTools.print(">>> ");
@@ -901,6 +902,23 @@ class CCInterp {
                 return meta.docstring;
             default:
                 throw '$func has no docs';
+        }
+    }
+
+    function help() {
+        for (name => value in globals.toDict()) {
+            try {
+                var functionHelp = name.symbolName();
+                try {
+                    var docs = docs(value);
+                    if (docs != null && docs.length > 0) {
+                        functionHelp += ': $docs';
+                    }
+                } catch (s: Dynamic) {
+                    continue; // Not a callable
+                }
+                String(functionHelp).message();
+            }
         }
     }
 
