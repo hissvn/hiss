@@ -6,4 +6,11 @@ os:
   - windows
 haxe:
   - stable
+  - development
+
+matrix:
+# Allow Haxe development to fail.
+allow_failures:
+  - haxe: development
+
 script: ./test-travis.sh
