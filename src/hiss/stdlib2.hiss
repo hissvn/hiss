@@ -143,7 +143,7 @@
     `(let (value ,form) (_case value ,@case-list)))
 
 (defun input-string (&optional prompt)
-    (when prompt (message prompt))
+    (when prompt (message! prompt))
     (read-line))
 
 (defun input-int (&optional prompt)
@@ -164,9 +164,9 @@
     (eval (read (input-string prompt))))
 
 (defun input-choice (choices &optional prompt)
-    (when prompt (message prompt))
+    (when prompt (message! prompt))
     (do-for (idx choice) (enumerate choices)
-        (message "${idx}. $(to-print choice)"))
+        (message! "${idx}. $(to-print choice)"))
     (nth choices (input-int "> ")))
 
 (defmacro set-default! (var value)

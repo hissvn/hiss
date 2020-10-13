@@ -19,6 +19,35 @@ using hiss.HissTools;
 import hiss.StaticFiles;
 import hiss.HaxeTools;
 
+// Source: https://github.com/haxe-utest/utest/issues/105#issuecomment-687710047
+// and PlainTextReport.hx
+class NoExitReport extends utest.ui.text.PrintReport {
+    override function complete(result:utest.ui.common.PackageResult) {
+        this.result = result;
+        if (handler != null) handler(this);
+        if (!result.stats.isOk) {
+            #if (php || neko || cpp || cs || java || python || lua || eval || hl)
+                Sys.exit(1);
+            #elseif js
+                if(#if (haxe_ver >= 4.0) js.Syntax.code #else untyped __js__ #end('typeof phantom != "undefined"'))
+                #if (haxe_ver >= 4.0) js.Syntax.code #else untyped __js__ #end('phantom').exit(1);
+                if(#if (haxe_ver >= 4.0) js.Syntax.code #else untyped __js__ #end('typeof process != "undefined"'))
+                #if (haxe_ver >= 4.0) js.Syntax.code #else untyped __js__ #end('process').exit(1);
+            #elseif (flash && exit)
+                if(flash.system.Security.sandboxType == "localTrusted") {
+                    var delay = 5;
+                    trace('all done, exiting in $delay seconds');
+                    haxe.Timer.delay(function() try {
+                        flash.system.System.exit(1);
+                    } catch(e : Dynamic) {
+                        // do nothing
+                    }, delay * 1000);
+                }
+            #end
+        }
+    }
+}
+
 class HissTestCase extends Test {
 
     var interp: CCInterp;
@@ -47,7 +76,10 @@ class HissTestCase extends Test {
         var instance = new HissTestCase(null, false, null);
         instance.interp = interp;
         instance.expressions = args;
-        utest.UTest.run([instance]);
+        var runner = new utest.Runner();
+        runner.addCase(instance);
+        new NoExitReport(runner);
+        runner.run();
         cc(Nil);
     }
 
