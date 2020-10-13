@@ -2,12 +2,14 @@
 
 # Supply the first argument if calling this script from Travis CI.
 # In that case, test-all.sh will fail as soon as one target fails.
-# python3 will also be used instead of python when running shell commands.
+# python3 will also be used instead of python when running shell commands on xenial.
 end=""
 pysuffix=""
 if [ ! -z "$1" ]; then
     end="&& \\"
-    pysuffix="3"
+    if [ "${TRAVIS_OS_NAME}" = "linux" ]; then
+        pysuffix="3"
+    fi
 fi
 
 eval "haxe build-scripts/test/test-interp.hxml $end
