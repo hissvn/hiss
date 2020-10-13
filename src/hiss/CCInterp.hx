@@ -170,6 +170,10 @@ class CCInterp {
                         Reflect.setProperty(instance, instanceField, value);
                         cc(args.second());
                     }, {name:setterTranslatedName}));
+                    // It can be confusing to forget the ! when trying to use a setter, so allow usage without ! but with a warning:
+                    if (setterTranslatedName.endsWith("!")) {
+                        defAlias(List([Symbol(setterTranslatedName), Symbol(setterTranslatedName.substr(0, setterTranslatedName.length - 1)), Symbol("@deprecated")]), emptyEnv(), noCC);
+                    }
             }
         }
 
