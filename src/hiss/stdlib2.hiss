@@ -1,7 +1,7 @@
 (defmacro register-method (method name &optional call-on-reference keep-args-wrapped return-instance)
     "Register a method call as an unqualified global function. Unlike CCInterp.importClass, there won't be a Class: prefix"
     `(defun ,name (instance &rest args)
-        (setlocal result (call-haxe instance ,method args ,call-on-reference ,keep-args-wrapped))
+        (setlocal! result (call-haxe instance ,method args ,call-on-reference ,keep-args-wrapped))
         (if ,return-instance instance result)))
 
 (register-method "push" push! t t t)
@@ -34,7 +34,7 @@
 
 (defun zip (&rest lists)
     "Create a list of tuples by grouping all same-nth elements in the given lists. Discards elements with no corresponding element in all other lists"
-    (setlocal final-length (first (sort (for l lists (length l)))))
+    (setlocal! final-length (first (sort (for l lists (length l)))))
     (for i (range final-length)
         (for l lists (nth l i))))
 
@@ -46,17 +46,17 @@
         (eval (cons 'cond (rest ',forms)))))))
 
 (defmacro let (bindings &rest body)
-    (setlocal setlocal-exps 
+    (setlocal! setlocal-exps 
         (cond
             ; New-fangled, single-list let bindings like (name1 val1 name2 val2)
             ((symbol? (first bindings))
-                (setlocal names (odd-alternates bindings))
-                (setlocal values (even-alternates bindings))
-                (for pair (zip names values) `(setlocal ,(first pair) ,(nth pair 1))))
+                (setlocal! names (odd-alternates bindings))
+                (setlocal! values (even-alternates bindings))
+                (for pair (zip names values) `(setlocal! ,(first pair) ,(nth pair 1))))
 
             ; Old-school, many-list let bindings like ((name1 val1) (name2 val2))
             ((list? (first bindings))
-                (for pair bindings `(setlocal ,@pair)))))
+                (for pair bindings `(setlocal! ,@pair)))))
     `(begin
         ,@setlocal-exps
         ,@body))
@@ -81,13 +81,13 @@
 (defmacro bind (f &rest bind-args)
     (let (bind-args (for __arg__ bind-args (if (not (eq '_ __arg__)) (eval __arg__) __arg__)))
         `(lambda (&rest call-args)
-            (setlocal args (for arg ',bind-args (if (eq '_ arg) (shift! call-args) arg)))
+            (setlocal! args (for arg ',bind-args (if (eq '_ arg) (shift! call-args) arg)))
             (apply ,f (append args call-args)))))
 
 (defmacro rbind (f &rest bind-args)
     (let (bind-args (for __arg__ bind-args (if (not (eq '_ __arg__)) (eval __arg__) __arg__)))
         `(lambda (&rest call-args)
-            (setlocal args (for arg ',bind-args (if (eq '_ arg) (pop! call-args) arg)))
+            (setlocal! args (for arg ',bind-args (if (eq '_ arg) (pop! call-args) arg)))
             (apply ,f (append call-args args)))))
 
 (defvar second (rbind nth 1))
@@ -229,7 +229,7 @@
     (default! start-index 0)
     (cond
         ((list? string-or-list)
-            (setlocal found-idx -1)
+            (setlocal! found-idx -1)
             (do-for (idx elem) (enumerate string-or-list)
                 (when (and (<= start-index idx) (eq part elem))
                     (set! found-idx idx)
@@ -266,7 +266,7 @@
 (defun tree-contains (tree elem)
     (cond
         ((list? tree)
-            (setlocal found nil)
+            (setlocal! found nil)
             (do-for subtree tree
                 (when (tree-contains subtree elem)
                     (set! found t)

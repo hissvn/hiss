@@ -39,8 +39,8 @@
     (or (> 5 6) (> 6 5))
 
     // Test short-circuiting:
-    (setlocal short-circuit t)
-    (eq t (or t (setlocal short-circuit nil)))
+    (setlocal! short-circuit t)
+    (eq t (or t (setlocal! short-circuit nil)))
     short-circuit
 
     // Test against stack overflows:
@@ -61,8 +61,8 @@
     (eq t (and (> 6 5) (> 7 5)))
 
     // Test short-circuiting:
-    (setlocal short-circuit t)
-    (eq nil (and nil (setlocal short-circuit nil)))
+    (setlocal! short-circuit t)
+    (eq nil (and nil (setlocal! short-circuit nil)))
     short-circuit
 
     // Test against stack overflows:
@@ -73,7 +73,7 @@
     (eq 4 (pop! (list 1 2 3 4)))
     (eq nil (pop! (list))) // TODO is this desirable?
     ; Popping from a variable should modify in place
-    (setlocal l (list 1 2 3 4))
+    (setlocal! l (list 1 2 3 4))
     (eq 4 (pop! l))
     (eq (list 1 2 3) l)
     (eq 3 (pop! l)))
@@ -81,18 +81,18 @@
 (test shift!
     (eq 1 (shift! (list 1 2 3 4)))
     (eq nil (shift! (list)))
-    (setlocal l (list 1 2 3 4))
+    (setlocal! l (list 1 2 3 4))
     (eq 1 (shift! l))
     (eq (list 2 3 4) l)
     (eq 2 (shift! l)))
 
 (test take!
-    (setlocal l (list 1 2 3 4 5))
+    (setlocal! l (list 1 2 3 4 5))
     (eq (list 1 2 3) (take! l 3))
     (eq (list 4 5) l))
 
 (test drop!
-    (setlocal l (list 1 2 3 4 5))
+    (setlocal! l (list 1 2 3 4 5))
     (eq (list 3 4 5) (drop! l 2)))
 
 (test for
@@ -123,33 +123,33 @@
     ; Test evaluating globals
     (eq eval (eval 'eval))
     ; Test evaluating locals
-    (setlocal test-var 5)
+    (setlocal! test-var 5)
     (= 5 (eval 'test-var)))
 
 (test bind
     (prints "\"hello\"" (let (my-print (bind print "hello")) (my-print)))
-    (setlocal offset (bind + 6))
+    (setlocal! offset (bind + 6))
     (= 11 (offset 5))
     ; test binding macro/special form
-    (setlocal false (bind and nil))
+    (setlocal! false (bind and nil))
     (not (false t))
     ; test binding with gaps
     (defun printn (&rest args)
         (do-map args print))
     (prints "\"a\"\n\"c\"\n\"b\"" (let (print-out-of-order (bind printn "a" _ "b")) (print-out-of-order "c")))
     ; test that bind args are evaluated
-    (setlocal arg 5)
-    (setlocal offset (bind + arg))
+    (setlocal! arg 5)
+    (setlocal! offset (bind + arg))
     (= 5 (offset 0)))
 
 (test rbind
-    (setlocal fifth-of (rbind / 5))
+    (setlocal! fifth-of (rbind / 5))
     (= 1 (fifth-of 5))
-    (setlocal list-burrito (rbind list 'tortilla _ 'tortilla))
+    (setlocal! list-burrito (rbind list 'tortilla _ 'tortilla))
     (eq '(sauce tortilla meat tortilla) (list-burrito 'sauce 'meat)))
 
 (test (nth first second third fourth fifth sixth seventh eighth ninth tenth)
-    (setlocal l (list 1 2 3 4 5 6 7 8 9 10))
+    (setlocal! l (list 1 2 3 4 5 6 7 8 9 10))
     (= 1 (nth l 0))
     (= 10 (nth l 9))
     (= 1 (first l))
@@ -167,7 +167,7 @@
     (prints "Hello world" (message "Hello world")))
 
 (test symbol
-    (setlocal you "me")
+    (setlocal! you "me")
     (eq 'hey-me (symbol "hey-$you"))
     (not (eq (symbol) (symbol))))
 
@@ -193,11 +193,11 @@
 
 (test string-interpolation
     // TODO test interpolating all types of primitives
-    (setlocal i 5)
-    (setlocal f 5.5)
-    (setlocal sy 'hey-symbol)
-    (setlocal st "hey")
-    (setlocal l (list 5 5.5 'hey-symbol "hey"))
+    (setlocal! i 5)
+    (setlocal! f 5.5)
+    (setlocal! sy 'hey-symbol)
+    (setlocal! st "hey")
+    (setlocal! l (list 5 5.5 'hey-symbol "hey"))
     (eq "5. hey-symbol" "${i}. $sy")
     (eq "10.5" "$(+ i f)")
     (eq #"(5 5.5 hey-symbol "hey")"# "$l")
@@ -205,7 +205,7 @@
     (eq "hey you" "$st you"))
 
 (test (dict dict-get dict-set! dict-contains dict-erase!)
-    (setlocal d (dict "StringKey" "StringValue" 
+    (setlocal! d (dict "StringKey" "StringValue" 
                         0 5 
                         (list "ListKey") 9))
     
@@ -225,7 +225,7 @@
     (not (dict-contains d "StringKey")))
 
 (test dict-iteration
-    (setlocal d (dict "StringKey" "StringValue"
+    (setlocal! d (dict "StringKey" "StringValue"
                         0 5
                         (list "ListKey") 9))
     (eq 6 (length (apply append (for (key value) d (list key value))))))
@@ -268,9 +268,9 @@
 (if (bound? defgen)
     (test defgen
         (defgen counter (max) (do-for i (range max) (yield i)))
-        (setlocal c (counter 5))
+        (setlocal! c (counter 5))
         (eq (list 0 1 2 3 4) (collect c))
-        (setlocal c (counter 5))
+        (setlocal! c (counter 5))
         (has-next c)
         (has-next c)
         (= 0 (next c))

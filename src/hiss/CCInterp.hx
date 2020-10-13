@@ -247,7 +247,7 @@ class CCInterp {
 
         // Primitives
         importSpecialForm(set.bind(Global), { name: "defvar" });
-        importSpecialForm(set.bind(Local), { name: "setlocal" });
+        importSpecialForm(set.bind(Local), { name: "setlocal!" });
         importSpecialForm(set.bind(Destructive), { name: "set!" });
         importSpecialForm(setCallable.bind(false), { name: "defun" });
         importSpecialForm(setCallable.bind(true), { name: "defmacro" });
