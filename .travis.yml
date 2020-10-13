@@ -1,5 +1,9 @@
 language: haxe
 dist: xenial
+os:
+  - mac
+  - linux
+  - windows
 haxe:
   - stable
 script: ./test-travis.sh
