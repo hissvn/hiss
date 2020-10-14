@@ -55,16 +55,13 @@ class HissTestCase extends Test {
 
     static var functionsTested: Map<String, Bool> = [];
     var ignoreFunctions: Array<String> = [];
-    var useTimeout: Bool;
     var expressions: HValue = null;
 
     static var printTestCommands: Bool = true; // Only enable this for debugging infinite loops and mysterious hangs
 
-    public function new(hissFile: String, useTimeout: Bool = false, ?ignoreFunctions: Array<String>) {
+    public function new(hissFile: String, ?ignoreFunctions: Array<String>) {
         super();
         file = hissFile;
-
-        this.useTimeout = useTimeout;
 
         reallyTrace = Log.trace;
 
@@ -73,7 +70,7 @@ class HissTestCase extends Test {
     }
 
     public static function testAtRuntime(interp: CCInterp, args: HValue, env: HValue, cc: Continuation) {
-        var instance = new HissTestCase(null, false, null);
+        var instance = new HissTestCase(null, null);
         instance.interp = interp;
         instance.expressions = args;
         var runner = new utest.Runner();
@@ -211,25 +208,7 @@ class HissTestCase extends Test {
         interp.importFunction(HissTools, HissTools.print, { name: "print" }, T);
     }
 
-    function testWithoutTimeout() {
-        if (!useTimeout) runTests();
-        else Assert.pass();
-    }
-
-    @:timeout(10000)
-    function testWithTimeout(async: Async) {
-        if (useTimeout) {
-            #if target.threaded
-            Thread.create(runTests.bind(async));
-            #else
-            reallyTrace("Warning! On single-threaded target, an infinite loop will cause tests to hang.");
-            runTests(async);
-            #end
-        }
-        else { Assert.pass(); async.done(); };
-    }
-
-    function runTests(?async: Async) {
+    function testStdlib() {
         if (file == null) {
             hissTest(interp, expressions, interp.emptyEnv(), CCInterp.noCC);
         } else {
@@ -272,10 +251,6 @@ class HissTestCase extends Test {
                 #if sys
                 Sys.print('Warning: $functionsNotTested were never tested');
                 #end
-            }
-
-            if (async != null) {
-                async.done();
             }
         }
     }
