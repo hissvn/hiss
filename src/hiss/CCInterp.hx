@@ -417,7 +417,7 @@ class CCInterp {
 
         importCCFunction(VariadicFunctions.append, {name: "append"});
 
-        importFunction(this, (a, b) -> { return a % b; }, {name: "%"});
+        importFunction(this, (a, b) -> { return a % b; }, {name: "%", argNames: ["a", "b"]});
 
         importFunction(HaxeTools, HaxeTools.readLine, {name: "read-line", argNames: []});
 
