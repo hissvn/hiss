@@ -36,7 +36,7 @@ class HDate {
         return date.instance.getDay();
     }
 
-    public static function getFullYear(?date: HDate):Int {
+    public static function getYear(?date: HDate):Int {
         if (date == null) date = now();
         return date.instance.getFullYear();
     }
