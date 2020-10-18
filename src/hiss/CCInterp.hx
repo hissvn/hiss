@@ -427,6 +427,7 @@ class CCInterp {
         #if (sys || hxnodejs)
         importClass(HFile, "File");
         importFunction(Sys, Sys.sleep, { name: "sleep!", argNames: ["seconds"] });
+        importFunction(Sys, Sys.getEnv, { name: "get-env", argNames: ["var"]});
         #else
         importCCFunction(sleepCC, { name: "sleep!", argNames: ["seconds"] });
         #end
