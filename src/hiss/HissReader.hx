@@ -306,8 +306,6 @@ class HissReader {
             try {
                 stream.drop(terminator);
             } catch (s: Dynamic) {
-                trace(eofTerminates);
-                trace(stream.isEmpty());
                 throw 'terminator $terminator not found while reading $delimiters delimited list from $stream';
             }
         }
