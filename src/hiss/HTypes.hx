@@ -43,6 +43,16 @@ typedef CallableMeta = {
     var ?async: Bool;
 };
 
+typedef ClassMeta = {
+    var name: String;
+    var ?omitMemberPrefixes: Bool;
+    var ?omitStaticPrefixes: Bool;
+    var ?convertNames: String->String;
+    var ?getterPrefix: String;
+    var ?setterPrefix: String;
+    var ?setterSuffix: String;
+};
+
 typedef Continuation = (HValue) -> Void;
 
 typedef HFunction = (HValue, HValue, Continuation) -> Void;

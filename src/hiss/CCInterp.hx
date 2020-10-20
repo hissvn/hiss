@@ -96,45 +96,43 @@ class CCInterp {
     var debugClassImports = false;
     #end
 
-    public function importClass(
-            clazz: Class<Dynamic>,
-            name: String,
-            ?methodNameFunction: String->String,
-            ?getterNameFunction: String->String,
-            ?setterNameFunction: String->String) {
-
+    public function importClass(clazz: Class<Dynamic>, meta: ClassMeta) {
         if (debugClassImports) {
-            trace('Import $name');
+            trace('Import ${meta.name}');
         }
-        globals.put(name, Object("Class", clazz));
+        globals.put(meta.name, Object("Class", clazz));
 
-        // By default, convert method names into the form ClassName:method-to-lower-hyphen
-        if (methodNameFunction == null) {
-            methodNameFunction = (methodName) -> {
-                name + ":" + methodName.toLowerHyphen();
-            };
+        if (meta.omitMemberPrefixes == null) {
+            meta.omitMemberPrefixes = false;
         }
-
-        // By default, name getters in the form ClassName:get-property-to-lower-hyphen
-        if (getterNameFunction == null) {
-            getterNameFunction = (propertyName) -> {
-                name + ":get-" + propertyName.toLowerHyphen();
-            };
+        if (meta.omitStaticPrefixes == null) {
+            meta.omitStaticPrefixes = false;
         }
-
-        // By default, name setters in the form ClassName:set-property-to-lower-hyphen!
-        if (setterNameFunction == null) {
-            setterNameFunction = (propertyName) -> {
-                name + ":set-" + propertyName.toLowerHyphen() + "!";
-            };
+        // By default, convert names of functions and properties into the form name-to-lower-hyphen
+        if (meta.convertNames == null) {
+            meta.convertNames = Strings.toLowerHyphen;
+        }
+        
+        if (meta.getterPrefix == null) {
+            meta.getterPrefix = "get-";
+        }
+        if (meta.setterPrefix == null) {
+            meta.setterPrefix = "set-";
+        }
+        if (meta.setterSuffix == null) {
+            meta.setterSuffix = "!";
         }
 
         var dummyInstance = clazz.createEmptyInstance();
         for (instanceField in clazz.getInstanceFields()) {
             var fieldValue = Reflect.getProperty(dummyInstance, instanceField);
             switch (Type.typeof(fieldValue)) {
+                // Import methods:
                 case TFunction:
-                    var translatedName = methodNameFunction(instanceField);
+                    var translatedName = meta.convertNames(instanceField);
+                    if (!meta.omitMemberPrefixes) {
+                        translatedName = meta.name + ":" + translatedName;
+                    }
                     if (debugClassImports) {
                         trace(translatedName);
                     }
@@ -151,19 +149,33 @@ class CCInterp {
                 default:
                     // generate getters and setters for instance fields
                     // TODO this approach is naive. It only finds properties that are returned by getProperty() which hopefully
-                    // excludes ones that aren't publicly readable (test that). It also generates setters for ALL publicly readable
+                    // excludes ones that aren't publicly readable (TODO test that). It also generates setters for ALL publicly readable
                     // properties, which may include some that aren't publicly writeable. Maybe trying setProperty() with a dummy
                     // value to check if the write succeeds somehow, then setting it back, would catch that.
 
                     // TODO test these imports
-                    var getterTranslatedName = getterNameFunction(instanceField);
+                    var getterTranslatedName = meta.convertNames(instanceField);
+                    getterTranslatedName = meta.getterPrefix + getterTranslatedName;
+                    if (!meta.omitMemberPrefixes) {
+                        getterTranslatedName = meta.name + ":" + getterTranslatedName;
+                    }
+                    if (debugClassImports) {
+                        trace(getterTranslatedName);
+                    }
                     globals.put(getterTranslatedName, Function((args, env, cc) -> {
                         var instance = args.first().value(this);
                         var value : Dynamic = Reflect.getProperty(instance, instanceField);
                         cc(value.toHValue());
                     }, {name:getterTranslatedName}));
 
-                    var setterTranslatedName = setterNameFunction(instanceField);
+                    var setterTranslatedName = meta.convertNames(instanceField);
+                    setterTranslatedName = meta.setterPrefix + setterTranslatedName + meta.setterSuffix;
+                    if (!meta.omitMemberPrefixes) {
+                        setterTranslatedName = meta.name + ":" + setterTranslatedName;
+                    }
+                    if (debugClassImports) {
+                        trace(setterTranslatedName);
+                    }
                     globals.put(setterTranslatedName, Function((args, env, cc) -> {
                         var instance = args.first().value(this);
                         var value = args.second().value(this);
@@ -182,7 +194,10 @@ class CCInterp {
             var fieldValue = Reflect.getProperty(clazz, classField);
             switch (Type.typeof(fieldValue)) {
                 case TFunction:
-                    var translatedName = methodNameFunction(classField);
+                    var translatedName = meta.convertNames(classField);
+                    if (!meta.omitStaticPrefixes) {
+                        translatedName = meta.name + ":" + translatedName;
+                    }
                     if (debugClassImports) {
                         trace(translatedName);
                     }
@@ -282,7 +297,7 @@ class CCInterp {
         importCCFunction(HissTestCase.hissPrints.bind(this), { name: "prints" });
 
         // Haxe interop -- We could bootstrap the rest from these if we had unlimited stack frames:
-        importClass(HType, "Type");
+        importClass(HType, {name: "Type"});
         importCCFunction(getProperty, { name: "get-property" });
         importCCFunction(callHaxe, { name: "call-haxe" });
         importCCFunction(_new, { name: "new" });
@@ -292,7 +307,7 @@ class CCInterp {
         importSpecialForm(throwsError, { name: "error?" });
         importSpecialForm(hissTry, { name: "try" });
 
-        importClass(HStream, "HStream");
+        importClass(HStream, {name: "HStream"});
         importFunction(reader, reader.setMacroString, {name: "set-macro-string!", argNames:  ["string", "read-function"]}, List([Int(1)]));
         importFunction(reader, reader.setDefaultReadFunction, {name: "set-default-read-function!", argNames: ["read-function"]}, T);
         importFunction(reader, reader.readNumber, {name: "read-number", argNames: ["start", "stream"]}, Nil);
@@ -306,10 +321,10 @@ class CCInterp {
 
         // Open Pandora's box if it's available:
         #if target.threaded
-        importClass(HDeque, "Deque");
-        importClass(HLock, "Lock");
-        importClass(HMutex, "Mutex");
-        importClass(HThread, "Thread");
+        importClass(HDeque, {name: "Deque"});
+        importClass(HLock, {name: "Lock"});
+        importClass(HMutex, {name: "Mutex"});
+        importClass(HThread, {name:"Thread"});
         //importClass(Threading.Tls, "Tls");
         #end
 
@@ -425,7 +440,7 @@ class CCInterp {
         importFunction(HissTools, HissTools.homeDir, {name: "home-dir", argNames: []});
         importFunction(StaticFiles, StaticFiles.getContent, { name: "get-content", argNames: ["file"] });
         #if (sys || hxnodejs)
-        importClass(HFile, "File");
+        importClass(HFile, {name: "File"});
         importFunction(Sys, Sys.sleep, { name: "sleep!", argNames: ["seconds"] });
         importFunction(Sys, Sys.getEnv, { name: "get-env", argNames: ["var"]});
         #else
@@ -435,11 +450,11 @@ class CCInterp {
         importCCFunction(delay, { name: "delay!", argNames: ["func", "seconds"] });
 
         // Take special care when importing this one because it also contains cc functions that importClass() would handle wrong
-        importClass(HHttp, "Http");
+        importClass(HHttp, {name: "Http"});
         // Just re-import to overwrite the CC function which shouldn't be imported normally:
         importCCFunction(HHttp.request.bind(this), { name: "Http:request" });
 
-        importClass(HDate, "Date");
+        importClass(HDate, {name:"Date"});
 
         importFunction(this, python, { name: "python", argNames: [] });
 
