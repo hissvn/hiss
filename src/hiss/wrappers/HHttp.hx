@@ -5,6 +5,7 @@ import haxe.Http;
 import hiss.HTypes;
 import hiss.HissTools;
 using hiss.HissTools;
+using hiss.Stdlib;
 
 /**
     More complicated than most hiss type wrappers.
@@ -45,7 +46,7 @@ class HHttp {
         // First arg: an HHttp object
         var http: Http = args.first().value(interp).instance;
         // Second (optional) arg: whether to send as POST request
-        var post = if (args.length() > 1) args.second().value(interp) else false;
+        var post = if (args.length_h() > 1) args.second().value(interp) else false;
 
         http.onData = (dataString: String) -> {
             cc(dataString.toHValue());

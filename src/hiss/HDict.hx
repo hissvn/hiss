@@ -2,6 +2,7 @@ package hiss;
 
 import hiss.HTypes;
 using hiss.HissTools;
+using hiss.Stdlib;
 
 typedef HKeyValuePair = {
     key: HValue,

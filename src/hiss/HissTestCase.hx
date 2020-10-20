@@ -16,6 +16,8 @@ import hiss.CCInterp;
 import hiss.HissTools;
 import hiss.CompileInfo;
 using hiss.HissTools;
+import hiss.Stdlib;
+using hiss.Stdlib;
 import hiss.StaticFiles;
 import hiss.HaxeTools;
 
@@ -87,7 +89,7 @@ class HissTestCase extends Test {
 
         var functionsCoveredByUnit = switch (args.first()) {
             case Symbol(name): [name];
-            case List(symbols): [for (symbol in symbols) symbol.symbolName()];
+            case List(symbols): [for (symbol in symbols) symbol.symbolName_h()];
             default: throw 'Bad syntax for (test) statement';
         }
 
@@ -144,7 +146,7 @@ class HissTestCase extends Test {
 
         interp.eval(expression, env);
         interp.importFunction(HissTestCase, hissPrintFail, { name: "print" }, T);
-        interp.importFunction(HissTools, HissTools.message, { name: "message" }, T); // It's ok to send messages from the standard library, just not to print raw HValues
+        interp.importFunction(HissTools, Stdlib.message, { name: "message" }, T); // It's ok to send messages from the standard library, just not to print raw HValues
         cc(if (expectedPrint == actualPrint
                 // Forgive a missing newline in the `prints` statement
                 || (actualPrint.charAt(actualPrint.length-1) == '\n' && expectedPrint == actualPrint.substr(0, actualPrint.length-1))) {
@@ -205,7 +207,7 @@ class HissTestCase extends Test {
         Log.trace = tempTrace;
         #end
 
-        interp.importFunction(HissTools, HissTools.print, { name: "print" }, T);
+        interp.importFunction(HissTools, Stdlib.print, { name: "print" }, T);
     }
 
     function testStdlib() {
@@ -225,7 +227,7 @@ class HissTestCase extends Test {
             for (v => val in interp.globals.toDict()) {
                 switch (val) {
                     case Function(_, _) | SpecialForm(_) | Macro(_):
-                        if (!functionsTested.exists(v.symbolName())) functionsTested[v.symbolName()] = false;
+                        if (!functionsTested.exists(v.symbolName_h())) functionsTested[v.symbolName_h()] = false;
                     default:
                 }
             }

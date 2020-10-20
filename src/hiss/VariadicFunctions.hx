@@ -2,7 +2,7 @@ package hiss;
 
 import hiss.HTypes;
 using hiss.HissTools;
-
+using hiss.Stdlib;
 
 enum Comparison {
     Lesser;
@@ -44,7 +44,7 @@ class VariadicFunctions {
     }
 
     public static function subtract(interp: CCInterp, args: HValue, env: HValue, cc: Continuation) {
-        switch (args.length()) {
+        switch (args.length_h()) {
             case 0: cc(Int(0));
             case 1: cc(HissTools.toHValue(0 - args.first().value(interp)));
             default:
@@ -58,7 +58,7 @@ class VariadicFunctions {
     }
 
     public static function divide(interp: CCInterp, args: HValue, env: HValue, cc: Continuation) {
-        switch (args.length()) {
+        switch (args.length_h()) {
             case 0: throw "Can't divide without operands";
             case 1: cc(HissTools.toHValue(1 / args.first().value(interp)));
             default:
@@ -93,7 +93,7 @@ class VariadicFunctions {
                 for (i in 0...times) {
                     product += toRepeat;
                 }
-                if (args.length() == 2) {
+                if (args.length_h() == 2) {
                     cc(String(product));
                 } else {
                     multiply(interp, String(product).cons(args.slice(2)), env, cc);
@@ -105,7 +105,7 @@ class VariadicFunctions {
                 for (i in 0...times) {
                     product = product.concat(toRepeat);
                 }
-                if (args.length() == 2) {
+                if (args.length_h() == 2) {
                     cc(List(product));
                 } else {
                     multiply(interp, List(product).cons(args.slice(2)), env, cc);
@@ -115,7 +115,7 @@ class VariadicFunctions {
     }
 
     public static function numCompare(interp: CCInterp, type: Comparison, args: HValue, env: HValue, cc: Continuation) {
-        switch (args.length()) {
+        switch (args.length_h()) {
             case 0: throw "Can't compare without operands";
             case 1: cc(T);
             default:

@@ -11,6 +11,7 @@ import hiss.HTypes;
 import hiss.CCInterp;
 
 using hiss.HissTools;
+using hiss.Stdlib;
 using hiss.HaxeTools;
 
 import hiss.HStream.HPosition;

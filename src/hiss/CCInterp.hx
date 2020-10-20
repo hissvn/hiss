@@ -30,6 +30,8 @@ import hiss.wrappers.HType;
 import hiss.HissReader;
 import hiss.HissTools;
 using hiss.HissTools;
+import hiss.Stdlib;
+using hiss.Stdlib;
 import hiss.StaticFiles;
 import hiss.VariadicFunctions;
 import hiss.NativeFunctions;
@@ -97,6 +99,13 @@ class CCInterp {
     var debugClassImports = false;
     #end
 
+    // TODO functions starting with is[Something] will be imported without the is, using predicateSuffix
+    // TODO any functions with 'cc' in the last token after an underscore will be imported as ccfunctions with this interp bound
+    //     as the first argument
+    // TODO any functions with 'h' in the last token after an underscore will keep their args wrapped
+    // TODO any function with 'd' for destructive in the last token after an underscore will use sideEffectSuffix
+    //     but also define an alias with a warning
+    // TODO functions and properties starting with an underscore will not be imported
     public function importClass(clazz: Class<Dynamic>, meta: ClassMeta) {
         if (debugClassImports) {
             trace('Import ${meta.name}');
@@ -120,8 +129,11 @@ class CCInterp {
         if (meta.setterPrefix == null) {
             meta.setterPrefix = "set-";
         }
-        if (meta.setterSuffix == null) {
-            meta.setterSuffix = "!";
+        if (meta.sideEffectSuffix == null) {
+            meta.sideEffectSuffix = "!";
+        }
+        if (meta.predicateSuffix == null) {
+            meta.predicateSuffix = "?";
         }
 
         var dummyInstance = clazz.createEmptyInstance();
@@ -154,6 +166,9 @@ class CCInterp {
                     // properties, which may include some that aren't publicly writeable. Maybe trying setProperty() with a dummy
                     // value to check if the write succeeds somehow, then setting it back, would catch that.
 
+                    // TODO One approach to privacy would be to just ignore properties with _ in front,
+                    // if I commit to saying importClass() is only for specially formed classes.
+
                     // TODO test these imports
                     var getterTranslatedName = meta.convertNames(instanceField);
                     getterTranslatedName = meta.getterPrefix + getterTranslatedName;
@@ -170,7 +185,7 @@ class CCInterp {
                     }, {name:getterTranslatedName}));
 
                     var setterTranslatedName = meta.convertNames(instanceField);
-                    setterTranslatedName = meta.setterPrefix + setterTranslatedName + meta.setterSuffix;
+                    setterTranslatedName = meta.setterPrefix + setterTranslatedName + meta.sideEffectSuffix;
                     if (!meta.omitMemberPrefixes) {
                         setterTranslatedName = meta.name + ":" + setterTranslatedName;
                     }
@@ -203,7 +218,7 @@ class CCInterp {
                         trace(translatedName);
                     }
                     globals.put(translatedName, Function((args, env, cc) -> {
-                        cc(Reflect.callMethod(null, fieldValue, args.unwrapList(this)).toHValue());
+                        cc(Reflect.callMethod(clazz, fieldValue, args.unwrapList(this)).toHValue());
                     }, {name:translatedName}));
                 default:
                     // TODO generate getters and setters for static properties
@@ -232,6 +247,7 @@ class CCInterp {
         globals.put(meta.name, SpecialForm(func, meta));
     }
 
+    // TODO this is like register-method but never used.
     function importMethod(method: String, meta: CallableMeta, callOnReference: Bool, keepArgsWrapped: HValue, returnInstance: Bool) {
         globals.put(meta.name, Function((args: HValue, env: HValue, cc: Continuation) -> {
             var instance = args.first().value(this, callOnReference);
@@ -345,29 +361,29 @@ class CCInterp {
         importFunction(this, () -> List(scriptArgs), {name: "args"});
 
         // Primitive type predicates
-        importFunction(HissTools, HissTools.isInt, {name: "int?"}, T);
-        importFunction(HissTools, HissTools.isFloat, {name: "float?"}, T);
-        importFunction(HissTools, HissTools.isNumber, {name: "number?"}, T);
-        importFunction(HissTools, HissTools.isSymbol, {name: "symbol?"}, T);
-        importFunction(HissTools, HissTools.isString, {name: "string?"}, T);
-        importFunction(HissTools, HissTools.isList, {name: "list?"}, T);
-        importFunction(HissTools, HissTools.isDict, {name: "dict?"}, T);
-        importFunction(HissTools, HissTools.isFunction, {name: "function?"}, T);
-        importFunction(HissTools, HissTools.isMacro, {name: "macro?"}, T);
-        importFunction(HissTools, HissTools.isCallable, {name: "callable?"}, T);
-        importFunction(HissTools, HissTools.isObject, {name: "object?"}, T);
+        importFunction(Stdlib, Stdlib.isInt_h, {name: "int?"}, T);
+        importFunction(Stdlib, Stdlib.isFloat_h, {name: "float?"}, T);
+        importFunction(Stdlib, Stdlib.isNumber_h, {name: "number?"}, T);
+        importFunction(Stdlib, Stdlib.isSymbol_h, {name: "symbol?"}, T);
+        importFunction(Stdlib, Stdlib.isString_h, {name: "string?"}, T);
+        importFunction(Stdlib, Stdlib.isList_h, {name: "list?"}, T);
+        importFunction(Stdlib, Stdlib.isDict_h, {name: "dict?"}, T);
+        importFunction(Stdlib, Stdlib.isFunction_h, {name: "function?"}, T);
+        importFunction(Stdlib, Stdlib.isMacro_h, {name: "macro?"}, T);
+        importFunction(Stdlib, Stdlib.isCallable_h, {name: "callable?"}, T);
+        importFunction(Stdlib, Stdlib.isObject_h, {name: "object?"}, T);
 
-        importFunction(HissTools, HissTools.clear, {name: "clear!"}, T);
+        importFunction(Stdlib, Stdlib.clear_hd, {name: "clear!"}, T);
 
         // Iterator tools
-        importFunction(HissTools, HissTools.iterable, {name: "iterable", argNames: ["next", "has-next"]}, Nil);
-        importFunction(HissTools, HissTools.iteratorToIterable, {name: "iterator->iterable", argNames: ["haxe-iterator"]}, Nil);
+        importFunction(Stdlib, Stdlib.iterable, {name: "iterable", argNames: ["next", "has-next"]}, Nil);
+        importFunction(Stdlib, Stdlib.iteratorToIterable, {name: "iterator->iterable", argNames: ["haxe-iterator"]}, Nil);
 
         // String functions:
         importClass(HStringTools, {name: "StringTools", omitStaticPrefixes: true});
 
         // Debug info
-        importFunction(HissTools, HissTools.version, {name: "version"});
+        importFunction(Stdlib, Stdlib.version, {name: "version"});
 
         // Sometimes it's useful to provide the interpreter with your own target-native print function
         // so they will be used while the standard library is being loaded.
@@ -375,36 +391,35 @@ class CCInterp {
             importFunction(this, printFunction, {name: "print!", argNames: ["value"]},Nil);
         }
         else {
-            importFunction(HissTools, HissTools.print, {name: "print!", argNames: ["value"]}, T);
+            importFunction(Stdlib, Stdlib.print, {name: "print!", argNames: ["value"]}, T);
         }
 
         // TODO this should take its behavior from the user-provided print
-        importFunction(HissTools, HissTools.message, {name: "message!", argNames: ["value"]}, T);
+        importFunction(Stdlib, Stdlib.message, {name: "message!", argNames: ["value"]}, T);
 
-        importFunction(HissTools, HissTools.toPrint, {name: "to-print", argNames: ["value"]}, T);
-        importFunction(HissTools, HissTools.toMessage, {name: "to-message", argNames: ["value"]}, T);
+        importFunction(Stdlib, Stdlib.toPrint, {name: "to-print", argNames: ["value"]}, T);
+        importFunction(Stdlib, Stdlib.toMessage, {name: "to-message", argNames: ["value"]}, T);
 
         // Functions/forms that could be bootstrapped with register-function, but save stack frames if not:
-        importFunction(HissTools, HissTools.length, {name: "length", argNames: ["seq"]}, T);
-        importFunction(HissTools, HissTools.reverse, {name: "reverse", argNames: ["l"]}, T);
+        importFunction(Stdlib, Stdlib.length_h, {name: "length", argNames: ["seq"]}, T);
+        importFunction(Stdlib, Stdlib.reverse, {name: "reverse", argNames: ["l"]}, T);
         importFunction(HissTools, HissTools.first, {name: "first",argNames: ["l"]}, T);
-        importFunction(HissTools, HissTools.rest, {name: "rest",argNames: ["l"]}, T);
-        importFunction(HissTools, HissTools.last, {name: "last",argNames: ["l"]}, T);
-        importFunction(HissTools, HissTools.eq.bind(_, this, _), {name: "eq", argNames: ["a", "b"]}, T);
-        importFunction(HissTools, HissTools.nth, {name: "nth", argNames:  ["l", "n"]}, T);
-        importFunction(HissTools, HissTools.setNth, {name: "set-nth!", argNames: ["l", "n", "val"]}, T);
-        importFunction(HissTools, HissTools.cons, {name: "cons", argNames: ["val", "l"]}, T);
+        importFunction(Stdlib, Stdlib.rest, {name: "rest",argNames: ["l"]}, T);
+        importFunction(Stdlib, Stdlib.eq.bind(_, this, _), {name: "eq", argNames: ["a", "b"]}, T);
+        importFunction(Stdlib, Stdlib.nth_h, {name: "nth", argNames:  ["l", "n"]}, T);
+        importFunction(Stdlib, Stdlib.setNth_h, {name: "set-nth!", argNames: ["l", "n", "val"]}, T);
+        importFunction(Stdlib, Stdlib.cons, {name: "cons", argNames: ["val", "l"]}, T);
         importFunction(this, not, {name: "not", argNames: ["val"]}, T);
-        importFunction(HissTools, HissTools.sort, {name: "sort", argNames: ["l", "sort-function"]}, Nil);
-        importFunction(HissTools, HissTools.range, {name: "range", argNames: ["start", "end"]}, Nil);
+        importFunction(Stdlib, Stdlib.sort, {name: "sort", argNames: ["l", "sort-function"]}, Nil);
+        importFunction(Stdlib, Stdlib.range, {name: "range", argNames: ["start", "end"]}, Nil);
         importFunction(HissTools, HissTools.alternates.bind(_, false), {name: "even-alternates"}, T);
         importFunction(HissTools, HissTools.alternates.bind(_, true), {name: "odd-alternates"}, T);
         importFunction(HaxeTools, HaxeTools.shellCommand, {name: "shell-command", argNames: ["cmd"]}, Nil);
         importFunction(this, read, {name: "read", argNames: ["string"]}, Nil);
         importFunction(this, readAll, {name: "read-all", argNames: ["string"]}, Nil);
 
-        importFunction(HissTools, HissTools.symbolName, {name: "symbol-name", argNames: ["sym"]}, T);
-        importFunction(HissTools, HissTools.symbol, {name: "symbol", argNames: ["sym-name"]}, T);
+        importFunction(Stdlib, Stdlib.symbolName_h, {name: "symbol-name", argNames: ["sym"]}, T);
+        importFunction(Stdlib, Stdlib.symbol, {name: "symbol", argNames: ["sym-name"]});
 
         importSpecialForm(quote, {name:"quote"});
 
@@ -430,7 +445,7 @@ class CCInterp {
         importFunction(HaxeTools, HaxeTools.readLine, {name: "read-line", argNames: []});
 
         // Operating system
-        importFunction(HissTools, HissTools.homeDir, {name: "home-dir", argNames: []});
+        importFunction(Stdlib, Stdlib.homeDir, {name: "home-dir", argNames: []});
         importFunction(StaticFiles, StaticFiles.getContent, { name: "get-content", argNames: ["file"] });
         #if (sys || hxnodejs)
         importClass(HFile, {name: "File"});
@@ -492,7 +507,7 @@ class CCInterp {
             throw sig;
         } catch (err: Dynamic) {
             // TODO let the catch access the error message
-            if (args.length() > 1) {
+            if (args.length_h() > 1) {
                 internalEval(args.second(), env, cc);
             } else {
                 cc(Nil);
@@ -522,7 +537,7 @@ class CCInterp {
         importFunction(this, () -> history, {name:"history"});
         importFunction(this, (str) -> history[history.length-1] = str, {name:"rewrite-history"});
         #if (sys || hxnodejs)
-        var historyFile = Path.join([HissTools.homeDir(), ".hisstory"]);
+        var historyFile = Path.join([Stdlib.homeDir(), ".hisstory"]);
         history = sys.io.File.getContent(historyFile).split("\n");
 
         var cReader = null;
@@ -565,7 +580,7 @@ class CCInterp {
 
             // TODO errors from async functions won't be caught by this, so use errorHandler instead of try-catch
             try {
-                internalEval(exp, locals, HissTools.print);
+                internalEval(exp, locals, Stdlib.print);
             }
             catch (e: HSignal) {
                 switch (e) {
@@ -814,7 +829,7 @@ class CCInterp {
                         }
                         if (scope == null) scope = globals;
                 }
-                scope.put(args.first().symbolName(), val);
+                scope.put(args.first().symbolName_h(), val);
                 cc(val);
             });
     }
@@ -822,37 +837,37 @@ class CCInterp {
     function setCallable(isMacro: Bool, args: HValue, env: HValue, cc: Continuation) {
         lambda(isMacro, args.rest(), env, (fun: HValue) -> {
             set(Global, args.first().cons(List([fun])), env, cc);
-        }, args.first().symbolName());
+        }, args.first().symbolName_h());
     }
 
     function defAlias(args: HValue, env: HValue, cc: Continuation) {
         var func = args.first();
         var alias = args.second();
-        var metaSymbols = [for (symbol in args.toList().slice(2)) symbol.symbolName()];
+        var metaSymbols = [for (symbol in args.toList().slice(2)) symbol.symbolName_h()];
 
         internalEval(func, env, (funcVal) -> {
             var hFunc = funcVal.toCallable();
             var meta = Reflect.copy(metadata(funcVal));
 
-            meta.name = alias.symbolName();
+            meta.name = alias.symbolName_h();
             if (metaSymbols.indexOf("@deprecated") != -1) {
                 meta.deprecated = true;
             }
 
             var newFunc = Function(hFunc, meta);
-            globals.put(alias.symbolName(), newFunc);
+            globals.put(alias.symbolName_h(), newFunc);
             cc(newFunc);
         });
     }
 
     function _if(args: HValue, env: HValue, cc: Continuation) {
-        if (args.length() > 3) {
+        if (args.length_h() > 3) {
             error('(if) called with too many arguments. Try wrapping the cases in (begin)');
         }
         internalEval(args.first(), env, (val) -> {
             if (truthy(val)) {
                 internalEval(args.second(), env, cc);
-            } else if (args.length() > 2) {
+            } else if (args.length_h() > 2) {
                 internalEval(args.third(), env, cc);
             } else {
                 cc(Nil);
@@ -891,7 +906,7 @@ class CCInterp {
             name: name,
             argNames: [for (paramSymbol in params.toList()) try {
                 // simple functions args can be imported with names
-                paramSymbol.symbolName();
+                paramSymbol.symbolName_h();
             } catch (s: Dynamic){
                 // nested list args cannot
                 "[nested list]";
@@ -944,7 +959,7 @@ class CCInterp {
     function help() {
         for (name => value in globals.toDict()) {
             try {
-                var functionHelp = name.symbolName();
+                var functionHelp = name.symbolName_h();
                 try {
                     var docs = docs(value);
                     if (docs != null && docs.length > 0) {
@@ -1128,17 +1143,17 @@ class CCInterp {
         5. keepArgsWrapped (default Nil) - list of argument indices that should be passed in HValue form, rather than as Haxe Dynamic values. Nil for none, T for all.
     **/
     function callHaxe(args: HValue, env: HValue, cc: Continuation) {
-        var callOnReference = if (args.length() < 4) {
+        var callOnReference = if (args.length_h() < 4) {
             false;
         } else {
-            truthy(args.nth(Int(3)));
+            truthy(args.nth_h(Int(3)));
         };
-        var keepArgsWrapped = if (args.length() < 5) {
+        var keepArgsWrapped = if (args.length_h() < 5) {
             Nil;
         } else {
-            args.nth(Int(4));
+            args.nth_h(Int(4));
         };
-        var haxeCallArgs = if (args.length() < 3) {
+        var haxeCallArgs = if (args.length_h() < 3) {
             [];
         } else {
             args.third().unwrapList(this, keepArgsWrapped);
@@ -1161,7 +1176,7 @@ class CCInterp {
         var message = "";
         var functionToCall = null;
 
-        if (args.length() > 1) {
+        if (args.length_h() > 1) {
             message = eval(args.first(), env).toHaxeString();
             functionToCall = args.second();
         } else {
@@ -1278,9 +1293,9 @@ class CCInterp {
         var dict = new HDict(this);
 
         var idx = 0;
-        while (idx < args.length()) {
-            var key = args.nth(Int(idx));
-            var value = args.nth(Int(idx+1));
+        while (idx < args.length_h()) {
+            var key = args.nth_h(Int(idx));
+            var value = args.nth_h(Int(idx+1));
             dict.put(key, value);
             idx += 2;
         }

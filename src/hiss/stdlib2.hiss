@@ -1,3 +1,7 @@
+/*
+    Hiss standard library functions implemented in Hiss
+*/
+
 (defmacro register-method! (method name &optional call-on-reference keep-args-wrapped return-instance)
     "Register a method call as an unqualified global function. Unlike CCInterp.importClass, there won't be a Class: prefix"
     `(defun ,name (instance &rest args)
@@ -32,6 +36,8 @@
         (slice l (- len (or end len)) (- len start))))
 (defun peek (l num)
     (slice l 0 num))
+(defun last (l)
+    (nth l (- (length l) 1)))
 
 (defalias setlocal! setlocal @deprecated)
 (defalias set! set @deprecated)
