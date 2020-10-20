@@ -12,31 +12,31 @@ import sys.thread.Tls;
 class HDeque {
     var _instance: Deque<Dynamic>;
     public function new() { _instance = new Deque<Dynamic>(); }
-    public function add(i: Dynamic) { _instance.add(i); }
-    public function pop(block) { return _instance.pop(block); }
-    public function push(i: Dynamic) { _instance.push(i); }
+    public function add_d(i: Dynamic) { _instance.add(i); }
+    public function pop_d(block) { return _instance.pop(block); }
+    public function push_d(i: Dynamic) { _instance.push(i); }
 }
 
 class HLock {
     var _instance: Lock;
     public function new() { _instance = new Lock(); }
-    public function release() { _instance.release(); }
-    public function wait(?timeout: Float) { return _instance.wait(timeout); }
+    public function release_d() { _instance.release(); }
+    public function wait_d(?timeout: Float) { return _instance.wait(timeout); }
 }
 
 class HMutex {
     var _instance: Mutex;
     public function new() { _instance = new Mutex(); }
-    public function acquire() { _instance.acquire(); }
-    public function release() { _instance.release(); }
-    public function tryAcquire() { return _instance.tryAcquire(); }
+    public function acquire_d() { _instance.acquire(); }
+    public function release_d() { _instance.release(); }
+    public function tryAcquire_d() { return _instance.tryAcquire(); }
 }
 
 class HThread {
     var _instance: Thread;
     function new(i: Thread) { _instance = i; }
-    public static function create(callb: () -> Void) { return new HThread(Thread.create(callb)); }
+    public static function create_d(callb: () -> Void) { return new HThread(Thread.create(callb)); }
     public static function current() { return Thread.current(); }
-    public static function readMessage(block: Bool = true) { return Thread.readMessage(block); }
-    public function sendMessage(msg: Dynamic) { _instance.sendMessage(msg); }
+    public static function readMessage_d(block: Bool = true) { return Thread.readMessage(block); }
+    public function sendMessage_d(msg: Dynamic) { _instance.sendMessage(msg); }
 }

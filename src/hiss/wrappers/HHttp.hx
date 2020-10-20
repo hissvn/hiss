@@ -18,19 +18,19 @@ class HHttp {
     }
 
     // setters
-    public function setHeader(name: String, value: String) {
+    public function setHeader_d(name: String, value: String) {
         _instance.setHeader(name, value);
     }
 
     // TODO a setHeader helper for sending UTF-8 json
 
-    public function setParameter(name:String, value:String) {
+    public function setParameter_d(name:String, value:String) {
         _instance.setParameter(name, value);
     }
 
     // TODO how to handle setPostBytes()?
 
-    public function setPostData(?data:String) {
+    public function setPostData_d(?data:String) {
         _instance.setPostData(data);
     }
 
@@ -43,7 +43,7 @@ class HHttp {
     #end
 
     // TODO _cc
-    public static function request(interp: CCInterp, args: HValue, env: HValue, cc: Continuation) {
+    public static function request_d(interp: CCInterp, args: HValue, env: HValue, cc: Continuation) {
         // First arg: an HHttp object
         var http: Http = args.first().value(interp).instance;
         // Second (optional) arg: whether to send as POST request

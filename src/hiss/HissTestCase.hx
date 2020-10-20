@@ -246,7 +246,8 @@ class HissTestCase extends Test {
             }
             // We don't want to be accountable for testing functions defined IN the tests.
 
-            interp.globals.put("test", SpecialForm(hissTest.bind(interp), { name: "test" }));
+            interp.globals.put("test!", SpecialForm(hissTest.bind(interp), { name: "test!" }));
+            interp.defDestructiveAlias("test!", "!");
             interp.globals.put("prints", SpecialForm(hissPrints.bind(interp), { name: "prints" }));
 
             for (f in ignoreFunctions) {

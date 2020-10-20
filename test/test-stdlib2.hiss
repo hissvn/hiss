@@ -1,6 +1,6 @@
-(message "Testing Hiss standard library for version $(version)")
+(message! "Testing Hiss standard library for version $(version)")
 
-(test or
+(test! or
     // Test with booleans:
     (eq nil (or))
     (eq t (or t))
@@ -21,7 +21,7 @@
     // Test against stack overflows:
     (eq t (or nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil t)))
 
-(test and
+(test! and
     // Test with booleans:
     (eq t (and))
     (eq t (and t))
@@ -43,7 +43,7 @@
     // Test against stack overflows:
     (eq t (and t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t t)))
 
-(test pop!
+(test! pop!
     ; Allow popping from a list literal
     (eq 4 (pop! (list 1 2 3 4)))
     (eq nil (pop! (list))) // TODO is this desirable?
@@ -53,7 +53,7 @@
     (eq (list 1 2 3) l)
     (eq 3 (pop! l)))
 
-(test shift!
+(test! shift!
     (eq 1 (shift! (list 1 2 3 4)))
     (eq nil (shift! (list)))
     (setlocal! l (list 1 2 3 4))
@@ -61,32 +61,32 @@
     (eq (list 2 3 4) l)
     (eq 2 (shift! l)))
 
-(test take!
+(test! take!
     (setlocal! l (list 1 2 3 4 5))
     (eq (list 1 2 3) (take! l 3))
     (eq (list 4 5) l))
 
-(test drop!
+(test! drop!
     (setlocal! l (list 1 2 3 4 5))
     (eq (list 3 4 5) (drop! l 2)))
 
-(test for
+(test! for
     (eq (list 7 8 9) (for i (list 1 2 3) (+ i 6)))
     (eq (list 0 2 4 6) (for i (range 7) (if (= 1 (% i 2)) (continue) i)))
     (eq (list 0 1 2 3 4) (for i (range 7) (if (= 5 i) (break) i))))
 
-(test do-for
+(test! do-for
     (not (do-for i (list 1 2 3) i))
     (prints "1\n2\n3" (do-for i (list 1 2 3) (print i))))
 
-(test map
+(test! map
     (eq (list 7 8 9) (map (list 1 2 3) (lambda (i) (+ i 6)))))
 
-(test do-map
+(test! do-map
     (not (do-map (list 1 2 3) (lambda (i) i)))
     (prints "1\n2\n3" (do-map (list 1 2 3) print)))
 
-(test continuation-iteration
+(test! continuation-iteration
     (defun one-three-five () (for i (range 8) (cond ((= 1 (% i 2)) i) ((= 6 i) (break)) (t (continue)))))
     (eq (list 1 3 5) (one-three-five))
     (nil? (enable-cc!))
@@ -94,14 +94,14 @@
     (nil? (disable-cc!))
     (eq (list 1 3 5) (one-three-five)))
 
-(test eval
+(test! eval
     ; Test evaluating globals
     (eq eval (eval 'eval))
     ; Test evaluating locals
     (setlocal! test-var 5)
     (= 5 (eval 'test-var)))
 
-(test bind
+(test! bind
     (prints "\"hello\"" (let (my-print (bind print "hello")) (my-print)))
     (setlocal! offset (bind + 6))
     (= 11 (offset 5))
@@ -117,13 +117,13 @@
     (setlocal! offset (bind + arg))
     (= 5 (offset 0)))
 
-(test rbind
+(test! rbind
     (setlocal! fifth-of (rbind / 5))
     (= 1 (fifth-of 5))
     (setlocal! list-burrito (rbind list 'tortilla _ 'tortilla))
     (eq '(sauce tortilla meat tortilla) (list-burrito 'sauce 'meat)))
 
-(test (nth first second third fourth fifth sixth seventh eighth ninth tenth)
+(test! (nth first second third fourth fifth sixth seventh eighth ninth tenth)
     (setlocal! l (list 1 2 3 4 5 6 7 8 9 10))
     (= 1 (nth l 0))
     (= 10 (nth l 9))
@@ -138,35 +138,35 @@
     (= 9 (ninth l))
     (= 10 (tenth l)))
 
-(test message
+(test! message
     (prints "Hello world" (message "Hello world")))
 
-(test symbol
+(test! symbol
     (setlocal! you "me")
     (eq 'hey-me (symbol "hey-$you"))
     (not (eq (symbol) (symbol))))
 
-(test symbol-name
+(test! symbol-name
     (eq "hey" (symbol-name 'hey)))
 
-(test variable-capture
+(test! variable-capture
     (let (value 5)
         (defun return-value () value))
     (= 5 (return-value)))
 
-(test read-strings
+(test! read-strings
     (eq #"\"# "\\")
     (eq #"""# "\"")
     (eq #"$"# "\$"))
 
-(test return
+(test! return
     (defun cut-off-early () (return 5) 6)
     (= (cut-off-early) 5)
-    (nil? (enable-continuations))
+    (nil? (enable-cc!))
     (= (cut-off-early) 5)
-    (nil? (disable-continuations)))
+    (nil? (disable-cc!)))
 
-(test string-interpolation
+(test! string-interpolation
     // TODO test interpolating all types of primitives
     (setlocal! i 5)
     (setlocal! f 5.5)
@@ -179,7 +179,7 @@
     (eq "hey!" "${st}!")
     (eq "hey you" "$st you"))
 
-(test (dict dict-get dict-set! dict-contains dict-erase!)
+(test! (dict dict-get dict-set! dict-contains dict-erase!)
     (setlocal! d (dict "StringKey" "StringValue" 
                         0 5 
                         (list "ListKey") 9))
@@ -199,33 +199,33 @@
     (or (dict-erase! d "StringKey") t)
     (not (dict-contains d "StringKey")))
 
-(test dict-iteration
+(test! dict-iteration
     (setlocal! d (dict "StringKey" "StringValue"
                         0 5
                         (list "ListKey") 9))
     (eq 6 (length (apply append (for (key value) d (list key value))))))
 
-(test +
+(test! +
     (= 5 (+ 2 3))
     (= 5 (+ 1 2 2))
     (= 5 (+ 10 -5))
     (= -5 (+ -5)))
 
-(test -
+(test! -
     (= -1 (- 1))
     (= 1 (- -1))
     (= 1 (- 3 2)))
 
-(test /
+(test! /
     (= 0.2 (/ 5))
     (= 2.5 (/ 5 2))
     (= .5 (/ 5 2 5)))
 
-(test *
+(test! *
     (= 25 (* 5 5))
     (= -25 (* -5 5)))
 
-(test list-arithmetic
+(test! list-arithmetic
     ; Hiss supports special list and string arithmetic like Python
     (eq (list 1 2 3 4) (+ (list 1 2) (list 3) (list 4)))
     (eq (list 1 1 1 1) (* (list 1) 4))
@@ -233,7 +233,7 @@
     (eq (list 1 1 1 1) (* (list 1) 2 2))
     (eq (list 1 1 1 1) (* 2 2 (list 1))))
 
-(test string-arithmetic    
+(test! string-arithmetic    
     (eq "1234" (+ "12" "3" "4"))
     (eq "heyheyheyhey" (* "hey" 4))
     (eq "heyheyheyhey" (* 4 "hey"))
@@ -241,7 +241,7 @@
     (eq "heyheyheyhey" (* "hey" 2 2)))
 
 (if (bound? defgen)
-    (test defgen
+    (test! defgen
         (defgen counter (max) (do-for i (range max) (yield i)))
         (setlocal! c (counter 5))
         (eq (list 0 1 2 3 4) (collect c))
@@ -253,13 +253,13 @@
         (has-next c)
         (eq (list 2 3 4) (collect c))))
 
-(test let
+(test! let
     (eq "onetwo" (let (a "one" b "two") (+ a b)))
     (eq "onetwo" (let ((a "one") (b "two")) (+ a b)))
     ; All lets should be sequential:
     (eq (list 1 1 2) (let (a 1 b a c (+ a b)) (list a b c))))
 
-(test index-of
+(test! index-of
     (= 2 (index-of "heyy" "y"))
     (= 2 (index-of "heyy" "y" 2))
     (= 3 (index-of "heyy" "y" 3))
@@ -267,24 +267,24 @@
     (= 2 (index-of '(h e y y) 'y 2))
     (= 3 (index-of '(h e y y) 'y 3)))
 
-(test contains
+(test! contains
     (contains "heyy" "y")
     (not (contains "hey" "hello"))
     (contains (list 1 2 3) 1))
 
-(test tree-replace
+(test! tree-replace
     (eq '(hey (whats up)) (tree-replace '(hey (shut up)) 'shut 'whats)))
 
-(test tree-contains
+(test! tree-contains
     (tree-contains '(4 5 6 (7 8 9)) 7) 
     (tree-contains '(4 5 6 (7 8 9)) 4)
     (not (tree-contains '(4 5 6 (7 8 9)) 10)))
 
-(test groups
+(test! groups
     (eq '((6 5)) (groups '(6 5 3) 2))
     (eq '((6 5) (3)) (groups '(6 5 3) 2 t)))
 
-(test case
+(test! case
     (eq 'good (case (length '(one two three))
         (0 (error! "bad"))
         (3 'good)
@@ -297,10 +297,10 @@
         ('twice "nope")
         ('thrice "also nope"))))
 
-(test list-bracket-syntax
+(test! list-bracket-syntax
     (eq (list 1 2 3) [1 2 3])
     (eq (list 1 2 3) [  1 2    3 ]))
 
-(test if-let
+(test! if-let
     (eq "me" (if-let (fork "me") fork "buns"))
     (eq "buns" (if-let (fork nil) fork "buns")))

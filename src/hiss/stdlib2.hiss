@@ -215,8 +215,8 @@
                     __done__ nil
                     __done-signal__ (symbol)
                     yield (lambda (value)
-                                (Deque:add __deque__ value)
-                                (Lock:wait __lock__))
+                                (Deque:add! __deque__ value)
+                                (Lock:wait! __lock__))
                     next (lambda ()
                             (if __done__ nil
                                 (begin
@@ -225,12 +225,12 @@
                                             (set! __next__ nil)
                                             ret)))
                                     (if (not __thread__)
-                                        (set! __thread__ (Thread:create
+                                        (set! __thread__ (Thread:create!
                                                                 (lambda ()
                                                                     ,@body
-                                                                    (Deque:add __deque__ __done-signal__)))))
-                                    (Lock:release __lock__)
-                                    (let (value (Deque:pop __deque__ t))
+                                                                    (Deque:add! __deque__ __done-signal__)))))
+                                    (Lock:release! __lock__)
+                                    (let (value (Deque:pop! __deque__ t))
                                         (case value
                                             (__done-signal__ (set! __done__ t) nil)
                                             (default value))))))
@@ -444,3 +444,4 @@
 (defalias set-default! default @deprecated)
 
 (defalias clear! clear @deprecated)
+(defalias test! test @deprecated)

@@ -148,9 +148,10 @@ class CCInterp {
                 // Import methods:
                 case TFunction:
                     var metaSignature = "";
+                    var translatedName = instanceField;
                     if (instanceField.contains("_")) {
                         metaSignature = instanceField.split("_")[1];
-                        instanceField = instanceField.substr(0, instanceField.indexOf("_"));
+                        translatedName = translatedName.substr(0, translatedName.indexOf("_"));
                     }
 
                     var bindInterpreter = metaSignature.contains("i");
@@ -158,9 +159,9 @@ class CCInterp {
                     var destructive = metaSignature.contains("d");
                     // TODO do something with ccFunctions
                     var ccFunction = metaSignature.contains("cc");
-                    var isPredicate = (instanceField.toLowerHyphen().split("-")[0] == "is");
-                    if (isPredicate) instanceField = instanceField.substr(2); // drop the 'is'
-                    var translatedName = meta.convertNames(instanceField);
+                    var isPredicate = (translatedName.toLowerHyphen().split("-")[0] == "is");
+                    if (isPredicate) translatedName = translatedName.substr(2); // drop the 'is'
+                    translatedName = meta.convertNames(translatedName);
                     if (isPredicate) translatedName += meta.predicateSuffix;
                     if (destructive) translatedName += meta.sideEffectSuffix;
                     if (!meta.omitMemberPrefixes) {
@@ -183,6 +184,9 @@ class CCInterp {
                         var returnValue: Dynamic = Reflect.callMethod(instance, methodPointer, argArray);
                         cc(returnValue.toHValue());
                     }, {name:translatedName}));
+                    if (destructive) {
+                        defDestructiveAlias(translatedName, meta.sideEffectSuffix);
+                    }
                 default:
                     // generate getters and setters for instance fields
                     // TODO this approach is naive. It only finds properties that are returned by getProperty() which hopefully
@@ -223,9 +227,7 @@ class CCInterp {
                         cc(args.second());
                     }, {name:setterTranslatedName}));
                     // It can be confusing to forget the ! when trying to use a setter, so allow usage without ! but with a warning:
-                    if (setterTranslatedName.endsWith("!")) {
-                        defAlias(List([Symbol(setterTranslatedName), Symbol(setterTranslatedName.substr(0, setterTranslatedName.length - 1)), Symbol("@deprecated")]), emptyEnv(), noCC);
-                    }
+                    defDestructiveAlias(setterTranslatedName, meta.sideEffectSuffix);
             }
         }
 
@@ -236,9 +238,10 @@ class CCInterp {
             switch (Type.typeof(fieldValue)) {
                 case TFunction:
                     var metaSignature = "";
+                    var translatedName = classField;
                     if (classField.contains("_")) {
                         metaSignature = classField.split("_")[1];
-                        classField = classField.substr(0, classField.indexOf("_"));
+                        translatedName = translatedName.substr(0, translatedName.indexOf("_"));
                     }
 
                     var bindInterpreter = metaSignature.contains("i");
@@ -246,9 +249,9 @@ class CCInterp {
                     var destructive = metaSignature.contains("d");
                     // TODO do something with ccFunctions
                     var ccFunction = metaSignature.contains("cc");
-                    var isPredicate = (classField.toLowerHyphen().split("-")[0] == "is");
-                    if (isPredicate) classField = classField.substr(2); // drop the 'is'
-                    var translatedName = meta.convertNames(classField);
+                    var isPredicate = (translatedName.toLowerHyphen().split("-")[0] == "is");
+                    if (isPredicate) translatedName = translatedName.substr(2); // drop the 'is'
+                    translatedName = meta.convertNames(translatedName);
                     if (isPredicate) translatedName += meta.predicateSuffix;
                     if (destructive) translatedName += meta.sideEffectSuffix;
                     if (!meta.omitStaticPrefixes) {
@@ -264,6 +267,9 @@ class CCInterp {
                         }
                         cc(Reflect.callMethod(clazz, fieldValue, argArray).toHValue());
                     }, {name:translatedName}));
+                    if (destructive) {
+                        defDestructiveAlias(translatedName, meta.sideEffectSuffix);
+                    }
                 default:
                     // TODO generate getters and setters for static properties
             }
@@ -354,7 +360,7 @@ class CCInterp {
         importFunction(this, useFunctions.bind(begin, evalAll, iterateCC), { name: "enable-cc!" });
 
         // First-class unit testing:
-        importSpecialForm(HissTestCase.testAtRuntime.bind(this), { name: "test" });
+        importSpecialForm(HissTestCase.testAtRuntime.bind(this), { name: "test!" });
         importCCFunction(HissTestCase.hissPrints.bind(this), { name: "prints" });
 
         // Haxe interop -- We could bootstrap the rest from these if we had unlimited stack frames:
@@ -459,7 +465,7 @@ class CCInterp {
         // Take special care when importing this one because it also contains cc functions that importClass() would handle wrong
         importClass(HHttp, {name: "Http"});
         // Just re-import to overwrite the CC function which shouldn't be imported normally:
-        importCCFunction(HHttp.request.bind(this), { name: "Http:request" });
+        importCCFunction(HHttp.request_d.bind(this), { name: "Http:request" });
         // TODO handle functions suffixed with CC so they're imported that way always?
         // ^ Although that wouldn't handle the binding part.
 
@@ -867,6 +873,14 @@ class CCInterp {
             globals.put(alias.symbolName_h(), newFunc);
             cc(newFunc);
         });
+    }
+
+    /**
+        The Hiss convention is for functions with side effects to end with "!".
+        It can be nice to have things work without the !, but with a warning.
+    **/
+    public function defDestructiveAlias(destructiveName: String, suffix: String) {
+        defAlias(List([Symbol(destructiveName), Symbol(destructiveName.substr(0, destructiveName.length - suffix.length)), Symbol("@deprecated")]), emptyEnv(), noCC);
     }
 
     function _if(args: HValue, env: HValue, cc: Continuation) {
