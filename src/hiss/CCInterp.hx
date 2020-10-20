@@ -411,8 +411,6 @@ class CCInterp {
         importFunction(this, not, {name: "not", argNames: ["val"]}, T);
         importFunction(Stdlib, Stdlib.sort, {name: "sort", argNames: ["l", "sort-function"]}, Nil);
         importFunction(Stdlib, Stdlib.range, {name: "range", argNames: ["start", "end"]}, Nil);
-        importFunction(HissTools, HissTools.alternates.bind(_, false), {name: "even-alternates"}, T);
-        importFunction(HissTools, HissTools.alternates.bind(_, true), {name: "odd-alternates"}, T);
         importFunction(HaxeTools, HaxeTools.shellCommand, {name: "shell-command", argNames: ["cmd"]}, Nil);
         importFunction(this, read, {name: "read", argNames: ["string"]}, Nil);
         importFunction(this, readAll, {name: "read-all", argNames: ["string"]}, Nil);

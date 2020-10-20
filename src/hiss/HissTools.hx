@@ -95,7 +95,6 @@ class HissTools {
         return List(list.toList().slice(idx));
     }
 
-    // TODO get rid of this
     public static function alternates(list: HValue, start: Bool) {
         var result = new Array<HValue>();
         var l = list.toList().copy();

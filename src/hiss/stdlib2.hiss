@@ -70,22 +70,6 @@
             (eval (cons 'begin (rest (first ',forms))))
         (eval (cons 'cond (rest ',forms)))))))
 
-(defmacro let (bindings &rest body)
-    (setlocal! setlocal-exps 
-        (cond
-            ; New-fangled, single-list let bindings like (name1 val1 name2 val2)
-            ((symbol? (first bindings))
-                (setlocal! names (odd-alternates bindings))
-                (setlocal! values (even-alternates bindings))
-                (for pair (zip names values) `(setlocal! ,(first pair) ,(nth pair 1))))
-
-            ; Old-school, many-list let bindings like ((name1 val1) (name2 val2))
-            ((list? (first bindings))
-                (for pair bindings `(setlocal! ,@pair)))))
-    `(begin
-        ,@setlocal-exps
-        ,@body))
-
 (defmacro when (cond &rest body)
     `(if ,cond (begin ,@body)))
 
@@ -99,6 +83,33 @@
                 (call/cc (lambda (continue)
                     ,@body))
                 (if ,cond (recur)))))))
+
+(defun groups (l size &optional take-remainder)
+    (setlocal! c (copy l))
+    (setlocal! g (list))
+    (while c
+        (cond
+            ((< (length c) size)
+                (when take-remainder
+                    (push! g (copy c)))
+                (clear! c))
+            (t
+                (push! g (take! c size)))))
+	g)
+
+(defmacro let (bindings &rest body)
+    (setlocal! setlocal-exps 
+        (cond
+            ; New-fangled, single-list let bindings like (name1 val1 name2 val2)
+            ((symbol? (first bindings))
+                (for pair (groups bindings 2) `(setlocal! ,(first pair) ,(nth pair 1))))
+
+            ; Old-school, many-list let bindings like ((name1 val1) (name2 val2))
+            ((list? (first bindings))
+                (for pair bindings `(setlocal! ,@pair)))))
+    `(begin
+        ,@setlocal-exps
+        ,@body))
 
 (defun apply (f args)
     (eval `(,f ',@args)))
@@ -299,16 +310,6 @@
                     (break)))
             found)
         (t (eq tree elem))))
-
-(defun groups (l size &optional take-remainder)
-    (cond
-        ((< (length l) size)
-            (if take-remainder
-                    (list l)
-                (list)))
-        ((= (length l) size)
-            (list l))
-        (t (cons (peek l size) (groups (slice l size) size take-remainder)))))
 
 (defvar *types* (dict))
 
