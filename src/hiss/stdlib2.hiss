@@ -31,6 +31,8 @@
     l)
 (defalias drop! drop @deprecated)
 
+(register-method! "copy" copy t)
+
 (defun slice (l start &optional end)
     (call-haxe l "slice" (list start (or end (length l)))))
 (defun rslice (l start &optional end)
