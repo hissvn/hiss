@@ -453,6 +453,8 @@ class CCInterp {
         importClass(HHttp, {name: "Http"});
         // Just re-import to overwrite the CC function which shouldn't be imported normally:
         importCCFunction(HHttp.request.bind(this), { name: "Http:request" });
+        // TODO handle functions suffixed with CC so they're imported that way always?
+        // ^ Although that wouldn't handle the binding part.
 
         importClass(HDate, {name:"Date"});
 

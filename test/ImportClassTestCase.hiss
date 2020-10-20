@@ -1,0 +1,4 @@
+(defvar instance1 (new TestClass1))
+
+(test instance1
+    (eq "default" (TestClass1:get-field instance1)))
