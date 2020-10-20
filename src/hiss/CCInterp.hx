@@ -403,7 +403,6 @@ class CCInterp {
         // Functions/forms that could be bootstrapped with register-function, but save stack frames if not:
         importFunction(Stdlib, Stdlib.length_h, {name: "length", argNames: ["seq"]}, T);
         importFunction(Stdlib, Stdlib.reverse, {name: "reverse", argNames: ["l"]}, T);
-        importFunction(HissTools, HissTools.first, {name: "first",argNames: ["l"]}, T);
         importFunction(Stdlib, Stdlib.rest, {name: "rest",argNames: ["l"]}, T);
         importFunction(Stdlib, Stdlib.eq.bind(_, this, _), {name: "eq", argNames: ["a", "b"]}, T);
         importFunction(Stdlib, Stdlib.nth_h, {name: "nth", argNames:  ["l", "n"]}, T);
