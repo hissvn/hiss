@@ -118,7 +118,7 @@ class HissTools {
     }    
 
     public static function extend(env: HValue, extension: HValue) {
-        return extension.cons(env);
+        return extension.cons_h(env);
     }
 
     public static function destructuringBind(names: HValue, interp: CCInterp, values: HValue) {

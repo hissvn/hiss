@@ -99,13 +99,14 @@ class CCInterp {
     var debugClassImports = false;
     #end
 
-    // TODO functions starting with is[Something] will be imported without the is, using predicateSuffix
-    // TODO any functions with 'cc' in the last token after an underscore will be imported as ccfunctions with this interp bound
-    //     as the first argument
-    // TODO any functions with 'h' in the last token after an underscore will keep their args wrapped
-    // TODO any function with 'd' for destructive in the last token after an underscore will use sideEffectSuffix
+    // functions starting with is[Something] will be imported without the is, using predicateSuffix
+    // TODO static functions with 'cc' in the metaSignature will be imported as ccfunctions with interp bound as the first argument (NOTE this will need to bypass reflect.callmethod in order to preserve asyncness)
+    // TODO functions that convert [type1]To[type2] else will be imported with use conversionInfix instead of To 
+    // functions with 'i' in the metaSignature will be imported with this interp bound as the first argument
+    // functions with 'h' in the metaSignature will keep their args wrapped
+    // functions with 'd' for destructive in the metaSignature will use sideEffectSuffix
     //     but also define an alias with a warning
-    // TODO functions and properties starting with an underscore will not be imported
+    // functions and properties starting with an underscore will not be imported
     public function importClass(clazz: Class<Dynamic>, meta: ClassMeta) {
         if (debugClassImports) {
             trace('Import ${meta.name}');
@@ -135,14 +136,33 @@ class CCInterp {
         if (meta.predicateSuffix == null) {
             meta.predicateSuffix = "?";
         }
+        if (meta.conversionInfix == null) {
+            meta.conversionInfix = "->";
+        }
 
         var dummyInstance = clazz.createEmptyInstance();
         for (instanceField in clazz.getInstanceFields()) {
+            if (instanceField.startsWith("_")) continue;
             var fieldValue = Reflect.getProperty(dummyInstance, instanceField);
             switch (Type.typeof(fieldValue)) {
                 // Import methods:
                 case TFunction:
+                    var metaSignature = "";
+                    if (instanceField.contains("_")) {
+                        metaSignature = instanceField.split("_")[1];
+                        instanceField = instanceField.substr(0, instanceField.indexOf("_"));
+                    }
+
+                    var bindInterpreter = metaSignature.contains("i");
+                    var wrapArgs = if (metaSignature.contains("h")) T else Nil;
+                    var destructive = metaSignature.contains("d");
+                    // TODO do something with ccFunctions
+                    var ccFunction = metaSignature.contains("cc");
+                    var isPredicate = (instanceField.toLowerHyphen().split("-")[0] == "is");
+                    if (isPredicate) instanceField = instanceField.substr(2); // drop the 'is'
                     var translatedName = meta.convertNames(instanceField);
+                    if (isPredicate) translatedName += meta.predicateSuffix;
+                    if (destructive) translatedName += meta.sideEffectSuffix;
                     if (!meta.omitMemberPrefixes) {
                         translatedName = meta.name + ":" + translatedName;
                     }
@@ -151,7 +171,11 @@ class CCInterp {
                     }
                     globals.put(translatedName, Function((args, env, cc) -> {
                         var instance = args.first().value(this);
-                        var argArray = args.rest().unwrapList(this);
+                        var argArray = args.rest_h().unwrapList(this, wrapArgs);
+
+                        if (bindInterpreter) {
+                            argArray.insert(0, this);
+                        }
                         // We need an empty instance for checking the types of the properties.
                         // BUT if we get our function pointers from the empty instance, the C++ target
                         // will segfault when we try to call them, so getProperty has to be called every time
@@ -206,11 +230,27 @@ class CCInterp {
         }
 
         for (classField in clazz.getClassFields()) {
+            if (classField.startsWith("_")) continue;
             // TODO this logic is much-repeated from the above for-loop
             var fieldValue = Reflect.getProperty(clazz, classField);
             switch (Type.typeof(fieldValue)) {
                 case TFunction:
+                    var metaSignature = "";
+                    if (classField.contains("_")) {
+                        metaSignature = classField.split("_")[1];
+                        classField = classField.substr(0, classField.indexOf("_"));
+                    }
+
+                    var bindInterpreter = metaSignature.contains("i");
+                    var wrapArgs = if (metaSignature.contains("h")) T else Nil;
+                    var destructive = metaSignature.contains("d");
+                    // TODO do something with ccFunctions
+                    var ccFunction = metaSignature.contains("cc");
+                    var isPredicate = (classField.toLowerHyphen().split("-")[0] == "is");
+                    if (isPredicate) classField = classField.substr(2); // drop the 'is'
                     var translatedName = meta.convertNames(classField);
+                    if (isPredicate) translatedName += meta.predicateSuffix;
+                    if (destructive) translatedName += meta.sideEffectSuffix;
                     if (!meta.omitStaticPrefixes) {
                         translatedName = meta.name + ":" + translatedName;
                     }
@@ -218,7 +258,11 @@ class CCInterp {
                         trace(translatedName);
                     }
                     globals.put(translatedName, Function((args, env, cc) -> {
-                        cc(Reflect.callMethod(clazz, fieldValue, args.unwrapList(this)).toHValue());
+                        var argArray = args.unwrapList(this, wrapArgs);
+                        if (bindInterpreter) {
+                            argArray.insert(0, this);
+                        }
+                        cc(Reflect.callMethod(clazz, fieldValue, argArray).toHValue());
                     }, {name:translatedName}));
                 default:
                     // TODO generate getters and setters for static properties
@@ -228,7 +272,7 @@ class CCInterp {
 
     function _new(args: HValue, env: HValue, cc: Continuation) {
         var clazz: Class<Dynamic> = args.first().value(this);
-        var args = args.rest().unwrapList(this);
+        var args = args.rest_h().unwrapList(this);
         var instance: Dynamic = Type.createInstance(clazz, args);
         cc(instance.toHValue());
     }
@@ -251,7 +295,7 @@ class CCInterp {
     function importMethod(method: String, meta: CallableMeta, callOnReference: Bool, keepArgsWrapped: HValue, returnInstance: Bool) {
         globals.put(meta.name, Function((args: HValue, env: HValue, cc: Continuation) -> {
             var instance = args.first().value(this, callOnReference);
-            cc(instance.callMethod(instance.getProperty(method), args.rest().unwrapList(this, keepArgsWrapped)).toHValue());
+            cc(instance.callMethod(instance.getProperty(method), args.rest_h().unwrapList(this, keepArgsWrapped)).toHValue());
         }, meta));
     }
 
@@ -360,63 +404,22 @@ class CCInterp {
         // command-line args
         importFunction(this, () -> List(scriptArgs), {name: "args"});
 
-        // Primitive type predicates
-        importFunction(Stdlib, Stdlib.isInt_h, {name: "int?"}, T);
-        importFunction(Stdlib, Stdlib.isFloat_h, {name: "float?"}, T);
-        importFunction(Stdlib, Stdlib.isNumber_h, {name: "number?"}, T);
-        importFunction(Stdlib, Stdlib.isSymbol_h, {name: "symbol?"}, T);
-        importFunction(Stdlib, Stdlib.isString_h, {name: "string?"}, T);
-        importFunction(Stdlib, Stdlib.isList_h, {name: "list?"}, T);
-        importFunction(Stdlib, Stdlib.isDict_h, {name: "dict?"}, T);
-        importFunction(Stdlib, Stdlib.isFunction_h, {name: "function?"}, T);
-        importFunction(Stdlib, Stdlib.isMacro_h, {name: "macro?"}, T);
-        importFunction(Stdlib, Stdlib.isCallable_h, {name: "callable?"}, T);
-        importFunction(Stdlib, Stdlib.isObject_h, {name: "object?"}, T);
-
-        importFunction(Stdlib, Stdlib.clear_hd, {name: "clear!"}, T);
-
-        // Iterator tools
-        importFunction(Stdlib, Stdlib.iterable, {name: "iterable", argNames: ["next", "has-next"]}, Nil);
-        importFunction(Stdlib, Stdlib.iteratorToIterable, {name: "iterator->iterable", argNames: ["haxe-iterator"]}, Nil);
-
         // String functions:
         importClass(HStringTools, {name: "StringTools", omitStaticPrefixes: true});
 
-        // Debug info
-        importFunction(Stdlib, Stdlib.version, {name: "version"});
+        importClass(Stdlib, {name: "Stdlib", omitStaticPrefixes: true});
 
         // Sometimes it's useful to provide the interpreter with your own target-native print function
         // so they will be used while the standard library is being loaded.
         if (printFunction != null) {
             importFunction(this, printFunction, {name: "print!", argNames: ["value"]},Nil);
         }
-        else {
-            importFunction(Stdlib, Stdlib.print, {name: "print!", argNames: ["value"]}, T);
-        }
 
-        // TODO this should take its behavior from the user-provided print
-        importFunction(Stdlib, Stdlib.message, {name: "message!", argNames: ["value"]}, T);
-
-        importFunction(Stdlib, Stdlib.toPrint, {name: "to-print", argNames: ["value"]}, T);
-        importFunction(Stdlib, Stdlib.toMessage, {name: "to-message", argNames: ["value"]}, T);
-
-        // Functions/forms that could be bootstrapped with register-function, but save stack frames if not:
-        importFunction(Stdlib, Stdlib.length_h, {name: "length", argNames: ["seq"]}, T);
-        importFunction(Stdlib, Stdlib.reverse, {name: "reverse", argNames: ["l"]}, T);
-        importFunction(Stdlib, Stdlib.rest, {name: "rest",argNames: ["l"]}, T);
-        importFunction(Stdlib, Stdlib.eq.bind(_, this, _), {name: "eq", argNames: ["a", "b"]}, T);
-        importFunction(Stdlib, Stdlib.nth_h, {name: "nth", argNames:  ["l", "n"]}, T);
-        importFunction(Stdlib, Stdlib.setNth_h, {name: "set-nth!", argNames: ["l", "n", "val"]}, T);
-        importFunction(Stdlib, Stdlib.cons, {name: "cons", argNames: ["val", "l"]}, T);
         importFunction(this, not, {name: "not", argNames: ["val"]}, T);
-        importFunction(Stdlib, Stdlib.sort, {name: "sort", argNames: ["l", "sort-function"]}, Nil);
-        importFunction(Stdlib, Stdlib.range, {name: "range", argNames: ["start", "end"]}, Nil);
+    
         importFunction(HaxeTools, HaxeTools.shellCommand, {name: "shell-command", argNames: ["cmd"]}, Nil);
         importFunction(this, read, {name: "read", argNames: ["string"]}, Nil);
         importFunction(this, readAll, {name: "read-all", argNames: ["string"]}, Nil);
-
-        importFunction(Stdlib, Stdlib.symbolName_h, {name: "symbol-name", argNames: ["sym"]}, T);
-        importFunction(Stdlib, Stdlib.symbol, {name: "symbol", argNames: ["sym-name"]});
 
         importSpecialForm(quote, {name:"quote"});
 
@@ -442,7 +445,6 @@ class CCInterp {
         importFunction(HaxeTools, HaxeTools.readLine, {name: "read-line", argNames: []});
 
         // Operating system
-        importFunction(Stdlib, Stdlib.homeDir, {name: "home-dir", argNames: []});
         importFunction(StaticFiles, StaticFiles.getContent, { name: "get-content", argNames: ["file"] });
         #if (sys || hxnodejs)
         importClass(HFile, {name: "File"});
@@ -488,7 +490,7 @@ class CCInterp {
     // error? will have an implicit begin
     function throwsError(args: HValue, env: HValue, cc: Continuation) {
         try {
-            internalEval(Symbol("begin").cons(args), env, (val) -> {
+            internalEval(Symbol("begin").cons_h(args), env, (val) -> {
                 cc(Nil); // If the continuation is called, there is no error
             });
         } catch (err: Dynamic) {
@@ -577,7 +579,7 @@ class CCInterp {
 
             // TODO errors from async functions won't be caught by this, so use errorHandler instead of try-catch
             try {
-                internalEval(exp, locals, Stdlib.print);
+                internalEval(exp, locals, Stdlib.print_hd);
             }
             catch (e: HSignal) {
                 switch (e) {
@@ -700,11 +702,11 @@ class CCInterp {
         env = envWithReturn(env, returnCalled);
         var value = eval(exps.first(), env);
 
-        if (returnCalled.b || !truthy(exps.rest())) {
+        if (returnCalled.b || !truthy(exps.rest_h())) {
             cc(value);
         }
         else {
-            trBegin(exps.rest(), env, cc);
+            trBegin(exps.rest_h(), env, cc);
         }
     }
 
@@ -713,11 +715,11 @@ class CCInterp {
         env = envWithReturn(env, returnCalled);
 
         internalEval(exps.first(), env, (result) -> {
-            if (returnCalled.b || !truthy(exps.rest())) {
+            if (returnCalled.b || !truthy(exps.rest_h())) {
                 cc(result);
             }
             else {
-                begin(exps.rest(), env, cc);
+                begin(exps.rest_h(), env, cc);
             }
         });
     }
@@ -730,10 +732,10 @@ class CCInterp {
             case Macro(func, meta) | SpecialForm(func, meta):
                 #if !ignoreWarnings
                 if (meta.deprecated) {
-                    String('Warning! Macro ${meta.name} is deprecated.').message();
+                    String('Warning! Macro ${meta.name} is deprecated.').message_hd();
                 }
                 #end
-                func(args.rest(), env, cc);
+                func(args.rest_h(), env, cc);
             default: throw '${args.first()} is not a macro or special form';
         }
     }
@@ -759,10 +761,10 @@ class CCInterp {
                 case Function(func, meta):
                     #if !ignoreWarnings
                     if (meta.deprecated) {
-                        String('Warning! Function ${meta.name} is deprecated.').message();
+                        String('Warning! Function ${meta.name} is deprecated.').message_hd();
                     }
                     #end
-                    func(values.rest(), if (callInline) env else emptyEnv(), cc);
+                    func(values.rest_h(), if (callInline) env else emptyEnv(), cc);
                 default: throw 'Cannot funcall ${values.first()}';
             }
             
@@ -775,8 +777,8 @@ class CCInterp {
             cc(Nil);
         } else {
             internalEval(args.first(), env, (value) -> {
-                evalAll(args.rest(), env, (value2) -> {
-                    cc(value.cons(value2));
+                evalAll(args.rest_h(), env, (value2) -> {
+                    cc(value.cons_h(value2));
                 });
             });
         }
@@ -832,8 +834,8 @@ class CCInterp {
     }
 
     function setCallable(isMacro: Bool, args: HValue, env: HValue, cc: Continuation) {
-        lambda(isMacro, args.rest(), env, (fun: HValue) -> {
-            set(Global, args.first().cons(List([fun])), env, cc);
+        lambda(isMacro, args.rest_h(), env, (fun: HValue) -> {
+            set(Global, args.first().cons_h(List([fun])), env, cc);
         }, args.first().symbolName_h());
     }
 
@@ -923,7 +925,7 @@ class CCInterp {
             async: false
         };
 
-        var body = args.rest().toList();
+        var body = args.rest_h().toList();
         
         for (exp in body) {
             switch (exp) {
@@ -944,7 +946,7 @@ class CCInterp {
         var hFun: HFunction = (fArgs, innerEnv, fCC) -> {
             var callEnv = List(env.toList().concat(innerEnv.toList()));
             callEnv = callEnv.extend(params.destructuringBind(this, fArgs)); // extending the outer env is how lambdas capture values
-            internalEval(Symbol('begin').cons(List(body)), callEnv, fCC);
+            internalEval(Symbol('begin').cons_h(List(body)), callEnv, fCC);
         };
         
         var callable = if (isMacro) {
@@ -975,7 +977,7 @@ class CCInterp {
                 } catch (s: Dynamic) {
                     continue; // Not a callable
                 }
-                String(functionHelp).message();
+                String(functionHelp).message_hd();
             }
         }
     }
@@ -996,7 +998,7 @@ class CCInterp {
                 // If it's body form, the values of the iterable need to be bound for the body
                 // (potentially with list destructuring)
                 var bodyEnv = innerEnv.extend(args.first().destructuringBind(this, innerArgs.first()));
-                internalEval(Symbol("begin").cons(body), bodyEnv, innerCC);
+                internalEval(Symbol("begin").cons_h(body), bodyEnv, innerCC);
             }, env, cc);
         } else {
             // If it's function form, a name symbol is not necessary
@@ -1088,9 +1090,9 @@ class CCInterp {
     **/
     function loop(args: HValue, env: HValue, cc: Continuation) {
         var bindings = args.first();
-        var body = args.rest();
+        var body = args.rest_h();
 
-        var names = Symbol("recur").cons(bindings.alternates(true));
+        var names = Symbol("recur").cons_h(bindings.alternates(true));
         var firstValueExps = bindings.alternates(false);
         evalAll(firstValueExps, env, (firstValues) -> {
             var nextValues = Nil;
@@ -1108,7 +1110,7 @@ class CCInterp {
                 }
 
                 // Recur has to be a special form so it retains the environment of the original loop call
-                internalEval(Symbol("begin").cons(body), env.extend(names.destructuringBind(this, SpecialForm(recur, {name: "recur"}).cons(values))), (value) -> {result = value;});
+                internalEval(Symbol("begin").cons_h(body), env.extend(names.destructuringBind(this, SpecialForm(recur, {name: "recur"}).cons_h(values))), (value) -> {result = value;});
                 
             } while (recurCalled);
             cc(result);
@@ -1417,9 +1419,9 @@ class CCInterp {
                             inline funcall(false, exp, env, cc);
                         case Macro(_):
                             //HaxeTools.print('macroexpanding ${exp.toPrint()} -> ');
-                            inline macroCall(callable.cons(exp.rest()), env, cc);
+                            inline macroCall(callable.cons_h(exp.rest_h()), env, cc);
                         case SpecialForm(_):
-                            inline specialForm(callable.cons(exp.rest()), env, cc);
+                            inline specialForm(callable.cons_h(exp.rest_h()), env, cc);
                         default: error('Hiss cannot call $callable from ${exp.first().toPrint()}');
                     }
                 });

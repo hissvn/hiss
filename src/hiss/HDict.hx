@@ -48,7 +48,7 @@ class HDict {
         var hashMatches = map[key.toPrint()];
 
         for (match in hashMatches) {
-            if (interp.truthy(match.key.eq(interp, key))) {
+            if (interp.truthy(interp.eq_ih(match.key, key))) {
                 return match.value;
             }
         }
@@ -61,7 +61,7 @@ class HDict {
         var hashMatches = map[key.toPrint()];
 
         for (match in hashMatches) {
-            if (interp.truthy(match.key.eq(interp, key))) {
+            if (interp.truthy(interp.eq_ih(match.key, key))) {
                 match.value = value;
                 return;
             }
@@ -78,7 +78,7 @@ class HDict {
         var hashMatches = map[key.toPrint()];
 
         for (match in hashMatches) {
-            if (interp.truthy(match.key.eq(interp, key))) {
+            if (interp.truthy(interp.eq_ih(match.key, key))) {
                 return true;
             }
         }
@@ -93,7 +93,7 @@ class HDict {
         var idx = 0;
         while (idx < hashMatches.length) {
             var match = hashMatches[idx];
-            if (interp.truthy(match.key.eq(interp, key))) {
+            if (interp.truthy(interp.eq_ih(match.key, key))) {
                 hashMatches.splice(idx, 1);
                 return;
             }

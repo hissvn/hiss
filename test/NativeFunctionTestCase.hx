@@ -14,18 +14,12 @@ class NativeFunctionTestCase extends utest.Test {
         return interp.eval(interp.read(name));
     }
 
-    public function testCallNativePrint() {
-        var print = interp.toNativeFunction(getGlobal("print"));
+    public function testCallNativeGroups() {
+        var groups = interp.toNativeFunction(getGlobal("groups"));
 
-        Assert.equals("stuff", print("stuff"));
-    }
 
-    public function testCallNativeNth() {
-        var nth = interp.toNativeFunction(getGlobal("nth"));
+        Assert.equals(2, groups([1, 2, 3, 4, 5], 2, false).length);
+        Assert.equals(3, groups([1, 2, 3, 4, 5], 2, true).length);
 
-        var list = [1, 3, 5];
-        Assert.equals(1, nth(list, 0));
-        Assert.equals(3, nth(list, 1));
-        Assert.equals(5, nth(list, 2));
     }
 }

@@ -52,6 +52,7 @@ typedef ClassMeta = {
     var ?setterPrefix: String;
     var ?sideEffectSuffix: String;
     var ?predicateSuffix: String;
+    var ?conversionInfix: String;
 };
 
 typedef Continuation = (HValue) -> Void;

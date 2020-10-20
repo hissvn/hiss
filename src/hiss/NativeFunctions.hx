@@ -59,7 +59,7 @@ class NativeFunctions {
         fullBodyExpr += "case Function(_, meta) if (meta.argNames != null && meta.argNames.length >" + maxArgCount + "):
                             throw 'Function has too many args for conversion to native function';
                         case Function(_, meta) if (meta.argNames == null):
-                            throw 'Function $meta.name has no args specified, cannot be converted';
+                            throw 'Function ' + meta.name + ' has no args specified, cannot be converted';
                         default:
                             throw 'Cannot convert non-function $fun to native function';
                         }";

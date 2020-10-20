@@ -101,7 +101,7 @@ class HissTestCase extends Test {
             #end
         }
 
-        var assertions = args.rest();
+        var assertions = args.rest_h();
 
         var freshEnv = interp.emptyEnv();
         for (ass in assertions.toList()) {
@@ -138,15 +138,24 @@ class HissTestCase extends Test {
 
         interp.importFunction(HissTestCase, (val: HValue) -> {
             actualPrint += val.toPrint() + "\n";
-        }, { name: "print" }, T);
+        }, { name: "print" }, T); // TODO make it deprecated
+        interp.importFunction(HissTestCase, (val: HValue) -> {
+            actualPrint += val.toPrint() + "\n";
+        }, { name: "print!" }, T);
 
         interp.importFunction(HissTestCase, (val: HValue) -> {
             actualPrint += val.toMessage() + "\n";
-        }, { name: "message" }, T);
+        }, { name: "message" }, T); // TODO make it deprecated
+        interp.importFunction(HissTestCase, (val: HValue) -> {
+            actualPrint += val.toMessage() + "\n";
+        }, { name: "message!" }, T);
 
         interp.eval(expression, env);
-        interp.importFunction(HissTestCase, hissPrintFail, { name: "print" }, T);
-        interp.importFunction(HissTools, Stdlib.message, { name: "message" }, T); // It's ok to send messages from the standard library, just not to print raw HValues
+        interp.importFunction(HissTestCase, hissPrintFail, { name: "print" }, T); // TODO make it deprecated
+        interp.importFunction(HissTestCase, hissPrintFail, { name: "print!" }, T);
+
+        interp.importFunction(HissTools, Stdlib.message_hd, { name: "message" }, T); // TODO make it deprecated
+        interp.importFunction(HissTools, Stdlib.message_hd, { name: "message!" }, T); // It's ok to send messages from the standard library, just not to print raw HValues
         cc(if (expectedPrint == actualPrint
                 // Forgive a missing newline in the `prints` statement
                 || (actualPrint.charAt(actualPrint.length-1) == '\n' && expectedPrint == actualPrint.substr(0, actualPrint.length-1))) {
@@ -198,7 +207,9 @@ class HissTestCase extends Test {
         #end
 
         if (interp != null) {
-            interp.importFunction(HissTestCase, hissPrintFail, { name: "print" }, T);
+            interp.importFunction(HissTestCase, hissPrintFail, { name: "print" }, T); // TODO make it deprecated
+            interp.importFunction(HissTestCase, hissPrintFail, { name: "print!" }, T);
+
         }
     }
 
@@ -207,7 +218,9 @@ class HissTestCase extends Test {
         Log.trace = tempTrace;
         #end
 
-        interp.importFunction(HissTools, Stdlib.print, { name: "print" }, T);
+        interp.importFunction(HissTools, Stdlib.print_hd, { name: "print" }, T); // TODO make it deprecated
+        interp.importFunction(HissTools, Stdlib.print_hd, { name: "print!" }, T);
+
     }
 
     function testStdlib() {

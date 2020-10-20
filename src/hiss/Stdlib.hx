@@ -30,7 +30,7 @@ class Stdlib {
         return list.toList()[idx.toInt()];
     }
 
-    public static function setNth_h(arr: HValue, idx: HValue, val: HValue) { 
+    public static function setNth_hd(arr: HValue, idx: HValue, val: HValue) { 
         arr.toList()[idx.toInt()] = val; return arr;
     }
 
@@ -182,21 +182,20 @@ class Stdlib {
         };
     }
 
-    public static function rest(list: HValue): HValue {
+    public static function rest_h(list: HValue): HValue {
         return List(list.toList().slice(1));
     }
 
     // Since the variadic binop macro uses cons and it's one of the first
     // things in the Hiss prelude, might as well let this one stand as a Haxe function.
-    public static function cons(hv: HValue, hl: HValue): HValue {
+    public static function cons_h(hv: HValue, hl: HValue): HValue {
         if (hl == Nil || hl.length_h() == 0) return List([hv]);
         var l = hl.toList().copy();
         l.insert(0, hv);
         return List(l);
     }
 
-    public static function eq(a: HValue, interp: CCInterp, b: HValue): HValue {
-        // Throw an error if trying to compare with interpstrings
+    public static function eq_ih(interp: CCInterp, a: HValue, b: HValue): HValue {
         switch (a) {
             case InterpString(_): a = interp.eval(a);
             default:
@@ -218,13 +217,13 @@ class Stdlib {
                 if (l1.length != l2.length) return Nil;
                 var i = 0;
                 while (i < l1.length) {
-                    if (!interp.truthy(eq(l1[i], interp, l2[i]))) return Nil;
+                    if (!interp.truthy(interp.eq_ih(l1[i], l2[i]))) return Nil;
                     i++;
                 }
                 return T;
             case Quote(aa) | Quasiquote(aa) | Unquote(aa) | UnquoteList(aa):
                 var bb = HaxeTools.extract(b, Quote(e) | Quasiquote(e) | Unquote(e) | UnquoteList(e) => e);
-                return eq(aa, interp, bb);
+                return interp.eq_ih(aa, bb);
             case SpecialForm(fun, _):
                 return switch (b) {
                     case SpecialForm(fun2, _) if (fun == fun2): T;
@@ -301,12 +300,13 @@ class Stdlib {
         }
     }
 
-    public static function print(exp: HValue) {
+    public static function print_hd(exp: HValue) {
         HaxeTools.println(exp.toPrint());
         return exp;
     }
 
-    public static function message(exp: HValue) {
+    // TODO this should take its behavior from the user-provided print in the interp
+    public static function message_hd(exp: HValue) {
         HaxeTools.println(exp.toMessage());
         return exp;
     }

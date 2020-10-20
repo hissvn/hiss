@@ -18,7 +18,7 @@ enum Comparison {
 class VariadicFunctions {
     public static function append(args: HValue, env: HValue, cc: Continuation) {
         var result = args.first().toList();
-        for (l in args.rest().toList()) {
+        for (l in args.rest_h().toList()) {
             result = result.concat(l.toList());
         }
         cc(List(result));
@@ -49,7 +49,7 @@ class VariadicFunctions {
             case 1: cc(HissTools.toHValue(0 - args.first().value(interp)));
             default:
                 var first: Dynamic = args.first().value(interp);
-                for (val in args.rest().unwrapList(interp)) {
+                for (val in args.rest_h().unwrapList(interp)) {
                     first -= val;
                 }
                 cc(HissTools.toHValue(first));
@@ -63,7 +63,7 @@ class VariadicFunctions {
             case 1: cc(HissTools.toHValue(1 / args.first().value(interp)));
             default:
                 var first: Dynamic = args.first().value(interp);
-                for (val in args.rest().unwrapList(interp)) {
+                for (val in args.rest_h().unwrapList(interp)) {
                     first /= val;
                 }
                 cc(HissTools.toHValue(first));
@@ -78,7 +78,7 @@ class VariadicFunctions {
 
                 switch (args.last()) {
                     case List(_) | String(_):
-                        multiply(interp, operands[operands.length-1].toHValue().cons(operands.slice(0, operands.length-1).toHList()), env, cc);
+                        multiply(interp, operands[operands.length-1].toHValue().cons_h(operands.slice(0, operands.length-1).toHList()), env, cc);
                         return;
                     default:
                 }
@@ -96,7 +96,7 @@ class VariadicFunctions {
                 if (args.length_h() == 2) {
                     cc(String(product));
                 } else {
-                    multiply(interp, String(product).cons(args.slice(2)), env, cc);
+                    multiply(interp, String(product).cons_h(args.slice(2)), env, cc);
                 }
             case List(l):
                 var product = [];
@@ -108,7 +108,7 @@ class VariadicFunctions {
                 if (args.length_h() == 2) {
                     cc(List(product));
                 } else {
-                    multiply(interp, List(product).cons(args.slice(2)), env, cc);
+                    multiply(interp, List(product).cons_h(args.slice(2)), env, cc);
                 }
             default: throw 'Cannot multiply with first operand ${args.first().toPrint()}';
         }
@@ -120,7 +120,7 @@ class VariadicFunctions {
             case 1: cc(T);
             default:
                 var leftSide: Dynamic = args.first().value(interp);
-                for (val in args.rest().unwrapList(interp)) {
+                for (val in args.rest_h().unwrapList(interp)) {
                     var rightSide: Dynamic = val;
                     var pass = switch (type) {
                         case Lesser:
