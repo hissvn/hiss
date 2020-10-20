@@ -251,6 +251,7 @@ class CCInterp {
 
     public function emptyEnv() { return List([emptyDict()]); }
 
+    // TODO declutter the constructor by refactoring to allow importClass(CCInterp) and importClass(HissTools) (and importClass of whatever functions get split out of HissTools)
     public function new(?printFunction: (Dynamic) -> Dynamic) {
         HissTestCase.reallyTrace = Log.trace;
 
@@ -499,6 +500,7 @@ class CCInterp {
         }
     }
 
+    // TODO make public enableCC() and disableCC()
     function useFunctions(beginFunction: HFunction, evalAllFunction: HFunction, iterateFunction: IterateFunction) {
         currentBeginFunction = beginFunction;
         currentEvalAllFunction = evalAllFunction;
@@ -780,10 +782,12 @@ class CCInterp {
         cc(args.first());
     }
 
+    // TODO move out of CCInterp
     function sleepCC(args: HValue, env: HValue, cc: Continuation) {
         Timer.delay(cc.bind(Nil), Math.round(args.first().toFloat() * 1000));
     }
 
+    // TODO move out of CCInterp
     // This won't work in the repl, I THINK because the main thread is always occupied
     function delay(args: HValue, env: HValue, cc: Continuation) {
         Timer.delay(() -> {
@@ -1269,6 +1273,7 @@ class CCInterp {
         cc(argVal);
     }
 
+    // TODO move out of CCInterp
     function makeDict(args: HValue, env: HValue, cc: Continuation) {
         var dict = new HDict(this);
 
