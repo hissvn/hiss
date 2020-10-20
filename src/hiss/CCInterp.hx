@@ -854,7 +854,17 @@ class CCInterp {
                 meta.deprecated = true;
             }
 
-            var newFunc = Function(hFunc, meta);
+            var newFunc = switch (funcVal) {
+                case Function(_, _):
+                    Function(hFunc, meta);
+                case Macro(_, _):
+                    Macro(hFunc, meta);
+                case SpecialForm(_, _):
+                    SpecialForm(hFunc, meta);
+                default:
+                    throw '';
+            };
+
             globals.put(alias.symbolName_h(), newFunc);
             cc(newFunc);
         });
