@@ -15,6 +15,7 @@ using hx.strings.Strings;
 
 import hiss.wrappers.HHttp;
 import hiss.wrappers.HDate;
+import hiss.wrappers.HStringTools;
 
 import hiss.HTypes;
 #if (sys || hxnodejs)
@@ -290,7 +291,6 @@ class CCInterp {
         // Allow switching at runtime:
         importFunction(this, useFunctions.bind(trBegin, trEvalAll, iterate), { name: "disable-cc!" });
         importFunction(this, useFunctions.bind(begin, evalAll, iterateCC), { name: "enable-cc!" });
-        importFunction(this, useFunctions.bind(begin, evalAll, iterateCC), { name: "disable-tail-recursion" });
 
         // First-class unit testing:
         importSpecialForm(HissTestCase.testAtRuntime.bind(this), { name: "test" });
@@ -363,15 +363,7 @@ class CCInterp {
         importFunction(HissTools, HissTools.iteratorToIterable, {name: "iterator->iterable", argNames: ["haxe-iterator"]}, Nil);
 
         // String functions:
-        globals.put("StringTools", Object("Class", StringTools));
-        importFunction(StringTools, StringTools.startsWith, {name: "starts-with"});
-        importFunction(StringTools, StringTools.endsWith, {name: "ends-with"});
-        importFunction(StringTools, StringTools.lpad, {name: "lpad"});
-        importFunction(StringTools, StringTools.rpad, {name: "rpad"});
-        importFunction(StringTools, StringTools.trim, {name: "trim"});
-        importFunction(StringTools, StringTools.ltrim, {name: "ltrim"});
-        importFunction(StringTools, StringTools.rtrim, {name: "rtrim"});
-
+        importClass(HStringTools, {name: "StringTools", omitStaticPrefixes: true});
 
         // Debug info
         importFunction(HissTools, HissTools.version, {name: "version"});
