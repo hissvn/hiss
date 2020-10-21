@@ -22,7 +22,7 @@
 (defun first (l) (nth l 0))
 
 (defmacro register-method! (method name &optional call-on-reference keep-args-wrapped return-instance)
-    "Register a method call as an unqualified global function. Unlike CCInterp.importClass, there won't be a Class: prefix"
+    "Register a method call as an unqualified global function. This function will work on any object that defines that function"
     `(defun ,name (instance &rest args)
         (setlocal! result (call-haxe instance ,method args ,call-on-reference ,keep-args-wrapped))
         (if ,return-instance instance result)))
@@ -47,8 +47,6 @@
     (call-haxe l "splice" (list 0 num) t)
     l)
 (defalias drop! drop @deprecated)
-
-(register-method! "copy" copy t)
 
 (defun slice (l start &optional end)
     (call-haxe l "slice" (list start (or end (length l)))))
@@ -102,13 +100,13 @@
                 (if ,cond (recur)))))))
 
 (defun groups (l size &optional take-remainder)
-    (setlocal! c (copy l))
+    (setlocal! c (list-copy l))
     (setlocal! g (list))
     (while c
         (cond
             ((< (length c) size)
                 (when take-remainder
-                    (push! g (copy c)))
+                    (push! g (list-copy c)))
                 (clear! c))
             (t
                 (push! g (take! c size)))))

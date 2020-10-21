@@ -360,7 +360,7 @@ class Stdlib {
         #end
     }
 
-    public static function sleep_cca(interp: CCInterp, args: HValue, env: HValue, cc: Continuation) {
+    public static function sleep_ccda(interp: CCInterp, args: HValue, env: HValue, cc: Continuation) {
         Timer.delay(cc.bind(Nil), Math.round(args.first().toFloat() * 1000));
     }
 
@@ -416,4 +416,11 @@ class Stdlib {
     }
 
     public static function mod(a, b) { return a % b; }
+
+    // Different from (copy) which calls whatever copy() method is defined on any object.
+    // We need this separate for safely copying lists in the stdlib on targets where copy()
+    // might be inlined
+    public static function listCopy(v: Array<Dynamic>) {
+        return v.copy();
+    }
 }
