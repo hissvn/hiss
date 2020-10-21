@@ -9,6 +9,8 @@ import uuid.Uuid;
 using hiss.HissTools;
 using hiss.Stdlib;
 
+using StringTools;
+
 /**
     Hiss Standard library functions implemented in Haxe
 **/
@@ -340,6 +342,7 @@ class Stdlib {
         for (name => value in interp.globals.toDict()) {
             try {
                 var functionHelp = name.symbolName_h();
+                if (functionHelp.startsWith("_")) continue;
                 try {
                     var meta = value.metadata();
                     if (meta.deprecated) {
@@ -359,7 +362,9 @@ class Stdlib {
                 functionMessages.push(functionHelp);
             }
         }
-        functionMessages.sort(Reflect.compare);
+        functionMessages.sort((a, b) -> {
+            Reflect.compare(a.toLowerCase(), b.toLowerCase());
+        });
         for (functionHelp in functionMessages) {
             String(functionHelp).message_hd();
         }
