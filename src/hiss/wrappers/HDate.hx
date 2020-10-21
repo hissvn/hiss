@@ -26,48 +26,57 @@ class HDate {
     }
 
     // To be more ergonomic, by default these all call on now() if no instance is provided:
-    public static function getDate(?date: HDate):Int {
-        if (date == null) date = now();
+    public static function getDate(?date:HDate):Int {
+        if (date == null)
+            date = now();
         return date._instance.getDate();
     }
 
-    public static function getDay(?date: HDate):Int {
-        if (date == null) date = now();
+    public static function getDay(?date:HDate):Int {
+        if (date == null)
+            date = now();
         return date._instance.getDay();
     }
 
-    public static function getYear(?date: HDate):Int {
-        if (date == null) date = now();
+    public static function getYear(?date:HDate):Int {
+        if (date == null)
+            date = now();
         return date._instance.getFullYear();
     }
 
-    public static function getHours(?date: HDate):Int {
-        if (date == null) date = now();
+    public static function getHours(?date:HDate):Int {
+        if (date == null)
+            date = now();
         return date._instance.getHours();
     }
 
-    public static function getMinutes(?date: HDate):Int {
-        if (date == null) date = now();
+    public static function getMinutes(?date:HDate):Int {
+        if (date == null)
+            date = now();
         return date._instance.getMinutes();
     }
 
-    public static function getMonth(?date: HDate):Int {
-        if (date == null) date = now();
+    public static function getMonth(?date:HDate):Int {
+        if (date == null)
+            date = now();
         return date._instance.getMonth();
     }
 
-    public static function getSeconds(?date: HDate):Int {
-        if (date == null) date = now();
+    public static function getSeconds(?date:HDate):Int {
+        if (date == null)
+            date = now();
         return date._instance.getSeconds();
     }
 
-    public static function getTime(?date: HDate):Float {
-        if (date == null) date = now();
+    public static function getTime(?date:HDate):Float {
+        if (date == null)
+            date = now();
         return date._instance.getTime();
     }
 
-    public static function getTimezoneOffset(?date: HDate):Int {
-        if (date == null) date = now();
+    public static function getTimezoneOffset(?date:HDate):Int {
+        if (date == null)
+            date = now();
         return date._instance.getTimezoneOffset();
     }
 

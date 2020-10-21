@@ -1,20 +1,17 @@
 package test;
 
 using hx.strings.Strings;
+
 import utest.Assert;
-
 import haxe.ds.Option;
-
 import test.HAssert;
-
 import hiss.HaxeTools;
 import hiss.HStream;
 
 class HStreamTestCase extends utest.Test {
+    var stream:HStream;
 
-    var stream: HStream;
-
-    function assertPos(line: Int, col: Int) {
+    function assertPos(line:Int, col:Int) {
         HAssert.objectEquals(new HPosition("test/expressions.hiss", line, col), stream.position());
     }
 

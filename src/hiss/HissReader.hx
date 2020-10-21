@@ -5,6 +5,7 @@ import haxe.ds.Either;
 using hx.strings.Strings;
 
 import hiss.HDict;
+
 using hiss.HissReader;
 
 import hiss.HTypes;
@@ -16,52 +17,56 @@ using hiss.HaxeTools;
 
 import hiss.HStream.HPosition;
 
-typedef HaxeReadFunction = (start: String, stream: HStream) -> HValue;
+typedef HaxeReadFunction = (start:String, stream:HStream) -> HValue;
 
 class HissReader {
-    var readTable: HDict;
+    var readTable:HDict;
 
     var macroLengths = [];
-    var interp: CCInterp;
+    var interp:CCInterp;
 
-    public function copyReadtable(): HDict {
+    public function copyReadtable():HDict {
         return readTable.copy();
     }
 
-    public function useReadtable(table: HDict) {
+    public function useReadtable(table:HDict) {
         this.readTable = table;
     }
 
-    public function setMacroString(s: String, f: HValue) {
+    public function setMacroString(s:String, f:HValue) {
         readTable.put_hd(String(s), f);
         if (macroLengths.indexOf(s.length) == -1) {
             macroLengths.push(s.length);
         }
-        macroLengths.sort(function(a, b) { return b - a; });
+        macroLengths.sort(function(a, b) {
+            return b - a;
+        });
         return f;
     }
 
-    public function setDefaultReadFunction(f: HValue) {
+    public function setDefaultReadFunction(f:HValue) {
         readTable.put_hd(String(""), f);
     }
 
-    function hissReadFunction(f: HaxeReadFunction, s: String) {
-        return Function((args: HValue, env: HValue, cc: Continuation) -> {
+    function hissReadFunction(f:HaxeReadFunction, s:String) {
+        return Function((args, env, cc) -> {
             var start = args.first().toHaxeString();
             var str = toStream(interp, args.second());
             cc(f(start, str));
-        }, { name: s, argNames: ["start", "stream"] });
+        }, {name: s, argNames: ["start", "stream"]});
     }
 
-    function internalSetMacroString(s: String, f: HaxeReadFunction) {
+    function internalSetMacroString(s:String, f:HaxeReadFunction) {
         readTable.put_hd(String(s), hissReadFunction(f, 'read-$s'));
         if (macroLengths.indexOf(s.length) == -1) {
             macroLengths.push(s.length);
         }
-        macroLengths.sort(function(a, b) { return b - a; });
+        macroLengths.sort(function(a, b) {
+            return b - a;
+        });
     }
 
-    public function new(interp: CCInterp) {
+    public function new(interp:CCInterp) {
         this.interp = interp;
 
         readTable = new HDict(interp);
@@ -90,10 +95,9 @@ class HissReader {
         internalSetMacroString("/*", readBlockComment);
         internalSetMacroString("//", readLineComment);
         internalSetMacroString(";", readLineComment);
-        
     }
-    
-    static function toStream(interp: CCInterp, stringOrStream: HValue, ?pos: HValue) {
+
+    static function toStream(interp:CCInterp, stringOrStream:HValue, ?pos:HValue) {
         var position = if (pos != null) pos.value(interp) else null;
 
         return switch (stringOrStream) {
@@ -106,7 +110,7 @@ class HissReader {
         }
     }
 
-    function readQuoteExpression(start: String, stream: HStream): HValue {
+    function readQuoteExpression(start:String, stream:HStream):HValue {
         var expression = read("", stream);
         return switch (start) {
             case "`":
@@ -122,7 +126,7 @@ class HissReader {
         }
     }
 
-    public function readNumber(start: String, stream: HStream): HValue {
+    public function readNumber(start:String, stream:HStream):HValue {
         stream.putBack(start);
 
         var token = nextToken(stream);
@@ -133,7 +137,7 @@ class HissReader {
         };
     }
 
-    function readSymbolOrSign(start: String, stream: HStream): HValue {
+    function readSymbolOrSign(start:String, stream:HStream):HValue {
         // Hyphen could either be a symbol (subraction), or the start of a negative numeral
         return if (stream.nextIsWhitespace() || stream.nextIsOneOf(terminators)) {
             stream.putBack(start);
@@ -143,17 +147,17 @@ class HissReader {
         }
     }
 
-    function readBlockComment(start: String, stream: HStream): HValue {
+    function readBlockComment(start:String, stream:HStream):HValue {
         stream.takeUntil(["*/"]);
         return Comment;
     }
 
-    function readLineComment(start: String, stream: HStream): HValue {
+    function readLineComment(start:String, stream:HStream):HValue {
         stream.takeLine();
         return Comment;
     }
 
-    function readRawString(start: String, str: HStream): HValue {
+    function readRawString(start:String, str:HStream):HValue {
         var pounds = "#";
         while (str.peek(1) == "#") {
             pounds += str.take(1);
@@ -162,20 +166,20 @@ class HissReader {
         var terminator = '"$pounds';
 
         switch (str.takeUntil([terminator], false, false)) {
-            case Some(s): 
+            case Some(s):
                 return String(s.output);
             case None:
                 throw 'Expected closing $terminator for read-raw-string of $str';
         }
     }
 
-    public function readString(start: String, str: HStream): HValue {
+    public function readString(start:String, str:HStream):HValue {
         // Quotes inside Interpolated expressions shouldn't terminate the literal
 
         var literal = "";
         while (true) {
             var outputInfo = HaxeTools.extract(str.takeUntil(['"', '\\$', '$', '\\\\'], false, true, false), Some(o) => o); // don't drop the terminator
-            //trace(outputInfo.terminator);
+            // trace(outputInfo.terminator);
             switch (outputInfo.terminator) {
                 case '"':
                     literal += outputInfo.output;
@@ -228,20 +232,20 @@ class HissReader {
         escaped = escaped.replaceAll("\\n", "\n");
         escaped = escaped.replaceAll("\\r", "\r");
         escaped = escaped.replaceAll('\\"', '"');
-        // Single quotes are not a thing in Hiss                
+        // Single quotes are not a thing in Hiss
 
         // Strings with regular quotes need to be interpolated at eval-time
         return InterpString(escaped);
     }
 
-    public function nextToken(str: HStream): String {
+    public function nextToken(str:HStream):String {
         str.dropWhitespace();
 
         var whitespaceOrTerminator = HStream.WHITESPACE.concat(terminators);
 
         var token = try {
             HaxeTools.extract(str.takeUntil(whitespaceOrTerminator, true, false, false), Some(s) => s, "next token").output;
-        } catch (s: Dynamic) {
+        } catch (s:Dynamic) {
             "";
         };
 
@@ -252,26 +256,31 @@ class HissReader {
         return token;
     }
 
-    public function readSymbol(start: String, str: HStream): HValue {
-        if (str.peek(1) == ")") throw "Unmatched closing paren";
+    public function readSymbol(start:String, str:HStream):HValue {
+        if (str.peek(1) == ")")
+            throw "Unmatched closing paren";
         var symbolName = nextToken(str);
         // braces are not allowed in symbols because they would break string interpolation
         if (symbolName.indexOf("{") != -1 || symbolName.indexOf("}") != -1) {
             throw 'Cannot have braces in symbol $symbolName';
         }
         // We mustn't return Symbol(nil) or Symbol(null) or Symbol(t) because it creates annoying logical edge cases
-        if (symbolName == "nil") return Nil;
-        if (symbolName == "null") return Null;
-        if (symbolName == "t") return T;
+        if (symbolName == "nil")
+            return Nil;
+        if (symbolName == "null")
+            return Null;
+        if (symbolName == "t")
+            return T;
         return Symbol(symbolName);
     }
 
     // blankElements specifies a value to return for blank elements (i.e. if there are two delimiters in a row).
     // if blankElements is null, consecutive delimiters are skipped as a group
-    public function readDelimitedList(terminator: String, delimiters: Array<String>, eofTerminates: Bool, ?blankElements: HValue, start: String, stream: HStream): HValue {
+    public function readDelimitedList(terminator:String, delimiters:Array<String>, eofTerminates:Bool, ?blankElements:HValue, start:String,
+            stream:HStream):HValue {
         // While reading a delimited list we will use different terminators
         var oldTerminators = terminators.copy();
-        
+
         // We want to skip any whitespace that follows a delimiter, but if the terminator is a whitespace character, that will
         // cause an error, so for these purposes, don't treat the terminator as whitespace no matter what.
         var whitespaceForThesePurposes = HStream.WHITESPACE.copy();
@@ -299,14 +308,13 @@ class HissReader {
             stream.dropIfOneOf(delimiters);
             stream.dropWhileOneOf(whitespaceForThesePurposes);
         }
-        
+
         // require the terminator unless eofTerminates
-        if (eofTerminates && stream.isEmpty()) {
-        } else {
+        if (eofTerminates && stream.isEmpty()) {} else {
             // Always drop the terminator if it's there
             try {
                 stream.drop(terminator);
-            } catch (s: Dynamic) {
+            } catch (s:Dynamic) {
                 throw 'terminator $terminator not found while reading $delimiters delimited list from $stream';
             }
         }
@@ -316,7 +324,7 @@ class HissReader {
         return List(values);
     }
 
-    function callReadFunction(func: HValue, start: String, stream: HStream): HValue {
+    function callReadFunction(func:HValue, start:String, stream:HStream):HValue {
         var pos = stream.position();
         var startingStream = stream.toString();
         try {
@@ -327,10 +335,11 @@ class HissReader {
             return result;
         }
         #if !throwErrors
-        catch (s: Dynamic) {
+        catch (s:Dynamic) {
             var endingStream = stream.toString();
             var consumed = startingStream.substr(0, startingStream.length - endingStream.length);
-            if (s.indexOf("Reader error") == 0) throw s;
+            if (s.indexOf("Reader error") == 0)
+                throw s;
             throw 'Reader error `$s` after taking `$consumed` at ${pos.toString()}';
         }
         #end
@@ -338,17 +347,18 @@ class HissReader {
 
     var terminators = [")", "/*", ";", "//"];
 
-    public function read(start: String, stream: HStream): HValue {
+    public function read(start:String, stream:HStream):HValue {
         stream.dropWhitespace();
 
         for (length in macroLengths) {
-            if (stream.length() < length) continue;
+            if (stream.length() < length)
+                continue;
             var couldBeAMacro = stream.peek(length);
             if (readTable.exists_h(String(couldBeAMacro))) {
                 stream.drop(couldBeAMacro);
                 var pos = stream.position();
                 var expression = null;
-                
+
                 expression = callReadFunction(readTable.get_h(String(couldBeAMacro)), couldBeAMacro, stream);
 
                 // If the expression is a comment, try to read the next one
@@ -357,7 +367,7 @@ class HissReader {
                         return if (stream.isEmpty()) {
                             Nil; // This is awkward but better than always erroring when the last expression is a comment
                         } else {
-                            read("", stream); 
+                            read("", stream);
                         }
                     default:
                         expression;
@@ -368,12 +378,13 @@ class HissReader {
         // Call default read function
         return callReadFunction(readTable.get_h(String("")), "", stream);
     }
-    
-    // TODO this can have side effects
-    public function readAll(str: HValue, ?dropWhitespace: HValue, ?terminators: HValue, ?pos: HValue): HValue {
-        var stream: HStream = toStream(interp, str, pos);
 
-        if (dropWhitespace == null) dropWhitespace = T;
+    // TODO this can have side effects
+    public function readAll(str:HValue, ?dropWhitespace:HValue, ?terminators:HValue, ?pos:HValue):HValue {
+        var stream:HStream = toStream(interp, str, pos);
+
+        if (dropWhitespace == null)
+            dropWhitespace = T;
 
         var exprs = [];
 

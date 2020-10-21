@@ -1,10 +1,10 @@
 package hiss;
 
 using hiss.HaxeTools;
+
 import haxe.macro.Expr;
 import haxe.macro.Context;
 import haxe.io.Path;
-
 import hiss.HaxeTools;
 
 class CompileInfo {
@@ -12,18 +12,18 @@ class CompileInfo {
         Based on https://code.haxe.org/category/macros/add-git-commit-hash-in-build.html
         but with bells and whistles for a nice Hiss versioning convention
     **/
-    public static macro function version(): ExprOf<String> {
+    public static macro function version():ExprOf<String> {
         #if !display
         var posInfos = Context.getPosInfos(Context.currentPos());
         var directory = Path.directory(posInfos.file);
         var branch = try {
             HaxeTools.shellCommand('cd "$directory" && git branch --show-current');
-        } catch (err: Dynamic) { 
+        } catch (err:Dynamic) {
             "[unknown branch]";
         }
         var revision = try {
             HaxeTools.shellCommand('cd "$directory" && git rev-list --count HEAD');
-        } catch (err: Dynamic) {
+        } catch (err:Dynamic) {
             "[unknown revision#]";
         };
         var modified = try {
@@ -32,7 +32,7 @@ class CompileInfo {
             } else {
                 "";
             }
-        } catch (err: Dynamic) {
+        } catch (err:Dynamic) {
             "[unknown if modified]";
         }
         var target = Context.definedValue("target.name");

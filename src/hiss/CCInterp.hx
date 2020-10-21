@@ -1,9 +1,13 @@
 package hiss;
 
 import Type;
+
 using Type;
+
 import Reflect;
+
 using Reflect;
+
 import Std;
 import haxe.CallStack;
 import haxe.Constraints.Function;
@@ -11,12 +15,12 @@ import haxe.io.Path;
 import haxe.Log;
 import haxe.Timer;
 import hx.strings.Strings;
+
 using hx.strings.Strings;
 
 import hiss.wrappers.HHttp;
 import hiss.wrappers.HDate;
 import hiss.wrappers.HStringTools;
-
 import hiss.HTypes;
 import hiss.SpecialForms;
 #if (sys || hxnodejs)
@@ -30,15 +34,19 @@ import hiss.wrappers.Threading;
 import hiss.wrappers.HType;
 import hiss.HissReader;
 import hiss.HissTools;
+
 using hiss.HissTools;
+
 import hiss.Stdlib;
+
 using hiss.Stdlib;
+
 import hiss.StaticFiles;
 import hiss.VariadicFunctions;
 import hiss.NativeFunctions;
 import hiss.HissTestCase;
-
 import StringTools;
+
 using StringTools;
 
 enum SetType {
@@ -50,20 +58,21 @@ enum SetType {
 @:expose
 @:build(hiss.NativeFunctions.build())
 class CCInterp {
-    public var globals: HValue;
-    var reader: HissReader;
+    public var globals:HValue;
 
-    var tempTrace: Dynamic = null;
+    var reader:HissReader;
+
+    var tempTrace:Dynamic = null;
     var readingProgram = false;
     var maxStackDepth = 0;
-    
-    var errorHandler: (Dynamic) -> Void = null;
 
-    public function setErrorHandler(handler: (Dynamic) -> Void) {
+    var errorHandler:(Dynamic) -> Void = null;
+
+    public function setErrorHandler(handler:(Dynamic) -> Void) {
         errorHandler = handler;
     }
 
-    public function error(message: Dynamic) {
+    public function error(message:Dynamic) {
         if (errorHandler != null) {
             errorHandler(message);
         } else {
@@ -87,7 +96,7 @@ class CCInterp {
         }
     }
 
-    public function importVar(value: Dynamic, name: String) {
+    public function importVar(value:Dynamic, name:String) {
         globals.put(name, value.toHValue());
     }
 
@@ -103,14 +112,14 @@ class CCInterp {
     // functions starting with is[Something] will be imported without the is, using predicateSuffix
     // static functions with 'cc' in the metaSignature will be imported as ccfunctions with interp bound as the first argument (NOTE this will need to bypass reflect.callmethod in order to preserve asyncness)
     // static functions with 's' in the metaSignature are special forms (therefore they are also in cc form)
-    // TODO functions that convert [type1]To[type2] else will be imported with use conversionInfix instead of To 
+    // TODO functions that convert [type1]To[type2] else will be imported with use conversionInfix instead of To
     // functions with 'i' in the metaSignature will be imported with this interp bound as the first argument
     // functions with 'h' in the metaSignature will keep their args wrapped
     // functions with 'd' for destructive in the metaSignature will use sideEffectSuffix
     //     but also define an alias with a warning
     // functions and properties starting with an underscore will not be imported
     // TODO functions with 'a' in the metaSignature are asynchronous (only makes sense if they are also cc)
-    public function importClass(clazz: Class<Dynamic>, meta: ClassMeta) {
+    public function importClass(clazz:Class<Dynamic>, meta:ClassMeta) {
         if (debugClassImports) {
             trace('Import ${meta.name}');
         }
@@ -126,7 +135,7 @@ class CCInterp {
         if (meta.convertNames == null) {
             meta.convertNames = Strings.toLowerHyphen;
         }
-        
+
         if (meta.getterPrefix == null) {
             meta.getterPrefix = "get-";
         }
@@ -145,7 +154,8 @@ class CCInterp {
 
         var dummyInstance = clazz.createEmptyInstance();
         for (instanceField in clazz.getInstanceFields()) {
-            if (instanceField.startsWith("_")) continue;
+            if (instanceField.startsWith("_"))
+                continue;
             var fieldValue = Reflect.getProperty(dummyInstance, instanceField);
             switch (Type.typeof(fieldValue)) {
                 // Import methods:
@@ -161,10 +171,13 @@ class CCInterp {
                     var wrapArgs = if (metaSignature.contains("h")) T else Nil;
                     var destructive = metaSignature.contains("d");
                     var isPredicate = (translatedName.toLowerHyphen().split("-")[0] == "is");
-                    if (isPredicate) translatedName = translatedName.substr(2); // drop the 'is'
+                    if (isPredicate)
+                        translatedName = translatedName.substr(2); // drop the 'is'
                     translatedName = meta.convertNames(translatedName);
-                    if (isPredicate) translatedName += meta.predicateSuffix;
-                    if (destructive) translatedName += meta.sideEffectSuffix;
+                    if (isPredicate)
+                        translatedName += meta.predicateSuffix;
+                    if (destructive)
+                        translatedName += meta.sideEffectSuffix;
                     if (!meta.omitMemberPrefixes) {
                         translatedName = meta.name + ":" + translatedName;
                     }
@@ -182,9 +195,9 @@ class CCInterp {
                         // BUT if we get our function pointers from the empty instance, the C++ target
                         // will segfault when we try to call them, so getProperty has to be called every time
                         var methodPointer = Reflect.getProperty(instance, instanceField);
-                        var returnValue: Dynamic = Reflect.callMethod(instance, methodPointer, argArray);
+                        var returnValue:Dynamic = Reflect.callMethod(instance, methodPointer, argArray);
                         cc(returnValue.toHValue());
-                    }, {name:translatedName}));
+                    }, {name: translatedName}));
                     if (destructive) {
                         defDestructiveAlias(translatedName, meta.sideEffectSuffix);
                     }
@@ -209,9 +222,9 @@ class CCInterp {
                     }
                     globals.put(getterTranslatedName, Function((args, env, cc) -> {
                         var instance = args.first().value(this);
-                        var value : Dynamic = Reflect.getProperty(instance, instanceField);
+                        var value:Dynamic = Reflect.getProperty(instance, instanceField);
                         cc(value.toHValue());
-                    }, {name:getterTranslatedName}));
+                    }, {name: getterTranslatedName}));
 
                     var setterTranslatedName = meta.convertNames(instanceField);
                     setterTranslatedName = meta.setterPrefix + setterTranslatedName + meta.sideEffectSuffix;
@@ -226,14 +239,15 @@ class CCInterp {
                         var value = args.second().value(this);
                         Reflect.setProperty(instance, instanceField, value);
                         cc(args.second());
-                    }, {name:setterTranslatedName}));
+                    }, {name: setterTranslatedName}));
                     // It can be confusing to forget the ! when trying to use a setter, so allow usage without ! but with a warning:
                     defDestructiveAlias(setterTranslatedName, meta.sideEffectSuffix);
             }
         }
 
         for (classField in clazz.getClassFields()) {
-            if (classField.startsWith("_")) continue;
+            if (classField.startsWith("_"))
+                continue;
             // TODO this logic is much-repeated from the above for-loop
             var fieldValue = Reflect.getProperty(clazz, classField);
             switch (Type.typeof(fieldValue)) {
@@ -251,10 +265,13 @@ class CCInterp {
                     var specialForm = metaSignature.contains("s");
                     var ccFunction = !specialForm && metaSignature.contains("cc");
                     var isPredicate = (translatedName.toLowerHyphen().split("-")[0] == "is");
-                    if (isPredicate) translatedName = translatedName.substr(2); // drop the 'is'
+                    if (isPredicate)
+                        translatedName = translatedName.substr(2); // drop the 'is'
                     translatedName = meta.convertNames(translatedName);
-                    if (isPredicate) translatedName += meta.predicateSuffix;
-                    if (destructive) translatedName += meta.sideEffectSuffix;
+                    if (isPredicate)
+                        translatedName += meta.predicateSuffix;
+                    if (destructive)
+                        translatedName += meta.sideEffectSuffix;
                     if (!meta.omitStaticPrefixes) {
                         translatedName = meta.name + ":" + translatedName;
                     }
@@ -276,7 +293,7 @@ class CCInterp {
                                 argArray.insert(0, this);
                             }
                             cc(Reflect.callMethod(clazz, fieldValue, argArray).toHValue());
-                        }, {name:translatedName}));
+                        }, {name: translatedName}));
                     }
                     if (destructive) {
                         defDestructiveAlias(translatedName, meta.sideEffectSuffix);
@@ -287,90 +304,107 @@ class CCInterp {
         }
     }
 
-    public function importFunction(instance: Dynamic, func: Function, meta: CallableMeta, keepArgsWrapped: HValue = Nil) {
-        globals.put(meta.name, Function((args: HValue, env: HValue, cc: Continuation) -> {
+    public function importFunction(instance:Dynamic, func:Function, meta:CallableMeta, keepArgsWrapped:HValue = Nil) {
+        globals.put(meta.name, Function((args, env, cc) -> {
             cc(Reflect.callMethod(instance, func, args.unwrapList(this, keepArgsWrapped)).toHValue());
         }, meta));
     }
 
-    public function importCCFunction(func: HFunction, meta: CallableMeta) {
+    public function importCCFunction(func:HFunction, meta:CallableMeta) {
         globals.put(meta.name, Function(func, meta));
     }
 
-    public function importSpecialForm(func: HFunction, meta: CallableMeta) {
+    public function importSpecialForm(func:HFunction, meta:CallableMeta) {
         globals.put(meta.name, SpecialForm(func, meta));
     }
 
     // TODO this is like register-method but never used.
-    function importMethod(method: String, meta: CallableMeta, callOnReference: Bool, keepArgsWrapped: HValue, returnInstance: Bool) {
-        globals.put(meta.name, Function((args: HValue, env: HValue, cc: Continuation) -> {
+    function importMethod(method:String, meta:CallableMeta, callOnReference:Bool, keepArgsWrapped:HValue, returnInstance:Bool) {
+        globals.put(meta.name, Function((args, env, cc) -> {
             var instance = args.first().value(this, callOnReference);
             cc(instance.callMethod(instance.getProperty(method), args.rest_h().unwrapList(this, keepArgsWrapped)).toHValue());
         }, meta));
     }
 
-    public static function noOp (args: HValue, env: HValue, cc: Continuation) { }
-    public static function noCC (arg: HValue) { }
+    public static function noOp(args:HValue, env:HValue, cc:Continuation) {}
 
-    var currentBeginFunction: HFunction = null;
-    var currentEvalAllFunction: HFunction = null;
+    public static function noCC(arg:HValue) {}
 
-    static function emptyList() { return List([]); }
+    var currentBeginFunction:HFunction = null;
+    var currentEvalAllFunction:HFunction = null;
 
-    public function emptyDict() { return Dict(new HDict(this)); }
+    static function emptyList() {
+        return List([]);
+    }
 
-    public function emptyEnv() { return List([emptyDict()]); }
+    public function emptyDict() {
+        return Dict(new HDict(this));
+    }
+
+    public function emptyEnv() {
+        return List([emptyDict()]);
+    }
 
     // TODO declutter the constructor by refactoring to allow importObject(this)
-    public function new(?printFunction: (Dynamic) -> Dynamic) {
+    public function new(?printFunction:(Dynamic) -> Dynamic) {
         HissTestCase.reallyTrace = Log.trace;
 
         globals = emptyDict();
         reader = new HissReader(this);
 
         // convention: functions with side effects end with ! unless they start with def
-        
+
         // When not a repl, use Sys.exit for quitting
         #if (sys || hxnodejs)
-        importFunction(Sys, Sys.exit.bind(0), { name: "quit!", argNames: [] });
+        importFunction(Sys, Sys.exit.bind(0), {name: "quit!", argNames: []});
         #end
 
         // These functions make sense for living in CCInterp because they access internal state directly:
-        importSpecialForm(set.bind(Global), { name: "defvar" });
-        importSpecialForm(set.bind(Local), { name: "setlocal!" });
-        importSpecialForm(set.bind(Destructive), { name: "set!" });
-        importSpecialForm(setCallable.bind(false), { name: "defun" });
-        importSpecialForm(setCallable.bind(true), { name: "defmacro" });
+        importSpecialForm(set.bind(Global), {name: "defvar"});
+        importSpecialForm(set.bind(Local), {name: "setlocal!"});
+        importSpecialForm(set.bind(Destructive), {name: "set!"});
+        importSpecialForm(setCallable.bind(false), {name: "defun"});
+        importSpecialForm(setCallable.bind(true), {name: "defmacro"});
         importSpecialForm(defAlias, {name: "defalias"});
-        importSpecialForm(_eval, { name: "eval" });
-        importSpecialForm(funcall.bind(false), { name: "funcall" });
-        importSpecialForm(funcall.bind(true), { name: "funcall-inline" });
+        importSpecialForm(_eval, {name: "eval"});
+        importSpecialForm(funcall.bind(false), {name: "funcall"});
+        importSpecialForm(funcall.bind(true), {name: "funcall-inline"});
         // Use tail-recursive begin and iterate by default:
         useFunctions(trBegin, trEvalAll, iterate);
 
         // Allow switching at runtime:
-        importFunction(this, useFunctions.bind(trBegin, trEvalAll, iterate), { name: "disable-cc!" });
-        importFunction(this, useFunctions.bind(begin, evalAll, iterateCC), { name: "enable-cc!" });
+        importFunction(this, useFunctions.bind(trBegin, trEvalAll, iterate), {name: "disable-cc!"});
+        importFunction(this, useFunctions.bind(begin, evalAll, iterateCC), {name: "enable-cc!"});
 
         // Error handling
-        importFunction(this, error, { name: "error!", argNames: ["message"] }, Nil);
-        importSpecialForm(throwsError, { name: "error?" });
-        importSpecialForm(hissTry, { name: "try" });
+        importFunction(this, error, {name: "error!", argNames: ["message"]}, Nil);
+        importSpecialForm(throwsError, {name: "error?"});
+        importSpecialForm(hissTry, {name: "try"});
 
         // Running as a repl
-        importFunction(this, repl, {name:"repl"});
+        importFunction(this, repl, {name: "repl"});
 
         importFunction(this, read, {name: "read", argNames: ["string"]}, Nil);
         importFunction(this, readAll, {name: "read-all", argNames: ["string"]}, Nil);
 
         importClass(HStream, {name: "HStream"});
-        importFunction(reader, reader.setMacroString, {name: "set-macro-string!", argNames:  ["string", "read-function"]}, List([Int(1)]));
+        importFunction(reader, reader.setMacroString, {name: "set-macro-string!", argNames: ["string", "read-function"]}, List([Int(1)]));
         importFunction(reader, reader.setDefaultReadFunction, {name: "set-default-read-function!", argNames: ["read-function"]}, T);
         importFunction(reader, reader.readNumber, {name: "read-number!", argNames: ["start", "stream"]}, Nil);
         importFunction(reader, reader.readString, {name: "read-string!", argNames: ["start", "stream"]}, Nil);
         importFunction(reader, reader.readSymbol, {name: "read-symbol!", argNames: ["start", "stream"]}, Nil);
         importFunction(reader, reader.nextToken, {name: "HStream:next-token!", argNames: ["stream"]}, Nil);
-        importFunction(reader, reader.readDelimitedList, {name: "read-delimited-list!", argNames: ["terminator", "delimiters", "eof-terminates", "blank-elements", "start", "stream"]}, List([Int(3)]) /* keep blankElements wrapped */);
+        importFunction(reader, reader.readDelimitedList, {
+            name: "read-delimited-list!",
+            argNames: [
+                "terminator",
+                "delimiters",
+                "eof-terminates",
+                "blank-elements",
+                "start",
+                "stream"
+            ]
+        }, List([Int(3)]) /* keep blankElements wrapped */);
         importFunction(reader, reader.copyReadtable, {name: "copy-readtable"});
         importFunction(reader, reader.useReadtable, {name: "use-readtable!"});
         importFunction(reader, reader.read, {name: "read-next!", argNames: ["start", "stream"]});
@@ -385,7 +419,7 @@ class CCInterp {
         // Sometimes it's useful to provide the interpreter with your own target-native print function
         // so they will be used while the standard library is being loaded.
         if (printFunction != null) {
-            importFunction(this, printFunction, {name: "print!", argNames: ["value"]},Nil);
+            importFunction(this, printFunction, {name: "print!", argNames: ["value"]}, Nil);
         }
 
         importClass(VariadicFunctions, {name: "VariadicFunctions", omitStaticPrefixes: true});
@@ -395,14 +429,14 @@ class CCInterp {
         importClass(HDeque, {name: "Deque"});
         importClass(HLock, {name: "Lock"});
         importClass(HMutex, {name: "Mutex"});
-        importClass(HThread, {name:"Thread"});
-        //importClass(Threading.Tls, "Tls");
+        importClass(HThread, {name: "Thread"});
+        // importClass(Threading.Tls, "Tls");
         #end
 
         // Dictionaries
         importClass(HDict, {
-            name:"Dict", 
-            omitMemberPrefixes: true, 
+            name: "Dict",
+            omitMemberPrefixes: true,
             omitStaticPrefixes: true,
             convertNames: (name) -> {
                 return "dict-" + name.toLowerHyphen();
@@ -423,64 +457,62 @@ class CCInterp {
         // Alias HTTP so capitalization typos don't get annoying:
         importClass(HHttp, {name: "HTTP"});
 
-        importClass(HDate, {name:"Date"});
+        importClass(HDate, {name: "Date"});
 
         importClass(HType, {name: "Type"});
 
+        importCCFunction(_load, {name: "load!", argNames: ["file"]});
 
-        importCCFunction(_load, { name: "load!", argNames: ["file"] });
-        
         // First-class unit testing:
-        importSpecialForm(HissTestCase.testAtRuntime.bind(this), { name: "test!" });
-        importCCFunction(HissTestCase.hissPrints.bind(this), { name: "prints" });
+        importSpecialForm(HissTestCase.testAtRuntime.bind(this), {name: "test!"});
+        importCCFunction(HissTestCase.hissPrints.bind(this), {name: "prints"});
 
         // Operating system
-        importFunction(StaticFiles, StaticFiles.getContent, { name: "get-content", argNames: ["file"] });
+        importFunction(StaticFiles, StaticFiles.getContent, {name: "get-content", argNames: ["file"]});
 
-        importClass(SpecialForms, { name: "SpecialForms", omitStaticPrefixes: true});
+        importClass(SpecialForms, {name: "SpecialForms", omitStaticPrefixes: true});
 
-        importSpecialForm(loop, { name: "loop" });
+        importSpecialForm(loop, {name: "loop"});
 
         // TODO These functions do not use interp state, and could be defined in another class with the 's' meta
         importFunction(this, () -> new HDict(this), {name: "empty-readtable"});
 
         // TODO these classes should be wrapped and imported whole:
         // Std
-        importFunction(Std, Std.random, {name:"random"});
+        importFunction(Std, Std.random, {name: "random"});
         importFunction(Std, Std.parseInt, {name: "int"});
         importFunction(Std, Std.parseFloat, {name: "float"});
 
-        
         #if (sys || hxnodejs)
-        importFunction(Sys, Sys.sleep, { name: "sleep!", argNames: ["seconds"] });
-        importFunction(Sys, Sys.getEnv, { name: "get-env", argNames: ["var"]});
+        importFunction(Sys, Sys.sleep, {name: "sleep!", argNames: ["seconds"]});
+        importFunction(Sys, Sys.getEnv, {name: "get-env", argNames: ["var"]});
         #end
 
         StaticFiles.compileWith("stdlib2.hiss");
 
-        //disableTrace();
+        // disableTrace();
         load("stdlib2.hiss");
-        //enableTrace();
+        // enableTrace();
     }
 
     // error? will have an implicit begin
-    function throwsError(args: HValue, env: HValue, cc: Continuation) {
+    function throwsError(args:HValue, env:HValue, cc:Continuation) {
         try {
             internalEval(Symbol("begin").cons_h(args), env, (val) -> {
                 cc(Nil); // If the continuation is called, there is no error
             });
-        } catch (err: Dynamic) {
+        } catch (err:Dynamic) {
             cc(T);
         }
     }
 
-    function hissTry(args: HValue, env: HValue, cc: Continuation) {
+    function hissTry(args:HValue, env:HValue, cc:Continuation) {
         try {
             // Try cannot have an implicit begin because the second argument is the catch
             internalEval(args.first(), env, cc);
-        } catch (sig: HSignal) {
+        } catch (sig:HSignal) {
             throw sig;
-        } catch (err: Dynamic) {
+        } catch (err:Dynamic) {
             // TODO let the catch access the error message
             if (args.length_h() > 1) {
                 internalEval(args.second(), env, cc);
@@ -491,32 +523,32 @@ class CCInterp {
     }
 
     // TODO make public enableCC() and disableCC()
-    function useFunctions(beginFunction: HFunction, evalAllFunction: HFunction, iterateFunction: IterateFunction) {
+    function useFunctions(beginFunction:HFunction, evalAllFunction:HFunction, iterateFunction:IterateFunction) {
         currentBeginFunction = beginFunction;
         currentEvalAllFunction = evalAllFunction;
-        globals.put("begin", SpecialForm(beginFunction,{name:"begin"}));
-        importSpecialForm(iterateFunction.bind(true, true), {name:"for"});
-        importSpecialForm(iterateFunction.bind(false, true), {name:"do-for"});
-        importSpecialForm(iterateFunction.bind(true, false), {name:"map"});
-        importSpecialForm(iterateFunction.bind(false, false), {name:"do-map"});
+        globals.put("begin", SpecialForm(beginFunction, {name: "begin"}));
+        importSpecialForm(iterateFunction.bind(true, true), {name: "for"});
+        importSpecialForm(iterateFunction.bind(false, true), {name: "do-for"});
+        importSpecialForm(iterateFunction.bind(true, false), {name: "map"});
+        importSpecialForm(iterateFunction.bind(false, false), {name: "do-map"});
         return Nil;
     }
 
     /** Run a Hiss REPL from this interpreter instance **/
-    public function repl(useConsoleReader=true) {
+    public function repl(useConsoleReader = true) {
         StaticFiles.compileWith("repl-lib.hiss");
         load("repl-lib.hiss");
 
-        
         var history = [];
-        importFunction(this, () -> history, {name:"history"});
-        importFunction(this, (str) -> history[history.length-1] = str, {name:"rewrite-history"});
+        importFunction(this, () -> history, {name: "history"});
+        importFunction(this, (str) -> history[history.length - 1] = str, {name: "rewrite-history"});
         #if (sys || hxnodejs)
         var historyFile = Path.join([Stdlib.homeDir(), ".hisstory"]);
         history = sys.io.File.getContent(historyFile).split("\n");
 
         var cReader = null;
-        if (useConsoleReader) cReader = new ConsoleReader(-1, historyFile);
+        if (useConsoleReader)
+            cReader = new ConsoleReader(-1, historyFile);
         // The REPL needs to make sure its ConsoleReader actually saves the history on exit, so quit() is provided here
         // differently than the version in stdlib2.hiss :)
         importFunction(this, () -> {
@@ -524,7 +556,7 @@ class CCInterp {
                 cReader.saveHistory();
             }
             throw HSignal.Quit;
-        }, {name:"quit!"});
+        }, {name: "quit!"});
         var locals = emptyEnv(); // This allows for top-level setlocal
 
         HaxeTools.println('Hiss version ${CompileInfo.version()}');
@@ -532,7 +564,7 @@ class CCInterp {
 
         while (true) {
             HaxeTools.print(">>> ");
-            
+
             var next = "";
             if (useConsoleReader) {
                 cReader.cmd.prompt = ">>> ";
@@ -543,31 +575,30 @@ class CCInterp {
             }
             history.push(next);
 
-            //interp.disableTrace();
+            // interp.disableTrace();
             var exp = null;
             try {
                 exp = read(next);
-            } catch (err: Dynamic) {
+            } catch (err:Dynamic) {
                 HaxeTools.println('Reader error: $err');
                 continue;
             }
-            //interp.enableTrace();
+            // interp.enableTrace();
 
             // TODO errors from async functions won't be caught by this, so use errorHandler instead of try-catch
             try {
                 internalEval(exp, locals, Stdlib.print_hd);
-            }
-            catch (e: HSignal) {
+            } catch (e:HSignal) {
                 switch (e) {
                     case Quit:
                         return;
                 }
             }
             #if (!throwErrors)
-            catch (s: String) {
+            catch (s:String) {
                 HaxeTools.println('Error "$s" from `${exp.toPrint()}`');
                 HaxeTools.println('Callstack depth ${CallStack.callStack().length}');
-            } catch (err: Dynamic) {
+            } catch (err:Dynamic) {
                 HaxeTools.println('Error type ${Type.typeof(err)}: $err from `${exp.toPrint()}`');
                 HaxeTools.println('Callstack depth ${CallStack.callStack().length}');
             }
@@ -580,8 +611,8 @@ class CCInterp {
 
     /** Command-line entrypoint for Hiss. Usage:
 
-            hiss [file.hiss] -- run a hiss script
-            hiss -- start a REPL
+        hiss [file.hiss] -- run a hiss script
+        hiss -- start a REPL
 
     **/
     public static function main() {
@@ -590,14 +621,14 @@ class CCInterp {
         run(interp);
     }
 
-    var scriptArgs: HList = [];
+    var scriptArgs:HList = [];
 
-    public static function run(interp: CCInterp, ?args: Array<String>) {
+    public static function run(interp:CCInterp, ?args:Array<String>) {
         #if (sys || hxnodejs)
         if (args == null) {
             args = Sys.args();
         }
-        
+
         var useConsoleReader = true;
         var script = null;
 
@@ -628,14 +659,13 @@ class CCInterp {
         #else
         trace("Hiss cannot run as a console application on this target.");
         #end
-
     }
 
-    public function load(file: String) {
+    public function load(file:String) {
         _load(List([String(file)]), emptyEnv(), noCC);
     }
 
-    function _load(args: HValue, env: HValue, cc: Continuation) {
+    function _load(args:HValue, env:HValue, cc:Continuation) {
         readingProgram = true;
         var exps = reader.readAll(String(StaticFiles.getContent(args.first().value(this))));
         readingProgram = false;
@@ -644,22 +674,24 @@ class CCInterp {
         currentBeginFunction(exps, env, cc);
     }
 
-    function envWithReturn(env: HValue, called: RefBool) {
+    function envWithReturn(env:HValue, called:RefBool) {
         var stackFrameWithReturn = emptyDict();
         stackFrameWithReturn.put("return", Function((args, env, cc) -> {
             called.b = true;
             cc(args.first());
-        }, {name:"return"}));
+        }, {name: "return"}));
         return env.extend(stackFrameWithReturn);
     }
 
-    function envWithBreakContinue(env: HValue, breakCalled: RefBool, continueCalled: RefBool) {
+    function envWithBreakContinue(env:HValue, breakCalled:RefBool, continueCalled:RefBool) {
         var stackFrameWithBreakContinue = emptyDict();
         stackFrameWithBreakContinue.put("continue", Function((_, _, continueCC) -> {
-            continueCalled.b = true; continueCC(Nil);
-        }, {name:"continue"}));
+            continueCalled.b = true;
+            continueCC(Nil);
+        }, {name: "continue"}));
         stackFrameWithBreakContinue.put("break", Function((_, _, breakCC) -> {
-            breakCalled.b = true; breakCC(Nil);
+            breakCalled.b = true;
+            breakCC(Nil);
         }, {name: "break"}));
         return env.extend(stackFrameWithBreakContinue);
     }
@@ -668,43 +700,41 @@ class CCInterp {
         This tail-recursive implementation of begin breaks callCC.
         Toggle between tail recursion and continuation support with
         (enable-tail-recursion), (disable-tail-recursion),
-                               X
+                X
         (enable-continuations), (disable-continuations)
 
         (The X denotes equivalent functions)
     **/
-    function trBegin(exps: HValue, env: HValue, cc: Continuation) {
+    function trBegin(exps:HValue, env:HValue, cc:Continuation) {
         var returnCalled = new RefBool();
         env = envWithReturn(env, returnCalled);
         var value = eval(exps.first(), env);
 
         if (returnCalled.b || !truthy(exps.rest_h())) {
             cc(value);
-        }
-        else {
+        } else {
             trBegin(exps.rest_h(), env, cc);
         }
     }
 
-    function begin(exps: HValue, env: HValue, cc: Continuation) {
+    function begin(exps:HValue, env:HValue, cc:Continuation) {
         var returnCalled = new RefBool();
         env = envWithReturn(env, returnCalled);
 
         internalEval(exps.first(), env, (result) -> {
             if (returnCalled.b || !truthy(exps.rest_h())) {
                 cc(result);
-            }
-            else {
+            } else {
                 begin(exps.rest_h(), env, cc);
             }
         });
     }
 
-    function specialForm(args: HValue, env: HValue, cc: Continuation) {
+    function specialForm(args:HValue, env:HValue, cc:Continuation) {
         #if traceCallstack
         HaxeTools.println('${CallStack.callStack().length}: ${args.toPrint()}');
         #end
-        switch(args.first()) {
+        switch (args.first()) {
             case Macro(func, meta) | SpecialForm(func, meta):
                 #if !ignoreWarnings
                 if (meta.deprecated) {
@@ -712,12 +742,13 @@ class CCInterp {
                 }
                 #end
                 func(args.rest_h(), env, cc);
-            default: throw '${args.first()} is not a macro or special form';
+            default:
+                throw '${args.first()} is not a macro or special form';
         }
     }
 
-    function macroCall(args: HValue, env: HValue, cc: Continuation) {
-        specialForm(args, env, (expansion: HValue) -> {
+    function macroCall(args:HValue, env:HValue, cc:Continuation) {
+        specialForm(args, env, (expansion:HValue) -> {
             #if traceMacros
             HaxeTools.println('${args.toPrint()} -> ${expansion.toPrint()}');
             #end
@@ -725,14 +756,14 @@ class CCInterp {
         });
     }
 
-    function funcall(callInline: Bool, args: HValue, env: HValue, cc: Continuation) {
+    function funcall(callInline:Bool, args:HValue, env:HValue, cc:Continuation) {
         #if traceCallstack
         HaxeTools.println('${CallStack.callStack().length}: ${args.toPrint()}');
         #end
-        
+
         currentEvalAllFunction(args, env, (values) -> {
             // trace(values.toPrint());
-            
+
             switch (values.first()) {
                 case Function(func, meta):
                     #if !ignoreWarnings
@@ -743,12 +774,10 @@ class CCInterp {
                     func(values.rest_h(), if (callInline) env else emptyEnv(), cc);
                 default: throw 'Cannot funcall ${values.first()}';
             }
-            
-            
         });
     }
 
-    function evalAll(args: HValue, env: HValue, cc: Continuation) {
+    function evalAll(args:HValue, env:HValue, cc:Continuation) {
         if (!truthy(args)) {
             cc(Nil);
         } else {
@@ -760,7 +789,7 @@ class CCInterp {
         }
     }
 
-    function trEvalAll(args: HValue, env: HValue, cc: Continuation) {
+    function trEvalAll(args:HValue, env:HValue, cc:Continuation) {
         if (!truthy(args)) {
             cc(Nil);
         } else {
@@ -768,37 +797,36 @@ class CCInterp {
         }
     }
 
-    function set(type: SetType, args: HValue, env: HValue, cc: Continuation) {
-        internalEval(args.second(),
-            env, (val) -> {
-                var scope = null;
-                switch (type) {
-                    case Global:
-                        scope = globals;
-                    case Local:
-                        scope = env.first();
-                    case Destructive:
-                        for (frame in env.toList()) {
-                            var frameDict = frame.toDict();
-                            if (frameDict.exists_h(args.first())) {
-                                scope = frame;
-                                break;
-                            }
+    function set(type:SetType, args:HValue, env:HValue, cc:Continuation) {
+        internalEval(args.second(), env, (val) -> {
+            var scope = null;
+            switch (type) {
+                case Global:
+                    scope = globals;
+                case Local:
+                    scope = env.first();
+                case Destructive:
+                    for (frame in env.toList()) {
+                        var frameDict = frame.toDict();
+                        if (frameDict.exists_h(args.first())) {
+                            scope = frame;
+                            break;
                         }
-                        if (scope == null) scope = globals;
-                }
-                scope.put(args.first().symbolName_h(), val);
-                cc(val);
-            });
+                    }
+                    if (scope == null) scope = globals;
+            }
+            scope.put(args.first().symbolName_h(), val);
+            cc(val);
+        });
     }
 
-    function setCallable(isMacro: Bool, args: HValue, env: HValue, cc: Continuation) {
-        SpecialForms.lambda_s(this, args.rest_h(), env, (fun: HValue) -> {
+    function setCallable(isMacro:Bool, args:HValue, env:HValue, cc:Continuation) {
+        SpecialForms.lambda_s(this, args.rest_h(), env, (fun : HValue) -> {
             set(Global, args.first().cons_h(List([fun])), env, cc);
         }, args.first().symbolName_h(), isMacro);
     }
 
-    function defAlias(args: HValue, env: HValue, cc: Continuation) {
+    function defAlias(args:HValue, env:HValue, cc:Continuation) {
         var func = args.first();
         var alias = args.second();
         var metaSymbols = [for (symbol in args.toList().slice(2)) symbol.symbolName_h()];
@@ -832,11 +860,15 @@ class CCInterp {
         The Hiss convention is for functions with side effects to end with "!".
         It can be nice to have things work without the !, but with a warning.
     **/
-    public function defDestructiveAlias(destructiveName: String, suffix: String) {
-        defAlias(List([Symbol(destructiveName), Symbol(destructiveName.substr(0, destructiveName.length - suffix.length)), Symbol("@deprecated")]), emptyEnv(), noCC);
+    public function defDestructiveAlias(destructiveName:String, suffix:String) {
+        defAlias(List([
+            Symbol(destructiveName),
+            Symbol(destructiveName.substr(0, destructiveName.length - suffix.length)),
+            Symbol("@deprecated")
+        ]), emptyEnv(), noCC);
     }
 
-    function getVar(name: HValue, env: HValue, cc: Continuation) {
+    function getVar(name:HValue, env:HValue, cc:Continuation) {
         // Env is a list of dictionaries -- stack frames
         var stackFrames = env.toList();
 
@@ -860,7 +892,7 @@ class CCInterp {
     }
 
     // Helper function to get the iterable object in iterate() and iterateCC()
-    function iterable(bodyForm: Bool, args: HValue, env: HValue, cc: Continuation) {
+    function iterable(bodyForm:Bool, args:HValue, env:HValue, cc:Continuation) {
         internalEval(if (bodyForm) {
             args.second();
         } else {
@@ -868,7 +900,7 @@ class CCInterp {
         }, env, cc);
     }
 
-    function performIteration(bodyForm: Bool, args:HValue, env: HValue, cc: Continuation, performFunction: PerformIterationFunction) {
+    function performIteration(bodyForm:Bool, args:HValue, env:HValue, cc:Continuation, performFunction:PerformIterationFunction) {
         if (bodyForm) {
             var body = List(args.toList().slice(2));
             performFunction((innerArgs, innerEnv, innerCC) -> {
@@ -879,7 +911,7 @@ class CCInterp {
             }, env, cc);
         } else {
             // If it's function form, a name symbol is not necessary
-            internalEval(args.second(), env, (fun) -> { 
+            internalEval(args.second(), env, (fun) -> {
                 performFunction(fun.toHFunction(), emptyEnv(), cc);
             });
         }
@@ -888,12 +920,14 @@ class CCInterp {
     /**
         Stack-safe implementation behind (for), (do-for), (map), and (do-map)
     **/
-    function iterate(collect: Bool, bodyForm: Bool, args: HValue, env: HValue, cc: Continuation) {
-        var it: HValue = Nil;
-        iterable(bodyForm, args, env, (_iterable) -> { it = _iterable; });
-        var iterable: Iterable<HValue> = it.value(this, true);
+    function iterate(collect:Bool, bodyForm:Bool, args:HValue, env:HValue, cc:Continuation) {
+        var it:HValue = Nil;
+        iterable(bodyForm, args, env, (_iterable) -> {
+            it = _iterable;
+        });
+        var iterable:Iterable<HValue> = it.value(this, true);
 
-        function synchronousIteration(operation: HFunction, innerEnv: HValue, outerCC: Continuation) {
+        function synchronousIteration(operation:HFunction, innerEnv:HValue, outerCC:Continuation) {
             var results = [];
             var continueCalled = new RefBool();
             var breakCalled = new RefBool();
@@ -915,7 +949,8 @@ class CCInterp {
 
             for (value in iterable) {
                 operation(List([value]), innerEnv, iterationCC);
-                if (breakCalled.b) break;
+                if (breakCalled.b)
+                    break;
             }
 
             outerCC(List(results));
@@ -927,9 +962,9 @@ class CCInterp {
     /**
         Continuation-based (and therefore dangerous!) implementation
     **/
-    function iterateCC(collect: Bool, bodyForm: Bool, args: HValue, env: HValue, cc: Continuation) {
+    function iterateCC(collect:Bool, bodyForm:Bool, args:HValue, env:HValue, cc:Continuation) {
         iterable(bodyForm, args, env, (it) -> {
-            var iterable: Iterable<HValue> = it.value(this, true);
+            var iterable:Iterable<HValue> = it.value(this, true);
             var iterator = iterable.iterator();
 
             var results = [];
@@ -938,7 +973,7 @@ class CCInterp {
 
             env = envWithBreakContinue(env, breakCalled, continueCalled);
 
-            function asynchronousIteration(operation: HFunction, innerEnv: HValue, outerCC: Continuation) {
+            function asynchronousIteration(operation:HFunction, innerEnv:HValue, outerCC:Continuation) {
                 if (!iterator.hasNext()) {
                     outerCC(List(results));
                 } else {
@@ -955,7 +990,6 @@ class CCInterp {
                         }
                     });
                 }
-                
             }
 
             performIteration(bodyForm, args, env, cc, asynchronousIteration);
@@ -965,7 +999,7 @@ class CCInterp {
     /**
         Special form for performing Hiss operations tail-recursively
     **/
-    function loop(args: HValue, env: HValue, cc: Continuation) {
+    function loop(args:HValue, env:HValue, cc:Continuation) {
         var bindings = args.first();
         var body = args.rest_h();
 
@@ -974,8 +1008,10 @@ class CCInterp {
         currentEvalAllFunction(firstValueExps, env, (firstValues) -> {
             var nextValues = Nil;
             var recurCalled = false;
-            var recur: HFunction = (nextValueExps, env, cc) -> {
-                currentEvalAllFunction(nextValueExps, env, (nextVals) -> {nextValues = nextVals;});
+            var recur:HFunction = (nextValueExps, env, cc) -> {
+                currentEvalAllFunction(nextValueExps, env, (nextVals) -> {
+                    nextValues = nextVals;
+                });
                 recurCalled = true;
             }
             var values = firstValues;
@@ -987,15 +1023,17 @@ class CCInterp {
                 }
 
                 // Recur has to be a special form so it retains the environment of the original loop call
-                internalEval(Symbol("begin").cons_h(body), env.extend(names.destructuringBind(this, SpecialForm(recur, {name: "recur"}).cons_h(values))), (value) -> {result = value;});
-                
+                internalEval(Symbol("begin").cons_h(body), env.extend(names.destructuringBind(this, SpecialForm(recur, {name: "recur"}).cons_h(values))),
+                    (value) -> {
+                        result = value;
+                    });
             } while (recurCalled);
             cc(result);
         });
     }
 
     // This breaks continuation-based signature rules because I just want it to work.
-    public function evalUnquotes(expr: HValue, env: HValue): HValue {
+    public function evalUnquotes(expr:HValue, env:HValue):HValue {
         switch (expr) {
             case List(exps):
                 var copy = exps.copy();
@@ -1007,7 +1045,7 @@ class CCInterp {
                             copy.splice(idx, 1);
 
                             internalEval(exp, env, (innerList) -> {
-                                for (exp in innerList.toList()) { 
+                                for (exp in innerList.toList()) {
                                     copy.insert(idx++, exp);
                                 }
                                 idx--; // continue; would be better, but this is a callback!
@@ -1016,7 +1054,7 @@ class CCInterp {
                         case Quote(UnquoteList(exp)):
                             copy.splice(idx, 1);
                             internalEval(exp, env, (innerList) -> {
-                                for (exp in innerList.toList()) { 
+                                for (exp in innerList.toList()) {
                                     copy.insert(idx++, Quote(exp));
                                 }
                                 idx--;
@@ -1027,40 +1065,43 @@ class CCInterp {
                             copy.insert(idx, evalUnquotes(exp, env));
                     }
                     idx++;
- 
                 }
                 return List(copy);
             case Quote(exp):
                 return Quote(evalUnquotes(exp, env));
             case Unquote(h):
                 var val = Nil;
-                internalEval(h, env, (v) -> { val = v; });
+                internalEval(h, env, (v) -> {
+                    val = v;
+                });
                 return val;
             case Quasiquote(exp):
                 return evalUnquotes(exp, env);
-            default: return expr;
+            default:
+                return expr;
         };
     }
 
-    public function read(str: String) {
+    public function read(str:String) {
         return reader.read("", HStream.FromString(str));
     }
 
-    public function readAll(str: String) {
+    public function readAll(str:String) {
         return reader.readAll(String(str));
     }
 
     /** Hiss-callable form for eval **/
-    function _eval(args: HValue, env: HValue, cc: Continuation) {
+    function _eval(args:HValue, env:HValue, cc:Continuation) {
         internalEval(args.first(), env, (val) -> {
             internalEval(val, env, cc);
         });
     }
 
     /** Public, synchronous form of eval. Won't work with javascript asynchronous functions **/
-    public function eval(arg: HValue, ?env: HValue) {
+    public function eval(arg:HValue, ?env:HValue) {
         var value = null;
-        if (env == null) env = emptyEnv();
+        if (env == null)
+            env = emptyEnv();
         internalEval(arg, env, (_value) -> {
             value = _value;
         });
@@ -1068,26 +1109,27 @@ class CCInterp {
     }
 
     /** Asynchronous-friendly form of eval. NOTE: The args are out of order so this isn't an HFunction. **/
-    public function evalCC(arg: HValue, cc: Continuation, ?env: HValue) {
-        if (env == null) env = emptyEnv();
+    public function evalCC(arg:HValue, cc:Continuation, ?env:HValue) {
+        if (env == null)
+            env = emptyEnv();
         internalEval(arg, env, cc);
     }
 
     /**
      * Behind the scenes, this function evaluates the truthiness of an HValue.
      * Its behavior can be overridden, but don't do it unless you know what you're getting into.
-     **/
-    public dynamic function truthy(cond: HValue): Bool {
+    **/
+    public dynamic function truthy(cond:HValue):Bool {
         return switch (cond) {
             case Nil: false;
-            //case Int(i) if (i == 0): false; /* 0 being falsy would be useful for Hank read-counts */
+            // case Int(i) if (i == 0): false; /* 0 being falsy would be useful for Hank read-counts */
             case List([]): false;
             default: true;
         }
     }
 
     /** Core form of eval -- continuation-based, takes one expression **/
-    private function internalEval(exp: HValue, env: HValue, cc: Continuation) {
+    private function internalEval(exp:HValue, env:HValue, cc:Continuation) {
         // TODO if there's an error handler, handle exceptions from haxe code through that
 
         switch (exp) {
@@ -1104,12 +1146,12 @@ class CCInterp {
                 while (interpolated.indexOf("$", idx) != -1) {
                     idx = interpolated.indexOf("$", idx);
                     // Allow \$ for putting $ in string.
-                    if (interpolated.charAt(idx-1) == '\\') {
+                    if (interpolated.charAt(idx - 1) == '\\') {
                         interpolated = interpolated.substr(0, idx - 1) + interpolated.substr(idx++);
                         continue;
                     }
 
-                    var expStream = HStream.FromString(interpolated.substr(idx+1));
+                    var expStream = HStream.FromString(interpolated.substr(idx + 1));
 
                     // Allow ${name} so a space isn't required to terminate the symbol
                     var exp = null;
@@ -1126,7 +1168,7 @@ class CCInterp {
                         expLength = startingLength - expStream.length();
                     }
                     internalEval(exp, env, (val) -> {
-                        interpolated = interpolated.substr(0, idx) + val.toMessage() + interpolated.substr(idx+1+expLength);
+                        interpolated = interpolated.substr(0, idx) + val.toMessage() + interpolated.substr(idx + 1 + expLength);
                         idx = idx + 1 + val.toMessage().length;
                     });
                 }
@@ -1151,12 +1193,12 @@ class CCInterp {
                     // HaxeTools.println('${CallStack.callStack().length}'.lpad(' ', 3) + '/' + '$maxStackDepth'.rpad(' ', 3) + '    ${exp.toPrint()}');
                 }
 
-                internalEval(exp.first(), env, (callable: HValue) -> {
+                internalEval(exp.first(), env, (callable:HValue) -> {
                     switch (callable) {
                         case Function(_):
                             inline funcall(false, exp, env, cc);
                         case Macro(_):
-                            //HaxeTools.print('macroexpanding ${exp.toPrint()} -> ');
+                            // HaxeTools.print('macroexpanding ${exp.toPrint()} -> ');
                             inline macroCall(callable.cons_h(exp.rest_h()), env, cc);
                         case SpecialForm(_):
                             inline specialForm(callable.cons_h(exp.rest_h()), env, cc);
@@ -1169,5 +1211,5 @@ class CCInterp {
     }
 }
 
-typedef IterateFunction = (collect: Bool, bodyForm: Bool, args: HValue, env: HValue, cc: Continuation) -> Void;
-typedef PerformIterationFunction = (operation: HFunction, env: HValue, cc: Continuation) -> Void;
+typedef IterateFunction = (collect:Bool, bodyForm:Bool, args:HValue, env:HValue, cc:Continuation) -> Void;
+typedef PerformIterationFunction = (operation:HFunction, env:HValue, cc:Continuation) -> Void;

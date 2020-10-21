@@ -8,7 +8,7 @@ class HFile {
         return File.getContent(path);
     }
 
-    public static function saveContent_d(path:String, content: String):Void {
+    public static function saveContent_d(path:String, content:String):Void {
         File.saveContent(path, content);
     }
 }

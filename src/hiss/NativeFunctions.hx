@@ -9,7 +9,7 @@ import haxe.macro.Expr;
     around as objects in the target language.
 **/
 class NativeFunctions {
-    public static macro function build(): Array<Field> {
+    public static macro function build():Array<Field> {
         var fields = Context.getBuildFields();
 
         // 5 seems like a reasonable default number of arguments
@@ -30,7 +30,7 @@ class NativeFunctions {
             meta: [],
             access: [APublic],
             kind: FFun({
-                ret: macro : Dynamic,
+                ret: macro:Dynamic,
                 args: [],
                 expr: macro return $v{maxArgCount}
             }),
@@ -39,10 +39,10 @@ class NativeFunctions {
 
         var fullBodyExpr = "switch (fun) {";
 
-        for (argCount in 0...maxArgCount+1) {
+        for (argCount in 0...maxArgCount + 1) {
             var argListExpr = "(";
             var funcallExpr = "funcall(false, List([fun,";
-            for (argNum in 1...argCount+1) {
+            for (argNum in 1...argCount + 1) {
                 argListExpr += '?arg$argNum: Dynamic,';
                 funcallExpr += 'Quote(arg$argNum.toHValue()),';
             }
@@ -56,7 +56,9 @@ class NativeFunctions {
                                 return $argListExpr -> { var val = null; $funcallExpr; return val.value(this, true);};\n';
         }
 
-        fullBodyExpr += "case Function(_, meta) if (meta.argNames != null && meta.argNames.length >" + maxArgCount + "):
+        fullBodyExpr += "case Function(_, meta) if (meta.argNames != null && meta.argNames.length >"
+            + maxArgCount
+            + "):
                             throw 'Function has too many args for conversion to native function';
                         case Function(_, meta) if (meta.argNames == null):
                             throw 'Function ' + meta.name + ' has no args specified, cannot be converted';
@@ -70,10 +72,12 @@ class NativeFunctions {
             meta: [],
             access: [APublic],
             kind: FFun({
-                ret: macro : Dynamic,
-                args: [{
-                    name: "fun",
-                    type: macro : HValue}
+                ret: macro:Dynamic,
+                args: [
+                    {
+                        name: "fun",
+                        type: macro:HValue
+                    }
                 ],
                 expr: Context.parse(fullBodyExpr, Context.currentPos())
             }),

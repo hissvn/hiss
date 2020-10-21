@@ -1,9 +1,9 @@
 package hiss.wrappers;
 
 import haxe.Http;
-
 import hiss.HTypes;
 import hiss.HissTools;
+
 using hiss.HissTools;
 using hiss.Stdlib;
 
@@ -11,14 +11,14 @@ using hiss.Stdlib;
     More complicated than most hiss type wrappers.
 **/
 class HHttp {
-    var _instance: Http;
+    var _instance:Http;
 
-    public function new(url: String) {
+    public function new(url:String) {
         _instance = new Http(url);
     }
 
     // setters
-    public function setHeader_d(name: String, value: String) {
+    public function setHeader_d(name:String, value:String) {
         _instance.setHeader(name, value);
     }
 
@@ -37,18 +37,18 @@ class HHttp {
     // TODO this method is conditionally defined for now, but requestUrl() should probably be added to HttpNodeJs upstream.
     // https://github.com/HaxeFoundation/haxe/issues/9896
     #if !nodejs
-    public static function requestUrl(url:String) : String {
+    public static function requestUrl(url:String):String {
         return Http.requestUrl(url);
     }
     #end
 
-    public static function request_dcc(interp: CCInterp, args: HValue, env: HValue, cc: Continuation) {
+    public static function request_dcc(interp:CCInterp, args:HValue, env:HValue, cc:Continuation) {
         // First arg: an HHttp object
-        var http: Http = args.first().value(interp)._instance;
+        var http:Http = args.first().value(interp)._instance;
         // Second (optional) arg: whether to send as POST request
         var post = if (args.length_h() > 1) args.second().value(interp) else false;
 
-        http.onData = (dataString: String) -> {
+        http.onData = (dataString:String) -> {
             cc(dataString.toHValue());
         };
 

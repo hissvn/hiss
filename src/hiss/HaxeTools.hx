@@ -14,12 +14,12 @@ import haxe.extern.EitherType;
 #end
 
 class HaxeTools {
-    public static macro function extract(value:ExprOf<EnumValue>, pattern:Expr, ?hint: ExprOf<String>):Expr {
+    public static macro function extract(value:ExprOf<EnumValue>, pattern:Expr, ?hint:ExprOf<String>):Expr {
         switch (pattern) {
             case macro $a => $b:
                 return macro switch ($value) {
                     case $a: $b;
-                    default: 
+                    default:
                         var v = Std.string($value);
                         throw 'extraction to `' + $hint + '` failed on `' + v + '`';
                 }
@@ -28,36 +28,36 @@ class HaxeTools {
         }
     }
 
-    public static function print(str: String) {
+    public static function print(str:String) {
         #if (sys || hxnodejs)
-            Sys.print(str);
+        Sys.print(str);
         #else
-            trace(str); // TODO this will have an unwanted newline
+        trace(str); // TODO this will have an unwanted newline
         #end
     }
 
-    public static function println(str: String) {
+    public static function println(str:String) {
         #if (sys || hxnodejs)
-            Sys.println(str);
+        Sys.println(str);
         #else
-            trace(str);
+        trace(str);
         #end
     }
 
-    public static function shellCommand(cmd: String): String {
+    public static function shellCommand(cmd:String):String {
         #if sys
-            var process = new Process(cmd);
-            if (process.exitCode() != 0) {
-                var message = process.stderr.readAll().toString();
-                throw 'Shell command error from `$cmd`: $message';
-            }
+        var process = new Process(cmd);
+        if (process.exitCode() != 0) {
+            var message = process.stderr.readAll().toString();
+            throw 'Shell command error from `$cmd`: $message';
+        }
 
-            var result = process.stdout.readAll();
-            process.close();
+        var result = process.stdout.readAll();
+        process.close();
 
-            return result.toString().trim();
+        return result.toString().trim();
         #else
-            throw "Can't run shell command on non-sys platform.";
+        throw "Can't run shell command on non-sys platform.";
         #end
     }
 }

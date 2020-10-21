@@ -12,7 +12,9 @@ if [ ! -z "$1" ]; then
     fi
 fi
 
-eval "haxe build-scripts/test/test-interp.hxml $end
+eval "haxelib run formatter --check -s . $end
+
+haxe build-scripts/test/test-interp.hxml $end
 
 haxe build-scripts/repl/build-py-repl.hxml && \
 haxe build-scripts/test/test-py$pysuffix.hxml $end

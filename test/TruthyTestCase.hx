@@ -1,12 +1,13 @@
 package test;
 
 import hiss.CCInterp;
+
 using hiss.HissTools;
+
 import utest.Assert;
 
 class TruthyTestCase extends utest.Test {
-
-    function evalString(s: String, interp: CCInterp): Dynamic {
+    function evalString(s:String, interp:CCInterp):Dynamic {
         return interp.eval(interp.read(s)).value(interp);
     }
 
