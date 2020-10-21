@@ -321,7 +321,7 @@ class CCInterp {
 
     public function emptyEnv() { return List([emptyDict()]); }
 
-    // TODO declutter the constructor by refactoring to allow importClass(CCInterp) and importClass(HissTools) (and importClass of whatever functions get split out of HissTools)
+    // TODO declutter the constructor by refactoring to allow importObject(this)
     public function new(?printFunction: (Dynamic) -> Dynamic) {
         HissTestCase.reallyTrace = Log.trace;
 
@@ -430,15 +430,11 @@ class CCInterp {
         importFunction(StaticFiles, StaticFiles.getContent, { name: "get-content", argNames: ["file"] });
 
         importClass(SpecialForms, { name: "SpecialForms", omitStaticPrefixes: true});
-        // TODO These functions do not use interp state, and could be defined in another class with the 's' meta
-        importSpecialForm(callCC, { name: "call/cc" });
+
         importSpecialForm(loop, { name: "loop" });
-        importSpecialForm(or, { name: "or" });
-        importSpecialForm(and, { name: "and" });
+
+        // TODO These functions do not use interp state, and could be defined in another class with the 's' meta
         importFunction(this, () -> new HDict(this), {name: "empty-readtable"});
-        importSpecialForm(quote, {name:"quote"});
-        importCCFunction(delay, { name: "delay!", argNames: ["func", "seconds"] });
-        importSpecialForm(bound, { name: "bound?" });
 
         // TODO these classes should be wrapped and imported whole:
         // Std
@@ -764,19 +760,6 @@ class CCInterp {
         }
     }
 
-    // TODO move out of interp
-    function quote(args: HValue, env: HValue, cc: Continuation) {
-        cc(args.first());
-    }
-
-    // TODO This is in CCInterp because it uses funcall. As a special form it could move out of interp
-    // This won't work in the repl, I THINK because the main thread is always occupied
-    function delay(args: HValue, env: HValue, cc: Continuation) {
-        Timer.delay(() -> {
-            funcall(false, List([args.first()]), env, noCC);
-        }, Math.round(args.second().toFloat() * 1000));
-    }
-
     function set(type: SetType, args: HValue, env: HValue, cc: Continuation) {
         internalEval(args.second(),
             env, (val) -> {
@@ -980,11 +963,11 @@ class CCInterp {
 
         var names = Symbol("recur").cons_h(bindings.alternates(true));
         var firstValueExps = bindings.alternates(false);
-        evalAll(firstValueExps, env, (firstValues) -> {
+        currentEvalAllFunction(firstValueExps, env, (firstValues) -> {
             var nextValues = Nil;
             var recurCalled = false;
             var recur: HFunction = (nextValueExps, env, cc) -> {
-                evalAll(nextValueExps, env, (nextVals) -> {nextValues = nextVals;});
+                currentEvalAllFunction(nextValueExps, env, (nextVals) -> {nextValues = nextVals;});
                 recurCalled = true;
             }
             var values = firstValues;
@@ -1001,63 +984,6 @@ class CCInterp {
             } while (recurCalled);
             cc(result);
         });
-    }
-
-    function bound(args: HValue, env: HValue, cc: Continuation) {
-        var stackFrames = env.toList();
-        var g = globals.toDict();
-        var name = args.first();
-
-        for (frame in stackFrames) {
-            var frameDict = frame.toDict();
-            if (frameDict.exists_h(name)) {
-                cc(T);
-                return;
-            }
-        }
-        cc(if (g.exists_h(name)) {
-            T;
-        } else {
-            Nil;
-        });
-    }
-
-    static var ccNum = 0;
-    function callCC(args: HValue, env: HValue, cc: Continuation) {
-        var ccId = ccNum++;
-        var message = "";
-        var functionToCall = null;
-
-        if (args.length_h() > 1) {
-            message = eval(args.first(), env).toHaxeString();
-            functionToCall = args.second();
-        } else {
-            functionToCall = args.first();
-        }
-
-        // Convert the continuation to a hiss function accepting one argument
-        var ccHFunction = Function((innerArgs: HValue, innerEnv: HValue, innerCC: Continuation) -> {
-            var arg = if (!truthy(innerArgs)) {
-                // It's typical to JUST want to break out of a sequence, not return a value to it.
-                Nil;
-            } else {
-                innerArgs.first();
-            };
-
-            #if traceContinuations
-            Sys.println('calling $message(cc#$ccId) with ${arg.toPrint()}');
-            #end
-
-            cc(arg);
-        }, { name: "cc", argNames: ["result"] });
-
-        funcall(true,
-            List([
-                functionToCall,
-                ccHFunction
-            ]),
-            env, 
-            cc);
     }
 
     // This breaks continuation-based signature rules because I just want it to work.
@@ -1114,30 +1040,6 @@ class CCInterp {
 
     public function readAll(str: String) {
         return reader.readAll(String(str));
-    }
-
-    function or(args: HValue, env: HValue, cc: Continuation) {
-        for (arg in args.toList()) {
-            var argVal = Nil;
-            internalEval(arg, env, (val) -> {argVal = val;});
-            if (truthy(argVal)) {
-                cc(argVal);
-                return;
-            }
-        }
-        cc(Nil);
-    }
-
-    function and(args: HValue, env: HValue, cc: Continuation) {
-        var argVal = T;
-        for (arg in args.toList()) {
-            internalEval(arg, env, (val) -> {argVal = val;});
-            if (!truthy(argVal)) {
-                cc(Nil);
-                return;
-            }
-        }
-        cc(argVal);
     }
 
     /** Hiss-callable form for eval **/

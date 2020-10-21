@@ -423,4 +423,30 @@ class Stdlib {
     public static function listCopy(v: Array<Dynamic>) {
         return v.copy();
     }
+
+    public static function isBound_s(interp: CCInterp, args: HValue, env: HValue, cc: Continuation) {
+        var stackFrames = env.toList();
+        var g = interp.globals.toDict();
+        var name = args.first();
+
+        for (frame in stackFrames) {
+            var frameDict = frame.toDict();
+            if (frameDict.exists_h(name)) {
+                cc(T);
+                return;
+            }
+        }
+        cc(if (g.exists_h(name)) {
+            T;
+        } else {
+            Nil;
+        });
+    }
+
+    // This won't work in the repl, I THINK because the main thread is always occupied
+    public static function delay_sd(interp: CCInterp, args: HValue, env: HValue, cc: Continuation) {
+        Timer.delay(() -> {
+            interp.eval(List([args.first()]), env);
+        }, Math.round(args.second().toFloat() * 1000));
+    }
 }

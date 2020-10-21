@@ -19,6 +19,8 @@
 (defalias dict-put! dict-set @deprecated)
 (defalias dict-exists dict-contains)
 
+(defalias call-cc call/cc)
+
 (defun first (l) (nth l 0))
 
 (defmacro register-method! (method name &optional call-on-reference keep-args-wrapped return-instance)

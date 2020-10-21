@@ -1,5 +1,4 @@
 build-scripts/all-script-args.hxml
 build-scripts/test/all-test-args.hxml
---define hissUsePython3
 --python bin/py/test-hiss.py
 --cmd python3 bin/py/test-hiss.py
