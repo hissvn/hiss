@@ -352,7 +352,7 @@ class Stdlib {
         }
     }
 
-    public static function readLine() {
+    public static function readLine_d() {
         #if (sys || hxnodejs)
             return Sys.stdin().readLine();
         #else

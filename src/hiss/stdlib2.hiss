@@ -180,32 +180,37 @@
 (defmacro case (form &rest case-list)
     `(let (value ,form) (_case value ,@case-list)))
 
-(defun input-string (&optional prompt)
+(defun input-string! (&optional prompt)
     (when prompt (message! prompt))
-    (read-line))
+    (read-line!))
+(defalias input-string! input-string @deprecated)
 
-(defun input-int (&optional prompt)
+(defun input-int! (&optional prompt)
     (int (input-string prompt)))
+(defalias input-int! input-int @deprecated)
 
-(defun input-float (&optional prompt)
+(defun input-float! (&optional prompt)
     (float (input-string prompt)))
+(defalias input-float! input-float @deprecated)
 
-(defun input-symbol (&optional prompt)
+(defun input-symbol! (&optional prompt)
     (let (name 
                 (input-string prompt))
         // don't return a gensym if the input is blank
         (if (empty? name) nil (symbol name))))
-
+(defalias input-symbol! input-symbol @deprecated)
 
 // Very dangerous function:
-(defun input-expression (&optional prompt)
+(defun input-expression! (&optional prompt)
     (eval (read (input-string prompt))))
+(defalias input-expression! input-expression @deprecated)
 
-(defun input-choice (choices &optional prompt)
+(defun input-choice! (choices &optional prompt)
     (when prompt (message! prompt))
     (do-for (idx choice) (enumerate choices)
         (message! "${idx}. $(to-print choice)"))
     (nth choices (input-int "> ")))
+(defalias input-choice! input-choice @deprecated)
 
 (defmacro set-default! (var value)
     `(if (or (not (bound? ,var)) (nil? ,var)) (set! ,var ,value)))
