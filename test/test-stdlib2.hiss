@@ -304,3 +304,8 @@
 (test! if-let
     (eq "me" (if-let (fork "me") fork "buns"))
     (eq "buns" (if-let (fork nil) fork "buns")))
+
+(test! copy
+    (let (l [1 2 3] c (copy l))
+        (clear! c)
+        (and (eq [1 2 3] l) (eq [] c))))
