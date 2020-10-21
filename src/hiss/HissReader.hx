@@ -368,7 +368,8 @@ class HissReader {
         // Call default read function
         return callReadFunction(readTable.get_h(String("")), "", stream);
     }
-
+    
+    // TODO this can have side effects
     public function readAll(str: HValue, ?dropWhitespace: HValue, ?terminators: HValue, ?pos: HValue): HValue {
         var stream: HStream = toStream(interp, str, pos);
 

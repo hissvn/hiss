@@ -420,6 +420,8 @@ class CCInterp {
         importClass(HStringTools, {name: "StringTools", omitStaticPrefixes: true});
 
         importClass(HHttp, {name: "Http"});
+        // Alias HTTP so capitalization typos don't get annoying:
+        importClass(HHttp, {name: "HTTP"});
 
         importClass(HDate, {name:"Date"});
 
