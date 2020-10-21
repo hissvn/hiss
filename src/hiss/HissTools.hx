@@ -23,15 +23,15 @@ class HissTools {
     // These dictionary functions are for Haxe usage and are more ergonomic with string args,
     // although the underlying keys will be HValues:
     public static function get(dict: HValue, key: String) {
-        return dict.toDict().get(Symbol(key));
+        return dict.toDict().get_h(Symbol(key));
     }
 
     public static function exists(dict: HValue, key: String) {
-        return dict.toDict().exists(Symbol(key));
+        return dict.toDict().exists_h(Symbol(key));
     }
 
     public static function put(dict: HValue, key: String, v: HValue) {
-        dict.toDict().put(Symbol(key), v);
+        dict.toDict().put_hd(Symbol(key), v);
         return dict;
     }
 
@@ -112,7 +112,7 @@ class HissTools {
     public static function dictExtend(dict: HValue, extension: HValue) {
         var extended = dict.toDict().copy();
         for (pair in extension.toDict().keyValueIterator()) {
-            extended.put(pair.key, pair.value);
+            extended.put_hd(pair.key, pair.value);
         }
         return Dict(extended);
     }    
@@ -269,5 +269,9 @@ class HissTools {
                 hv;
                 /*throw 'hvalue $hv cannot be unwrapped for a native Haxe operation';*/
         }
+    }
+
+    public static function metadata(callable: HValue) {
+        return HaxeTools.extract(callable, Function(_, meta) | Macro(_, meta) | SpecialForm(_, meta) => meta);
     }
 }

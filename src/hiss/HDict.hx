@@ -15,12 +15,12 @@ typedef HKeyValuePair = {
     Is an Iterable and key-value iterable
 **/
 class HDict {
-    var map: Map<String, Array<HKeyValuePair>> = [];
-    var interp: CCInterp;
+    var _map: Map<String, Array<HKeyValuePair>> = [];
+    var _interp: CCInterp;
 
     public function new (interp: CCInterp, ?map: Map<String, Array<HKeyValuePair>>) {
-        this.interp = interp;
-        if (map != null) this.map = map;
+        this._interp = interp;
+        if (map != null) this._map = map;
     }
 
     /** Iterate on Hiss lists of the form (key value), which can be destructured in Hiss for loops **/
@@ -38,17 +38,17 @@ class HDict {
 
     /** Allow key => value iteration in Haxe **/
     public function keyValueIterator(): KeyValueIterator<HValue, HValue> {
-        return new HDictIterator(map.keyValueIterator());
+        return new HDictIterator(_map.keyValueIterator());
     }
 
-    public function copy() { return new HDict(interp, map.copy()); }
+    public function copy() { return new HDict(_interp, _map.copy()); }
 
-    public function get(key: HValue): HValue {
-        if (!map.exists(key.toPrint())) return Nil;
-        var hashMatches = map[key.toPrint()];
+    public function get_h(key: HValue): HValue {
+        if (!_map.exists(key.toPrint())) return Nil;
+        var hashMatches = _map[key.toPrint()];
 
         for (match in hashMatches) {
-            if (interp.truthy(interp.eq_ih(match.key, key))) {
+            if (_interp.truthy(_interp.eq_ih(match.key, key))) {
                 return match.value;
             }
         }
@@ -56,12 +56,12 @@ class HDict {
         return Nil;
     }
 
-    public function put(key: HValue, value: HValue) {
-        if (!map.exists(key.toPrint())) map[key.toPrint()] = [];
-        var hashMatches = map[key.toPrint()];
+    public function put_hd(key: HValue, value: HValue) {
+        if (!_map.exists(key.toPrint())) _map[key.toPrint()] = [];
+        var hashMatches = _map[key.toPrint()];
 
         for (match in hashMatches) {
-            if (interp.truthy(interp.eq_ih(match.key, key))) {
+            if (_interp.truthy(_interp.eq_ih(match.key, key))) {
                 match.value = value;
                 return;
             }
@@ -73,12 +73,12 @@ class HDict {
         });
     }
 
-    public function exists(key: HValue) {
-        if (!map.exists(key.toPrint())) return false;
-        var hashMatches = map[key.toPrint()];
+    public function exists_h(key: HValue) {
+        if (!_map.exists(key.toPrint())) return false;
+        var hashMatches = _map[key.toPrint()];
 
         for (match in hashMatches) {
-            if (interp.truthy(interp.eq_ih(match.key, key))) {
+            if (_interp.truthy(_interp.eq_ih(match.key, key))) {
                 return true;
             }
         }
@@ -86,19 +86,33 @@ class HDict {
         return false;
     }
 
-    public function erase(key: HValue) {
-        if (!map.exists(key.toPrint())) return;
-        var hashMatches = map[key.toPrint()];
+    public function erase_hd(key: HValue) {
+        if (!_map.exists(key.toPrint())) return;
+        var hashMatches = _map[key.toPrint()];
         
         var idx = 0;
         while (idx < hashMatches.length) {
             var match = hashMatches[idx];
-            if (interp.truthy(interp.eq_ih(match.key, key))) {
+            if (_interp.truthy(_interp.eq_ih(match.key, key))) {
                 hashMatches.splice(idx, 1);
                 return;
             }
             ++idx;
         }
+    }
+
+    public static function makeDict_cc(interp: CCInterp, args: HValue, env: HValue, cc: Continuation) {
+        var dict = new HDict(interp);
+
+        var idx = 0;
+        while (idx < args.length_h()) {
+            var key = args.nth_h(Int(idx));
+            var value = args.nth_h(Int(idx+1));
+            dict.put_hd(key, value);
+            idx += 2;
+        }
+
+        cc(Dict(dict));
     }
 
     // TODO objects of the same type will be mapped in linear time because their print representations are the same.

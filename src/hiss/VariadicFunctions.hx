@@ -16,7 +16,7 @@ enum Comparison {
     Variadic operations that used to be fun and DRY, but are efficient now instead
 **/
 class VariadicFunctions {
-    public static function append(args: HValue, env: HValue, cc: Continuation) {
+    public static function append_cc(interp: CCInterp, args: HValue, env: HValue, cc: Continuation) {
         var result = args.first().toList();
         for (l in args.rest_h().toList()) {
             result = result.concat(l.toList());
@@ -24,7 +24,7 @@ class VariadicFunctions {
         cc(List(result));
     }
 
-    public static function add(interp: CCInterp, args: HValue, env: HValue, cc: Continuation) {
+    public static function add_cc(interp: CCInterp, args: HValue, env: HValue, cc: Continuation) {
         var sum:Dynamic = switch (args.first()) {
             case Int(_): 0;
             case Float(_): 0;
@@ -43,7 +43,7 @@ class VariadicFunctions {
         cc(HissTools.toHValue(sum));
     }
 
-    public static function subtract(interp: CCInterp, args: HValue, env: HValue, cc: Continuation) {
+    public static function subtract_cc(interp: CCInterp, args: HValue, env: HValue, cc: Continuation) {
         switch (args.length_h()) {
             case 0: cc(Int(0));
             case 1: cc(HissTools.toHValue(0 - args.first().value(interp)));
@@ -57,7 +57,7 @@ class VariadicFunctions {
         
     }
 
-    public static function divide(interp: CCInterp, args: HValue, env: HValue, cc: Continuation) {
+    public static function divide_cc(interp: CCInterp, args: HValue, env: HValue, cc: Continuation) {
         switch (args.length_h()) {
             case 0: throw "Can't divide without operands";
             case 1: cc(HissTools.toHValue(1 / args.first().value(interp)));
@@ -70,7 +70,7 @@ class VariadicFunctions {
         }
     }
 
-    public static function multiply(interp: CCInterp, args: HValue, env: HValue, cc: Continuation) {
+    public static function multiply_cc(interp: CCInterp, args: HValue, env: HValue, cc: Continuation) {
         switch (args.first()) {
             case Int(_) | Float(_):
                 var product: Dynamic = 1;
@@ -78,7 +78,7 @@ class VariadicFunctions {
 
                 switch (args.last()) {
                     case List(_) | String(_):
-                        multiply(interp, operands[operands.length-1].toHValue().cons_h(operands.slice(0, operands.length-1).toHList()), env, cc);
+                        multiply_cc(interp, operands[operands.length-1].toHValue().cons_h(operands.slice(0, operands.length-1).toHList()), env, cc);
                         return;
                     default:
                 }
@@ -96,7 +96,7 @@ class VariadicFunctions {
                 if (args.length_h() == 2) {
                     cc(String(product));
                 } else {
-                    multiply(interp, String(product).cons_h(args.slice(2)), env, cc);
+                    multiply_cc(interp, String(product).cons_h(args.slice(2)), env, cc);
                 }
             case List(l):
                 var product = [];
@@ -108,13 +108,13 @@ class VariadicFunctions {
                 if (args.length_h() == 2) {
                     cc(List(product));
                 } else {
-                    multiply(interp, List(product).cons_h(args.slice(2)), env, cc);
+                    multiply_cc(interp, List(product).cons_h(args.slice(2)), env, cc);
                 }
             default: throw 'Cannot multiply with first operand ${args.first().toPrint()}';
         }
     }
 
-    public static function numCompare(interp: CCInterp, type: Comparison, args: HValue, env: HValue, cc: Continuation) {
+    static function _numCompare(type: Comparison, interp: CCInterp, args: HValue, env: HValue, cc: Continuation) {
         switch (args.length_h()) {
             case 0: throw "Can't compare without operands";
             case 1: cc(T);
@@ -145,4 +145,10 @@ class VariadicFunctions {
                 cc(T);
         }
     }
+
+    public static var lesser_cc = _numCompare.bind(Lesser);
+    public static var lesserEqual_cc = _numCompare.bind(LesserEqual);
+    public static var greater_cc = _numCompare.bind(Greater);
+    public static var greaterEqual_cc = _numCompare.bind(GreaterEqual);
+    public static var equal_cc = _numCompare.bind(Equal);
 }

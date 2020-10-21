@@ -33,7 +33,7 @@ class HissReader {
     }
 
     public function setMacroString(s: String, f: HValue) {
-        readTable.put(String(s), f);
+        readTable.put_hd(String(s), f);
         if (macroLengths.indexOf(s.length) == -1) {
             macroLengths.push(s.length);
         }
@@ -42,7 +42,7 @@ class HissReader {
     }
 
     public function setDefaultReadFunction(f: HValue) {
-        readTable.put(String(""), f);
+        readTable.put_hd(String(""), f);
     }
 
     function hissReadFunction(f: HaxeReadFunction, s: String) {
@@ -54,7 +54,7 @@ class HissReader {
     }
 
     function internalSetMacroString(s: String, f: HaxeReadFunction) {
-        readTable.put(String(s), hissReadFunction(f, 'read-$s'));
+        readTable.put_hd(String(s), hissReadFunction(f, 'read-$s'));
         if (macroLengths.indexOf(s.length) == -1) {
             macroLengths.push(s.length);
         }
@@ -344,12 +344,12 @@ class HissReader {
         for (length in macroLengths) {
             if (stream.length() < length) continue;
             var couldBeAMacro = stream.peek(length);
-            if (readTable.exists(String(couldBeAMacro))) {
+            if (readTable.exists_h(String(couldBeAMacro))) {
                 stream.drop(couldBeAMacro);
                 var pos = stream.position();
                 var expression = null;
                 
-                expression = callReadFunction(readTable.get(String(couldBeAMacro)), couldBeAMacro, stream);
+                expression = callReadFunction(readTable.get_h(String(couldBeAMacro)), couldBeAMacro, stream);
 
                 // If the expression is a comment, try to read the next one
                 return switch (expression) {
@@ -366,7 +366,7 @@ class HissReader {
         }
 
         // Call default read function
-        return callReadFunction(readTable.get(String("")), "", stream);
+        return callReadFunction(readTable.get_h(String("")), "", stream);
     }
 
     public function readAll(str: HValue, ?dropWhitespace: HValue, ?terminators: HValue, ?pos: HValue): HValue {

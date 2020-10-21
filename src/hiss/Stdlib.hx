@@ -325,4 +325,25 @@ class Stdlib {
             throw "Can't get home directory on this target.";
         #end
     }
+
+    public static function docs_h(func: HValue) {
+        return func.metadata().docstring;
+    }
+
+    public static function help_i(interp: CCInterp) {
+        for (name => value in interp.globals.toDict()) {
+            try {
+                var functionHelp = name.symbolName_h();
+                try {
+                    var docs = docs_h(value);
+                    if (docs != null && docs.length > 0) {
+                        functionHelp += ': $docs';
+                    }
+                } catch (s: Dynamic) {
+                    continue; // Not a callable
+                }
+                String(functionHelp).message_hd();
+            }
+        }
+    }
 }

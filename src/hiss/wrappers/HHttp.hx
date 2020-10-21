@@ -42,10 +42,9 @@ class HHttp {
     }
     #end
 
-    // TODO _cc
-    public static function request_d(interp: CCInterp, args: HValue, env: HValue, cc: Continuation) {
+    public static function request_dcc(interp: CCInterp, args: HValue, env: HValue, cc: Continuation) {
         // First arg: an HHttp object
-        var http: Http = args.first().value(interp).instance;
+        var http: Http = args.first().value(interp)._instance;
         // Second (optional) arg: whether to send as POST request
         var post = if (args.length_h() > 1) args.second().value(interp) else false;
 

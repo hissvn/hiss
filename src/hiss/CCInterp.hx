@@ -107,6 +107,8 @@ class CCInterp {
     // functions with 'd' for destructive in the metaSignature will use sideEffectSuffix
     //     but also define an alias with a warning
     // functions and properties starting with an underscore will not be imported
+    // TODO functions with 'a' in the metaSignature are asynchronous (only makes sense if they are also cc)
+    // TODO functions with 's' in the metaSignature are special forms (only makes sense if they are also cc)
     public function importClass(clazz: Class<Dynamic>, meta: ClassMeta) {
         if (debugClassImports) {
             trace('Import ${meta.name}');
@@ -157,8 +159,6 @@ class CCInterp {
                     var bindInterpreter = metaSignature.contains("i");
                     var wrapArgs = if (metaSignature.contains("h")) T else Nil;
                     var destructive = metaSignature.contains("d");
-                    // TODO do something with ccFunctions
-                    var ccFunction = metaSignature.contains("cc");
                     var isPredicate = (translatedName.toLowerHyphen().split("-")[0] == "is");
                     if (isPredicate) translatedName = translatedName.substr(2); // drop the 'is'
                     translatedName = meta.convertNames(translatedName);
@@ -247,7 +247,6 @@ class CCInterp {
                     var bindInterpreter = metaSignature.contains("i");
                     var wrapArgs = if (metaSignature.contains("h")) T else Nil;
                     var destructive = metaSignature.contains("d");
-                    // TODO do something with ccFunctions
                     var ccFunction = metaSignature.contains("cc");
                     var isPredicate = (translatedName.toLowerHyphen().split("-")[0] == "is");
                     if (isPredicate) translatedName = translatedName.substr(2); // drop the 'is'
@@ -260,13 +259,19 @@ class CCInterp {
                     if (debugClassImports) {
                         trace(translatedName);
                     }
-                    globals.put(translatedName, Function((args, env, cc) -> {
-                        var argArray = args.unwrapList(this, wrapArgs);
-                        if (bindInterpreter) {
-                            argArray.insert(0, this);
-                        }
-                        cc(Reflect.callMethod(clazz, fieldValue, argArray).toHValue());
-                    }, {name:translatedName}));
+                    if (ccFunction) {
+                        importCCFunction((args, env, cc) -> {
+                            fieldValue(this, args, env, cc);
+                        }, {name: translatedName});
+                    } else {
+                        globals.put(translatedName, Function((args, env, cc) -> {
+                            var argArray = args.unwrapList(this, wrapArgs);
+                            if (bindInterpreter) {
+                                argArray.insert(0, this);
+                            }
+                            cc(Reflect.callMethod(clazz, fieldValue, argArray).toHValue());
+                        }, {name:translatedName}));
+                    }
                     if (destructive) {
                         defDestructiveAlias(translatedName, meta.sideEffectSuffix);
                     }
@@ -331,27 +336,17 @@ class CCInterp {
         importFunction(Sys, Sys.exit.bind(0), { name: "quit!", argNames: [] });
         #end
 
-        // Primitives
+        // These functions make sense for living in CCInterp because they access internal state directly:
         importSpecialForm(set.bind(Global), { name: "defvar" });
         importSpecialForm(set.bind(Local), { name: "setlocal!" });
         importSpecialForm(set.bind(Destructive), { name: "set!" });
         importSpecialForm(setCallable.bind(false), { name: "defun" });
         importSpecialForm(setCallable.bind(true), { name: "defmacro" });
         importSpecialForm(defAlias, {name: "defalias"});
-        importFunction(this, docs, {name: "docs", argNames: ["callable"]}, T);
-        importFunction(this, help, {name: "help", argNames: []});
-        importSpecialForm(_if, { name: "if" });
-        importSpecialForm(lambda.bind(false), { name: "lambda" });
-        importSpecialForm(callCC, { name: "call/cc" });
         importSpecialForm(_eval, { name: "eval" });
         importSpecialForm(bound, { name: "bound?" });
-        importCCFunction(_load, { name: "load!", argNames: ["file"] });
         importSpecialForm(funcall.bind(false), { name: "funcall" });
         importSpecialForm(funcall.bind(true), { name: "funcall-inline" });
-        importSpecialForm(loop, { name: "loop" });
-        importSpecialForm(or, { name: "or" });
-        importSpecialForm(and, { name: "and" });
-
         // Use tail-recursive begin and iterate by default:
         useFunctions(trBegin, trEvalAll, iterate);
 
@@ -359,20 +354,16 @@ class CCInterp {
         importFunction(this, useFunctions.bind(trBegin, trEvalAll, iterate), { name: "disable-cc!" });
         importFunction(this, useFunctions.bind(begin, evalAll, iterateCC), { name: "enable-cc!" });
 
-        // First-class unit testing:
-        importSpecialForm(HissTestCase.testAtRuntime.bind(this), { name: "test!" });
-        importCCFunction(HissTestCase.hissPrints.bind(this), { name: "prints" });
-
-        // Haxe interop -- We could bootstrap the rest from these if we had unlimited stack frames:
-        importClass(HType, {name: "Type"});
-        importCCFunction(getProperty, { name: "get-property" });
-        importCCFunction(callHaxe, { name: "call-haxe" });
-        importCCFunction(_new, { name: "new" });
-
         // Error handling
         importFunction(this, error, { name: "error!", argNames: ["message"] }, Nil);
         importSpecialForm(throwsError, { name: "error?" });
         importSpecialForm(hissTry, { name: "try" });
+
+        // Running as a repl
+        importFunction(this, repl, {name:"repl"});
+
+        importFunction(this, read, {name: "read", argNames: ["string"]}, Nil);
+        importFunction(this, readAll, {name: "read-all", argNames: ["string"]}, Nil);
 
         importClass(HStream, {name: "HStream"});
         importFunction(reader, reader.setMacroString, {name: "set-macro-string!", argNames:  ["string", "read-function"]}, List([Int(1)]));
@@ -384,6 +375,32 @@ class CCInterp {
         importFunction(reader, reader.readDelimitedList, {name: "read-delimited-list", argNames: ["terminator", "delimiters", "eof-terminates", "blank-elements", "start", "stream"]}, List([Int(3)]) /* keep blankElements wrapped */);
         importFunction(reader, reader.copyReadtable, {name: "copy-readtable"});
         importFunction(reader, reader.useReadtable, {name: "use-readtable!"});
+
+        // Sometimes it's useful to provide the interpreter with your own target-native print function
+        // so they will be used while the standard library is being loaded.
+        if (printFunction != null) {
+            importFunction(this, printFunction, {name: "print!", argNames: ["value"]},Nil);
+        }
+
+        // TODO These functions do not use interp state, and could be defined in another class with the 's' meta
+        importSpecialForm(_if, { name: "if" });
+        importSpecialForm(lambda.bind(false), { name: "lambda" });
+        importSpecialForm(callCC, { name: "call/cc" });
+        importCCFunction(_load, { name: "load!", argNames: ["file"] });
+        importSpecialForm(loop, { name: "loop" });
+        importSpecialForm(or, { name: "or" });
+        importSpecialForm(and, { name: "and" });
+
+        // First-class unit testing:
+        importSpecialForm(HissTestCase.testAtRuntime.bind(this), { name: "test!" });
+        importCCFunction(HissTestCase.hissPrints.bind(this), { name: "prints" });
+
+        // Haxe interop -- We could bootstrap the rest from these if we had unlimited stack frames:
+        importClass(HType, {name: "Type"});
+        importCCFunction(getProperty, { name: "get-property" });
+        importCCFunction(callHaxe, { name: "call-haxe" });
+        importCCFunction(_new, { name: "new" });
+        
         importFunction(this, () -> new HDict(this), {name: "empty-readtable"});
 
         // Open Pandora's box if it's available:
@@ -395,17 +412,15 @@ class CCInterp {
         //importClass(Threading.Tls, "Tls");
         #end
 
-        importFunction(this, repl, {name:"repl"});
-
-        // TODO could handle all HissTools imports with an importClass() that doesn't apply a function prefix and converts is{Thing} to thing?
-        // The only problem with that some functions need args wrapped and others don't
-
         // Dictionaries
-        importCCFunction(makeDict, {name:"dict"});
-        importFunction(this, (dict: HValue, key) -> dict.toDict().get(key), {name: "dict-get"}, T);
-        importFunction(this, (dict: HValue, key, value) -> dict.toDict().put(key, value), {name: "dict-set!"}, T);
-        importFunction(this, (dict: HValue, key) -> dict.toDict().exists(key), {name: "dict-contains"}, T);
-        importFunction(this, (dict: HValue, key) -> dict.toDict().erase(key), {name: "dict-erase!"}, T);
+        importClass(HDict, {
+            name:"Dict", 
+            omitMemberPrefixes: true, 
+            omitStaticPrefixes: true,
+            convertNames: (name) -> {
+                return "dict-" + name.toLowerHyphen();
+            }
+        });
 
         // command-line args
         importFunction(this, () -> List(scriptArgs), {name: "args"});
@@ -414,37 +429,18 @@ class CCInterp {
         importClass(HStringTools, {name: "StringTools", omitStaticPrefixes: true});
 
         importClass(Stdlib, {name: "Stdlib", omitStaticPrefixes: true});
-
-        // Sometimes it's useful to provide the interpreter with your own target-native print function
-        // so they will be used while the standard library is being loaded.
-        if (printFunction != null) {
-            importFunction(this, printFunction, {name: "print!", argNames: ["value"]},Nil);
-        }
+        importClass(VariadicFunctions, {name: "VariadicFunctions", omitStaticPrefixes: true});
 
         importFunction(this, not, {name: "not", argNames: ["val"]}, T);
     
         importFunction(HaxeTools, HaxeTools.shellCommand, {name: "shell-command", argNames: ["cmd"]}, Nil);
-        importFunction(this, read, {name: "read", argNames: ["string"]}, Nil);
-        importFunction(this, readAll, {name: "read-all", argNames: ["string"]}, Nil);
 
         importSpecialForm(quote, {name:"quote"});
-
-        importCCFunction(VariadicFunctions.add.bind(this), {name: "+"});
-        importCCFunction(VariadicFunctions.subtract.bind(this), {name: "-"});
-        importCCFunction(VariadicFunctions.divide.bind(this), {name: "/"});
-        importCCFunction(VariadicFunctions.multiply.bind(this), {name: "*"});
-        importCCFunction(VariadicFunctions.numCompare.bind(this, Lesser), {name: "<"});
-        importCCFunction(VariadicFunctions.numCompare.bind(this, LesserEqual), {name: "<="});
-        importCCFunction(VariadicFunctions.numCompare.bind(this, Greater), {name: ">"});
-        importCCFunction(VariadicFunctions.numCompare.bind(this, GreaterEqual), {name: ">="});
-        importCCFunction(VariadicFunctions.numCompare.bind(this, Equal), {name: "="});
         
         // Std
         importFunction(Std, Std.random, {name:"random"});
         importFunction(Std, Std.parseInt, {name: "int"});
         importFunction(Std, Std.parseFloat, {name: "float"});
-
-        importCCFunction(VariadicFunctions.append, {name: "append"});
 
         importFunction(this, (a, b) -> { return a % b; }, {name: "%", argNames: ["a", "b"]});
 
@@ -462,12 +458,7 @@ class CCInterp {
 
         importCCFunction(delay, { name: "delay!", argNames: ["func", "seconds"] });
 
-        // Take special care when importing this one because it also contains cc functions that importClass() would handle wrong
         importClass(HHttp, {name: "Http"});
-        // Just re-import to overwrite the CC function which shouldn't be imported normally:
-        importCCFunction(HHttp.request_d.bind(this), { name: "Http:request" });
-        // TODO handle functions suffixed with CC so they're imported that way always?
-        // ^ Although that wouldn't handle the binding part.
 
         importClass(HDate, {name:"Date"});
 
@@ -827,7 +818,7 @@ class CCInterp {
                     case Destructive:
                         for (frame in env.toList()) {
                             var frameDict = frame.toDict();
-                            if (frameDict.exists(args.first())) {
+                            if (frameDict.exists_h(args.first())) {
                                 scope = frame;
                                 break;
                             }
@@ -852,7 +843,7 @@ class CCInterp {
 
         internalEval(func, env, (funcVal) -> {
             var hFunc = funcVal.toCallable();
-            var meta = Reflect.copy(metadata(funcVal));
+            var meta = Reflect.copy(funcVal.metadata());
 
             meta.name = alias.symbolName_h();
             if (metaSymbols.indexOf("@deprecated") != -1) {
@@ -907,15 +898,15 @@ class CCInterp {
         var v = null;
         for (frame in stackFrames) {
             var frameDict = frame.toDict();
-            if (frameDict.exists(name)) {
-                v = frameDict.get(name);
+            if (frameDict.exists_h(name)) {
+                v = frameDict.get_h(name);
                 break;
             }
         }
         if (v != null) {
             cc(v);
-        } else if (g.exists(name)) {
-            cc(g.get(name));
+        } else if (g.exists_h(name)) {
+            cc(g.get_h(name));
         } else {
             error('$name is undefined');
         };
@@ -969,31 +960,6 @@ class CCInterp {
             Function(hFun, meta);
         };
         cc(callable);
-    }
-
-    function metadata(callable: HValue) {
-        return HaxeTools.extract(callable, Function(_, meta) | Macro(_, meta) | SpecialForm(_, meta) => meta);
-    }
-
-    function docs(func: HValue) {
-        return metadata(func).docstring;
-    }
-
-    function help() {
-        for (name => value in globals.toDict()) {
-            try {
-                var functionHelp = name.symbolName_h();
-                try {
-                    var docs = docs(value);
-                    if (docs != null && docs.length > 0) {
-                        functionHelp += ': $docs';
-                    }
-                } catch (s: Dynamic) {
-                    continue; // Not a callable
-                }
-                String(functionHelp).message_hd();
-            }
-        }
     }
 
     // Helper function to get the iterable object in iterate() and iterateCC()
@@ -1138,12 +1104,12 @@ class CCInterp {
 
         for (frame in stackFrames) {
             var frameDict = frame.toDict();
-            if (frameDict.exists(name)) {
+            if (frameDict.exists_h(name)) {
                 cc(T);
                 return;
             }
         }
-        cc(if (g.exists(name)) {
+        cc(if (g.exists_h(name)) {
             T;
         } else {
             Nil;
@@ -1309,21 +1275,6 @@ class CCInterp {
             }
         }
         cc(argVal);
-    }
-
-    // TODO move out of CCInterp
-    function makeDict(args: HValue, env: HValue, cc: Continuation) {
-        var dict = new HDict(this);
-
-        var idx = 0;
-        while (idx < args.length_h()) {
-            var key = args.nth_h(Int(idx));
-            var value = args.nth_h(Int(idx+1));
-            dict.put(key, value);
-            idx += 2;
-        }
-
-        cc(Dict(dict));
     }
 
     /** Hiss-callable form for eval **/
