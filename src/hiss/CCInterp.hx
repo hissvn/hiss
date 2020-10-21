@@ -18,6 +18,7 @@ import hiss.wrappers.HDate;
 import hiss.wrappers.HStringTools;
 
 import hiss.HTypes;
+import hiss.SpecialForms;
 #if (sys || hxnodejs)
 import hiss.wrappers.HFile;
 import sys.io.FileOutput;
@@ -100,7 +101,8 @@ class CCInterp {
     #end
 
     // functions starting with is[Something] will be imported without the is, using predicateSuffix
-    // TODO static functions with 'cc' in the metaSignature will be imported as ccfunctions with interp bound as the first argument (NOTE this will need to bypass reflect.callmethod in order to preserve asyncness)
+    // static functions with 'cc' in the metaSignature will be imported as ccfunctions with interp bound as the first argument (NOTE this will need to bypass reflect.callmethod in order to preserve asyncness)
+    // static functions with 's' in the metaSignature are special forms (therefore they are also in cc form)
     // TODO functions that convert [type1]To[type2] else will be imported with use conversionInfix instead of To 
     // functions with 'i' in the metaSignature will be imported with this interp bound as the first argument
     // functions with 'h' in the metaSignature will keep their args wrapped
@@ -108,7 +110,6 @@ class CCInterp {
     //     but also define an alias with a warning
     // functions and properties starting with an underscore will not be imported
     // TODO functions with 'a' in the metaSignature are asynchronous (only makes sense if they are also cc)
-    // TODO functions with 's' in the metaSignature are special forms (only makes sense if they are also cc)
     public function importClass(clazz: Class<Dynamic>, meta: ClassMeta) {
         if (debugClassImports) {
             trace('Import ${meta.name}');
@@ -247,7 +248,8 @@ class CCInterp {
                     var bindInterpreter = metaSignature.contains("i");
                     var wrapArgs = if (metaSignature.contains("h")) T else Nil;
                     var destructive = metaSignature.contains("d");
-                    var ccFunction = metaSignature.contains("cc");
+                    var specialForm = metaSignature.contains("s");
+                    var ccFunction = !specialForm && metaSignature.contains("cc");
                     var isPredicate = (translatedName.toLowerHyphen().split("-")[0] == "is");
                     if (isPredicate) translatedName = translatedName.substr(2); // drop the 'is'
                     translatedName = meta.convertNames(translatedName);
@@ -261,6 +263,10 @@ class CCInterp {
                     }
                     if (ccFunction) {
                         importCCFunction((args, env, cc) -> {
+                            fieldValue(this, args, env, cc);
+                        }, {name: translatedName});
+                    } else if (specialForm) {
+                        importSpecialForm((args, env, cc) -> {
                             fieldValue(this, args, env, cc);
                         }, {name: translatedName});
                     } else {
@@ -279,13 +285,6 @@ class CCInterp {
                     // TODO generate getters and setters for static properties
             }
         }
-    }
-
-    function _new(args: HValue, env: HValue, cc: Continuation) {
-        var clazz: Class<Dynamic> = args.first().value(this);
-        var args = args.rest_h().unwrapList(this);
-        var instance: Dynamic = Type.createInstance(clazz, args);
-        cc(instance.toHValue());
     }
 
     public function importFunction(instance: Dynamic, func: Function, meta: CallableMeta, keepArgsWrapped: HValue = Nil) {
@@ -344,7 +343,6 @@ class CCInterp {
         importSpecialForm(setCallable.bind(true), { name: "defmacro" });
         importSpecialForm(defAlias, {name: "defalias"});
         importSpecialForm(_eval, { name: "eval" });
-        importSpecialForm(bound, { name: "bound?" });
         importSpecialForm(funcall.bind(false), { name: "funcall" });
         importSpecialForm(funcall.bind(true), { name: "funcall-inline" });
         // Use tail-recursive begin and iterate by default:
@@ -376,32 +374,15 @@ class CCInterp {
         importFunction(reader, reader.copyReadtable, {name: "copy-readtable"});
         importFunction(reader, reader.useReadtable, {name: "use-readtable!"});
 
+        importClass(Stdlib, {name: "Stdlib", omitStaticPrefixes: true});
+
         // Sometimes it's useful to provide the interpreter with your own target-native print function
         // so they will be used while the standard library is being loaded.
         if (printFunction != null) {
             importFunction(this, printFunction, {name: "print!", argNames: ["value"]},Nil);
         }
 
-        // TODO These functions do not use interp state, and could be defined in another class with the 's' meta
-        importSpecialForm(_if, { name: "if" });
-        importSpecialForm(lambda.bind(false), { name: "lambda" });
-        importSpecialForm(callCC, { name: "call/cc" });
-        importCCFunction(_load, { name: "load!", argNames: ["file"] });
-        importSpecialForm(loop, { name: "loop" });
-        importSpecialForm(or, { name: "or" });
-        importSpecialForm(and, { name: "and" });
-
-        // First-class unit testing:
-        importSpecialForm(HissTestCase.testAtRuntime.bind(this), { name: "test!" });
-        importCCFunction(HissTestCase.hissPrints.bind(this), { name: "prints" });
-
-        // Haxe interop -- We could bootstrap the rest from these if we had unlimited stack frames:
-        importClass(HType, {name: "Type"});
-        importCCFunction(getProperty, { name: "get-property" });
-        importCCFunction(callHaxe, { name: "call-haxe" });
-        importCCFunction(_new, { name: "new" });
-        
-        importFunction(this, () -> new HDict(this), {name: "empty-readtable"});
+        importClass(VariadicFunctions, {name: "VariadicFunctions", omitStaticPrefixes: true});
 
         // Open Pandora's box if it's available:
         #if target.threaded
@@ -422,66 +403,60 @@ class CCInterp {
             }
         });
 
+        #if (sys || hxnodejs)
+        importClass(HFile, {name: "File"});
+        #end
+
         // command-line args
         importFunction(this, () -> List(scriptArgs), {name: "args"});
 
         // String functions:
         importClass(HStringTools, {name: "StringTools", omitStaticPrefixes: true});
 
-        importClass(Stdlib, {name: "Stdlib", omitStaticPrefixes: true});
-        importClass(VariadicFunctions, {name: "VariadicFunctions", omitStaticPrefixes: true});
+        importClass(HHttp, {name: "Http"});
 
-        importFunction(this, not, {name: "not", argNames: ["val"]}, T);
-    
-        importFunction(HaxeTools, HaxeTools.shellCommand, {name: "shell-command", argNames: ["cmd"]}, Nil);
+        importClass(HDate, {name:"Date"});
 
-        importSpecialForm(quote, {name:"quote"});
+        importClass(HType, {name: "Type"});
+
+
+        importCCFunction(_load, { name: "load!", argNames: ["file"] });
         
+        // First-class unit testing:
+        importSpecialForm(HissTestCase.testAtRuntime.bind(this), { name: "test!" });
+        importCCFunction(HissTestCase.hissPrints.bind(this), { name: "prints" });
+
+        // Operating system
+        importFunction(StaticFiles, StaticFiles.getContent, { name: "get-content", argNames: ["file"] });
+
+        importClass(SpecialForms, { name: "SpecialForms", omitStaticPrefixes: true});
+        // TODO These functions do not use interp state, and could be defined in another class with the 's' meta
+        importSpecialForm(callCC, { name: "call/cc" });
+        importSpecialForm(loop, { name: "loop" });
+        importSpecialForm(or, { name: "or" });
+        importSpecialForm(and, { name: "and" });
+        importFunction(this, () -> new HDict(this), {name: "empty-readtable"});
+        importSpecialForm(quote, {name:"quote"});
+        importCCFunction(delay, { name: "delay!", argNames: ["func", "seconds"] });
+        importSpecialForm(bound, { name: "bound?" });
+
+        // TODO these classes should be wrapped and imported whole:
         // Std
         importFunction(Std, Std.random, {name:"random"});
         importFunction(Std, Std.parseInt, {name: "int"});
         importFunction(Std, Std.parseFloat, {name: "float"});
 
-        importFunction(this, (a, b) -> { return a % b; }, {name: "%", argNames: ["a", "b"]});
-
-        importFunction(HaxeTools, HaxeTools.readLine, {name: "read-line", argNames: []});
-
-        // Operating system
-        importFunction(StaticFiles, StaticFiles.getContent, { name: "get-content", argNames: ["file"] });
+        
         #if (sys || hxnodejs)
-        importClass(HFile, {name: "File"});
         importFunction(Sys, Sys.sleep, { name: "sleep!", argNames: ["seconds"] });
         importFunction(Sys, Sys.getEnv, { name: "get-env", argNames: ["var"]});
-        #else
-        importCCFunction(sleepCC, { name: "sleep!", argNames: ["seconds"] });
         #end
-
-        importCCFunction(delay, { name: "delay!", argNames: ["func", "seconds"] });
-
-        importClass(HHttp, {name: "Http"});
-
-        importClass(HDate, {name:"Date"});
-
-        importFunction(this, python, { name: "python", argNames: [] });
 
         StaticFiles.compileWith("stdlib2.hiss");
 
         //disableTrace();
         load("stdlib2.hiss");
         //enableTrace();
-    }
-
-    function not(v: HValue) {
-        return if (truthy(v)) Nil else T;
-    }
-
-    // It's absurd that we should have to provide this function...
-    function python() { 
-        #if hissUsePython3
-        return "python3";
-        #else
-        return "python";
-        #end
     }
 
     // error? will have an implicit begin
@@ -789,16 +764,12 @@ class CCInterp {
         }
     }
 
+    // TODO move out of interp
     function quote(args: HValue, env: HValue, cc: Continuation) {
         cc(args.first());
     }
 
-    // TODO move out of CCInterp
-    function sleepCC(args: HValue, env: HValue, cc: Continuation) {
-        Timer.delay(cc.bind(Nil), Math.round(args.first().toFloat() * 1000));
-    }
-
-    // TODO move out of CCInterp
+    // TODO This is in CCInterp because it uses funcall. As a special form it could move out of interp
     // This won't work in the repl, I THINK because the main thread is always occupied
     function delay(args: HValue, env: HValue, cc: Continuation) {
         Timer.delay(() -> {
@@ -831,9 +802,9 @@ class CCInterp {
     }
 
     function setCallable(isMacro: Bool, args: HValue, env: HValue, cc: Continuation) {
-        lambda(isMacro, args.rest_h(), env, (fun: HValue) -> {
+        SpecialForms.lambda_s(this, args.rest_h(), env, (fun: HValue) -> {
             set(Global, args.first().cons_h(List([fun])), env, cc);
-        }, args.first().symbolName_h());
+        }, args.first().symbolName_h(), isMacro);
     }
 
     function defAlias(args: HValue, env: HValue, cc: Continuation) {
@@ -874,21 +845,6 @@ class CCInterp {
         defAlias(List([Symbol(destructiveName), Symbol(destructiveName.substr(0, destructiveName.length - suffix.length)), Symbol("@deprecated")]), emptyEnv(), noCC);
     }
 
-    function _if(args: HValue, env: HValue, cc: Continuation) {
-        if (args.length_h() > 3) {
-            error('(if) called with too many arguments. Try wrapping the cases in (begin)');
-        }
-        internalEval(args.first(), env, (val) -> {
-            if (truthy(val)) {
-                internalEval(args.second(), env, cc);
-            } else if (args.length_h() > 2) {
-                internalEval(args.third(), env, cc);
-            } else {
-                cc(Nil);
-            }
-        });
-    }
-
     function getVar(name: HValue, env: HValue, cc: Continuation) {
         // Env is a list of dictionaries -- stack frames
         var stackFrames = env.toList();
@@ -910,56 +866,6 @@ class CCInterp {
         } else {
             error('$name is undefined');
         };
-    }
-
-    function lambda(isMacro: Bool, args: HValue, env: HValue, cc: Continuation, name = "[anonymous lambda]") {
-        var params = args.first();
-
-        // Check for metadata
-        var meta = {
-            name: name,
-            argNames: [for (paramSymbol in params.toList()) try {
-                // simple functions args can be imported with names
-                paramSymbol.symbolName_h();
-            } catch (s: Dynamic){
-                // nested list args cannot
-                "[nested list]";
-            }],
-            docstring: "",
-            deprecated: false,
-            async: false
-        };
-
-        var body = args.rest_h().toList();
-        
-        for (exp in body) {
-            switch (exp) {
-                case String(d) | InterpString(d):
-                    meta.docstring = d;
-                    body.shift();
-                case Symbol("@deprecated"):
-                    meta.deprecated = true;
-                    body.shift();
-                case Symbol("@async"):
-                    meta.async = true;
-                    body.shift();
-                default:
-                    break;
-            }
-        }
-
-        var hFun: HFunction = (fArgs, innerEnv, fCC) -> {
-            var callEnv = List(env.toList().concat(innerEnv.toList()));
-            callEnv = callEnv.extend(params.destructuringBind(this, fArgs)); // extending the outer env is how lambdas capture values
-            internalEval(Symbol('begin').cons_h(List(body)), callEnv, fCC);
-        };
-        
-        var callable = if (isMacro) {
-            Macro(hFun, meta);
-        } else {
-            Function(hFun, meta);
-        };
-        cc(callable);
     }
 
     // Helper function to get the iterable object in iterate() and iterateCC()
@@ -1116,49 +1022,6 @@ class CCInterp {
         });
     }
 
-    function getProperty(args: HValue, env: HValue, cc: Continuation) {
-        cc(Reflect.getProperty(args.first().value(this, true), args.second().toHaxeString()).toHValue());
-    }
-
-    /**
-        Special form for calling Haxe functions and methods from within Hiss.
-
-        args will be destructured like so:
-
-        1. caller - class or object
-        2. method - name of method or function on caller
-        3. args (default empty list) - list of function arguments
-        4. callOnReference (default Nil) - if T, a direct reference to caller will call the method, for when side-effects are desirable
-        5. keepArgsWrapped (default Nil) - list of argument indices that should be passed in HValue form, rather than as Haxe Dynamic values. Nil for none, T for all.
-    **/
-    function callHaxe(args: HValue, env: HValue, cc: Continuation) {
-        var callOnReference = if (args.length_h() < 4) {
-            false;
-        } else {
-            truthy(args.nth_h(Int(3)));
-        };
-        var keepArgsWrapped = if (args.length_h() < 5) {
-            Nil;
-        } else {
-            args.nth_h(Int(4));
-        };
-        var haxeCallArgs = if (args.length_h() < 3) {
-            [];
-        } else {
-            args.third().unwrapList(this, keepArgsWrapped);
-        };
-
-        var caller = args.first().value(this, callOnReference);
-        var methodName = args.second().toHaxeString();
-        var method = Reflect.getProperty(caller, methodName);
-
-        if (method == null) {
-            error('There is no haxe method called $methodName on ${args.first().toPrint()}');
-        } else {
-            cc(Reflect.callMethod(caller, method, haxeCallArgs).toHValue());
-        }
-    }
-
     static var ccNum = 0;
     function callCC(args: HValue, env: HValue, cc: Continuation) {
         var ccId = ccNum++;
@@ -1197,7 +1060,7 @@ class CCInterp {
             cc);
     }
 
-    // This breaks the continuation-based signature rules because I just want it to work.
+    // This breaks continuation-based signature rules because I just want it to work.
     public function evalUnquotes(expr: HValue, env: HValue): HValue {
         switch (expr) {
             case List(exps):

@@ -6,6 +6,7 @@
 (defalias subtract -)
 (defalias divide /)
 (defalias multiply *)
+(defalias mod %)
 (defalias lesser <)
 (defalias lesser-equal <=)
 (defalias greater >)

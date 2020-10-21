@@ -1,6 +1,7 @@
 package hiss;
 
 import haxe.io.Path;
+import haxe.Timer;
 
 import hiss.HTypes;
 import uuid.Uuid;
@@ -23,6 +24,10 @@ class Stdlib {
         var reversed = list.copy();
         reversed.reverse();
         return reversed;
+    }
+
+    public static function not_ih(interp: CCInterp, v: HValue) {
+        return if (interp.truthy(v)) Nil else T;
     }
 
     // Can't be ported to Hiss the Haxe reflection API doesn't allow array indexing
@@ -346,4 +351,69 @@ class Stdlib {
             }
         }
     }
+
+    public static function readLine() {
+        #if (sys || hxnodejs)
+            return Sys.stdin().readLine();
+        #else
+            throw "Can't read input on non-sys platform.";
+        #end
+    }
+
+    public static function sleep_cca(interp: CCInterp, args: HValue, env: HValue, cc: Continuation) {
+        Timer.delay(cc.bind(Nil), Math.round(args.first().toFloat() * 1000));
+    }
+
+    // Haxe interop
+    public static function getProperty_cc(interp:CCInterp, args: HValue, env: HValue, cc: Continuation) {
+        cc(Reflect.getProperty(args.first().value(interp, true), args.second().toHaxeString()).toHValue());
+    }
+
+    /**
+        Special form for calling Haxe functions and methods from within Hiss.
+
+        args will be destructured like so:
+
+        1. caller - class or object
+        2. method - name of method or function on caller
+        3. args (default empty list) - list of function arguments
+        4. callOnReference (default Nil) - if T, a direct reference to caller will call the method, for when side-effects are desirable
+        5. keepArgsWrapped (default Nil) - list of argument indices that should be passed in HValue form, rather than as Haxe Dynamic values. Nil for none, T for all.
+    **/
+    public static function callHaxe_cc(interp: CCInterp, args: HValue, env: HValue, cc: Continuation) {
+        var callOnReference = if (args.length_h() < 4) {
+            false;
+        } else {
+            interp.truthy(args.nth_h(Int(3)));
+        };
+        var keepArgsWrapped = if (args.length_h() < 5) {
+            Nil;
+        } else {
+            args.nth_h(Int(4));
+        };
+        var haxeCallArgs = if (args.length_h() < 3) {
+            [];
+        } else {
+            args.third().unwrapList(interp, keepArgsWrapped);
+        };
+
+        var caller = args.first().value(interp, callOnReference);
+        var methodName = args.second().toHaxeString();
+        var method = Reflect.getProperty(caller, methodName);
+
+        if (method == null) {
+            interp.error('There is no haxe method called $methodName on ${args.first().toPrint()}');
+        } else {
+            cc(Reflect.callMethod(caller, method, haxeCallArgs).toHValue());
+        }
+    }
+
+    public static function new_cc(interp: CCInterp, args: HValue, env: HValue, cc: Continuation) {
+        var clazz: Class<Dynamic> = args.first().value(interp);
+        var args = args.rest_h().unwrapList(interp);
+        var instance: Dynamic = Type.createInstance(clazz, args);
+        cc(instance.toHValue());
+    }
+
+    public static function mod(a, b) { return a % b; }
 }

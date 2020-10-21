@@ -60,12 +60,4 @@ class HaxeTools {
             throw "Can't run shell command on non-sys platform.";
         #end
     }
-
-    public static function readLine() {
-        #if (sys || hxnodejs)
-            return Sys.stdin().readLine();
-        #else
-            throw "Can't read input on non-sys platform.";
-        #end
-    }
 }
