@@ -335,20 +335,33 @@ class Stdlib {
         return func.metadata().docstring;
     }
 
-    public static function help_i(interp: CCInterp) {
+    public static function help_i(interp: CCInterp, showDeprecated = false) {
+        var functionMessages = [];
         for (name => value in interp.globals.toDict()) {
             try {
                 var functionHelp = name.symbolName_h();
                 try {
-                    var docs = docs_h(value);
+                    var meta = value.metadata();
+                    if (meta.deprecated) {
+                        if (showDeprecated) functionHelp += " @deprecated";
+                        else continue;
+                    }
+                    if (meta.async) {
+                        functionHelp += " @async";
+                    }
+                    var docs = value.docs_h();
                     if (docs != null && docs.length > 0) {
                         functionHelp += ': $docs';
                     }
                 } catch (s: Dynamic) {
                     continue; // Not a callable
                 }
-                String(functionHelp).message_hd();
+                functionMessages.push(functionHelp);
             }
+        }
+        functionMessages.sort(Reflect.compare);
+        for (functionHelp in functionMessages) {
+            String(functionHelp).message_hd();
         }
     }
 
