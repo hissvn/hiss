@@ -366,13 +366,19 @@ class CCInterp {
         importClass(HStream, {name: "HStream"});
         importFunction(reader, reader.setMacroString, {name: "set-macro-string!", argNames:  ["string", "read-function"]}, List([Int(1)]));
         importFunction(reader, reader.setDefaultReadFunction, {name: "set-default-read-function!", argNames: ["read-function"]}, T);
-        importFunction(reader, reader.readNumber, {name: "read-number", argNames: ["start", "stream"]}, Nil);
-        importFunction(reader, reader.readString, {name: "read-string", argNames: ["start", "stream"]}, Nil);
-        importFunction(reader, reader.readSymbol, {name: "read-symbol", argNames: ["start", "stream"]}, Nil);
+        importFunction(reader, reader.readNumber, {name: "read-number!", argNames: ["start", "stream"]}, Nil);
+        importFunction(reader, reader.readString, {name: "read-string!", argNames: ["start", "stream"]}, Nil);
+        importFunction(reader, reader.readSymbol, {name: "read-symbol!", argNames: ["start", "stream"]}, Nil);
         importFunction(reader, reader.nextToken, {name: "HStream:next-token!", argNames: ["stream"]}, Nil);
-        importFunction(reader, reader.readDelimitedList, {name: "read-delimited-list", argNames: ["terminator", "delimiters", "eof-terminates", "blank-elements", "start", "stream"]}, List([Int(3)]) /* keep blankElements wrapped */);
+        importFunction(reader, reader.readDelimitedList, {name: "read-delimited-list!", argNames: ["terminator", "delimiters", "eof-terminates", "blank-elements", "start", "stream"]}, List([Int(3)]) /* keep blankElements wrapped */);
         importFunction(reader, reader.copyReadtable, {name: "copy-readtable"});
         importFunction(reader, reader.useReadtable, {name: "use-readtable!"});
+        importFunction(reader, reader.read, {name: "read-next!", argNames: ["start", "stream"]});
+        defDestructiveAlias("read-number!", "!");
+        defDestructiveAlias("read-string!", "!");
+        defDestructiveAlias("read-symbol!", "!");
+        defDestructiveAlias("read-delimited-list!", "!");
+        defDestructiveAlias("read-next!", "!");
 
         importClass(Stdlib, {name: "Stdlib", omitStaticPrefixes: true});
 

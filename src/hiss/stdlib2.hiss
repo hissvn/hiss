@@ -426,7 +426,9 @@
 (defmacro def-reader-macro (str arg-names &rest body)
     `(set-macro-string! ,str (lambda (,(first arg-names) ,(second arg-names)) ,@body)))
 
-(def-reader-macro "[" (start stream) (cons 'list (read-delimited-list "]" '() nil null start stream)))
+(def-reader-macro "[" (start stream) (cons 'list (read-delimited-list! "]" '() nil null start stream)))
+
+(def-reader-macro "!" (start stream) (list 'not (read-next! "" stream)))
 
 (defmacro if-let ((name expression) then &optional else)
     `(let (,name ,expression)
