@@ -3,7 +3,6 @@ package test;
 import haxe.Log;
 import haxe.PosInfos;
 import hiss.StaticFiles;
-
 import utest.Runner;
 import utest.ui.Report;
 
