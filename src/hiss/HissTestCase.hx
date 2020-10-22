@@ -23,6 +23,8 @@ using hiss.Stdlib;
 import hiss.StaticFiles;
 import hiss.HaxeTools;
 
+using StringTools;
+
 // Source: https://github.com/haxe-utest/utest/issues/105#issuecomment-687710047
 // and PlainTextReport.hx
 class NoExitReport extends utest.ui.text.PrintReport {
@@ -238,8 +240,8 @@ class HissTestCase extends Test {
             // Get a list of BUILT-IN functions to make sure they're covered by tests.
             for (v => val in interp.globals.toDict()) {
                 switch (val) {
-                    case Function(_, _) | SpecialForm(_) | Macro(_):
-                        if (!functionsTested.exists(v.symbolName_h()))
+                    case Function(_, meta) | SpecialForm(_, meta) | Macro(_, meta):
+                        if (!meta.deprecated && !functionsTested.exists(v.symbolName_h()))
                             functionsTested[v.symbolName_h()] = false;
                     default:
                 }
@@ -261,12 +263,10 @@ class HissTestCase extends Test {
                 trace("Total time to run tests:");
             });
 
-            var functionsNotTested = [for (fun => tested in functionsTested) if (!tested) fun];
+            var functionsNotTested = [for (fun => tested in functionsTested) if (!tested && !fun.startsWith("_")) fun];
 
             if (functionsNotTested.length != 0) {
-                #if sys
-                Sys.print('Warning: $functionsNotTested were never tested');
-                #end
+                Assert.fail('Warning: $functionsNotTested were never tested');
             }
         }
     }
