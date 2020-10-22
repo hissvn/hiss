@@ -1,4 +1,4 @@
-package test;
+package test.cases;
 
 import hiss.CCInterp;
 import utest.Assert;

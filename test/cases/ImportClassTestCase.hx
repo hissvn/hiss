@@ -1,4 +1,4 @@
-package test;
+package test.cases;
 
 import utest.Test;
 import utest.Assert;

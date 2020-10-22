@@ -64,19 +64,15 @@ class HissTestCase extends Test {
 
     static var printTestCommands:Bool = true; // Only enable this for debugging infinite loops and mysterious hangs
 
-    public function new(hissFile:String, ?ignoreFunctions:Array<String>) {
+    public function new(hissFile:String) {
         super();
         file = hissFile;
 
         reallyTrace = Log.trace;
-
-        // Some functions just don't wanna be tested
-        if (ignoreFunctions != null)
-            this.ignoreFunctions = ignoreFunctions;
     }
 
     public static function testAtRuntime(interp:CCInterp, args:HValue, env:HValue, cc:Continuation) {
-        var instance = new HissTestCase(null, null);
+        var instance = new HissTestCase(null);
         instance.interp = interp;
         instance.expressions = args;
         var runner = new utest.Runner();

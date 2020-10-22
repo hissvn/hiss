@@ -488,10 +488,10 @@ class CCInterp {
         importFunction(Sys, Sys.getEnv, {name: "get-env", argNames: ["var"]});
         #end
 
-        StaticFiles.compileWith("stdlib2.hiss");
+        StaticFiles.compileWith("Stdlib.hiss");
 
         // disableTrace();
-        load("stdlib2.hiss");
+        load("Stdlib.hiss");
         // enableTrace();
     }
 
@@ -536,8 +536,8 @@ class CCInterp {
 
     /** Run a Hiss REPL from this interpreter instance **/
     public function repl(useConsoleReader = true) {
-        StaticFiles.compileWith("repl-lib.hiss");
-        load("repl-lib.hiss");
+        StaticFiles.compileWith("ReplLib.hiss");
+        load("ReplLib.hiss");
 
         var history = [];
         importFunction(this, () -> history, {name: "history"});
@@ -550,7 +550,7 @@ class CCInterp {
         if (useConsoleReader)
             cReader = new ConsoleReader(-1, historyFile);
         // The REPL needs to make sure its ConsoleReader actually saves the history on exit, so quit() is provided here
-        // differently than the version in stdlib2.hiss :)
+        // differently than the version in Stdlib.hiss :)
         importFunction(this, () -> {
             if (useConsoleReader) {
                 cReader.saveHistory();
