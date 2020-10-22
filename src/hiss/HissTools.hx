@@ -280,4 +280,12 @@ class HissTools {
     public static function metadata(callable:HValue) {
         return HaxeTools.extract(callable, Function(_, meta) | Macro(_, meta) | SpecialForm(_, meta) => meta);
     }
+
+    public static function toPrint(v:HValue) {
+        return v.toPrint_h();
+    }
+
+    public static function toMessage(v:HValue) {
+        return v.toMessage_h();
+    }
 }

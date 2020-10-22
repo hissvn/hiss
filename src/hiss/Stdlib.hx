@@ -251,15 +251,15 @@ class Stdlib {
     static var maxObjectRepLength = 50;
 
     // Convert values to strings for user consumption
-    public static function toMessage(v:HValue) {
+    public static function toMessage_h(v:HValue) {
         return switch (v) {
             case String(s): s;
-            default: toPrint(v);
+            default: toPrint_h(v);
         }
     }
 
     // Convert values to strings for REPL printing
-    public static function toPrint(v:HValue, recursiveCall:Int = 0):String {
+    public static function toPrint_h(v:HValue, recursiveCall:Int = 0):String {
         return switch (v) {
             case Int(i):
                 Std.string(i);
@@ -275,13 +275,13 @@ class Stdlib {
                 } else {
                     var valueStr = "";
                     for (v in l) {
-                        valueStr += v.toPrint(recursiveCall + 1) + ' ';
+                        valueStr += v.toPrint_h(recursiveCall + 1) + ' ';
                     }
                     valueStr = valueStr.substr(0, valueStr.length - 1); // no trailing space
                     '(${valueStr})';
                 };
             case Quote(e):
-                "'" + e.toPrint(recursiveCall + 1);
+                "'" + e.toPrint_h(recursiveCall + 1);
             case Object(t, o):
                 '[$t: ${Std.string(o)}]';
             case Function(_, meta) | Macro(_, meta) | SpecialForm(_, meta):
@@ -296,14 +296,14 @@ class Stdlib {
                 if (recursiveCall > recursivePrintDepth) {
                     "STACK OVERFLOW DANGER";
                 } else {
-                    '${[for (k => v in hdict) '$k => ${v.toPrint(recursiveCall + 1)}, ']}';
+                    '${[for (k => v in hdict) '$k => ${v.toPrint_h(recursiveCall + 1)}, ']}';
                 }
             case Quasiquote(e):
-                return '`${e.toPrint(recursiveCall + 1)}';
+                return '`${e.toPrint_h(recursiveCall + 1)}';
             case Unquote(e):
-                return ',${e.toPrint(recursiveCall + 1)}';
+                return ',${e.toPrint_h(recursiveCall + 1)}';
             case UnquoteList(e):
-                return ',@${e.toPrint(recursiveCall + 1)}';
+                return ',@${e.toPrint_h(recursiveCall + 1)}';
             #if traceReader
             case Comment:
                 'comment';
@@ -314,13 +314,13 @@ class Stdlib {
     }
 
     public static function print_hd(exp:HValue) {
-        HaxeTools.println(exp.toPrint());
+        HaxeTools.println(exp.toPrint_h());
         return exp;
     }
 
     // TODO this should take its behavior from the user-provided print in the interp
     public static function message_hd(exp:HValue) {
-        HaxeTools.println(exp.toMessage());
+        HaxeTools.println(exp.toMessage_h());
         return exp;
     }
 

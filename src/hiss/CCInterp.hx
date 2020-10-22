@@ -585,7 +585,6 @@ class CCInterp {
             }
             // interp.enableTrace();
 
-            // TODO errors from async functions won't be caught by this, so use errorHandler instead of try-catch
             try {
                 internalEval(exp, locals, Stdlib.print_hd);
             } catch (e:HSignal) {
@@ -594,9 +593,11 @@ class CCInterp {
                         return;
                 }
             }
+            // TODO Errors from async functions won't be caught by the try, so they throw their errors via error().
+            // So this should use errorHandler instead of try-catch
             #if (!throwErrors)
             catch (s:String) {
-                HaxeTools.println('Error "$s" from `${exp.toPrint()}`');
+                HaxeTools.println('Error "$s" from `${exp.toPrint_h()}`');
                 HaxeTools.println('Callstack depth ${CallStack.callStack().length}');
             } catch (err:Dynamic) {
                 HaxeTools.println('Error type ${Type.typeof(err)}: $err from `${exp.toPrint()}`');
