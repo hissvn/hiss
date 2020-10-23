@@ -204,7 +204,7 @@ class CCInterp {
                         }, {name: translatedName});
                     } else {
                         globals.put(translatedName, Function((args, env, cc) -> {
-                            var callObject = clazz;
+                            var callObject:Dynamic = clazz;
                             if (!isStatic) {
                                 callObject = args.first().value(this);
                                 args = args.rest_h();
@@ -228,7 +228,6 @@ class CCInterp {
                     }
                 // Import properties
                 default:
-                    // generate getters and setters for property.
                     // TODO every property currently gets a getter and a setter no matter what.
                     // Private properties are imported and therefore made public unless they start with _.
                     var getterTranslatedName = meta.convertNames(field);
@@ -240,7 +239,7 @@ class CCInterp {
                         trace(getterTranslatedName);
                     }
                     globals.put(getterTranslatedName, Function((args, env, cc) -> {
-                        var callObject = clazz;
+                        var callObject:Dynamic = clazz;
                         if (!isStatic) {
                             callObject = args.first().value(this);
                         }
