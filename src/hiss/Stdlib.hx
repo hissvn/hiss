@@ -193,8 +193,6 @@ class Stdlib {
         return List(list.toList().slice(1));
     }
 
-    // Since the variadic binop macro uses cons and it's one of the first
-    // things in the Hiss prelude, might as well let this one stand as a Haxe function.
     public static function cons_h(hv:HValue, hl:HValue):HValue {
         if (hl == Nil || hl.length_h() == 0)
             return List([hv]);
@@ -246,9 +244,7 @@ class Stdlib {
         }
     }
 
-    // TODO underscore these
-    static var recursivePrintDepth = 100;
-    static var maxObjectRepLength = 50;
+    static var _recursivePrintDepth = 100;
 
     // Convert values to strings for user consumption
     public static function toMessage_h(v:HValue) {
@@ -258,7 +254,8 @@ class Stdlib {
         }
     }
 
-    // Convert values to strings for REPL printing
+    public static var toPrint_doc = "Convert values to strings for REPL printing";
+
     public static function toPrint_h(v:HValue, recursiveCall:Int = 0):String {
         return switch (v) {
             case Int(i):
@@ -270,7 +267,7 @@ class Stdlib {
             case String(str) | InterpString(str):
                 '"$str"';
             case List(l):
-                if (recursiveCall > recursivePrintDepth) {
+                if (recursiveCall > _recursivePrintDepth) {
                     "STACK OVERFLOW DANGER";
                 } else {
                     var valueStr = "";
@@ -293,7 +290,7 @@ class Stdlib {
             case T:
                 't';
             case Dict(hdict):
-                if (recursiveCall > recursivePrintDepth) {
+                if (recursiveCall > _recursivePrintDepth) {
                     "STACK OVERFLOW DANGER";
                 } else {
                     '${[for (k => v in hdict) '$k => ${v.toPrint_h(recursiveCall + 1)}, ']}';

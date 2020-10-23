@@ -46,7 +46,7 @@ class HStream {
     var rawString:String;
     var pos:HPosition;
 
-    static var dummyCount:Int = 0;
+    static var _dummyCount:Int = 0;
 
     public function new(path:String, rawString:String, line:Int = 1, column:Int = 1) {
         if (rawString == null) {
@@ -62,7 +62,7 @@ class HStream {
 
     public static function FromString(s:String, ?pos:HPosition):HStream {
         return if (pos == null) {
-            new HStream('!NOTAFILE-${dummyCount++}!', s);
+            new HStream('!NOTAFILE-${_dummyCount++}!', s);
         } else {
             new HStream(pos.file, s, pos.line, pos.column);
         }
@@ -257,7 +257,7 @@ class HStream {
         return HStream.FromString(HaxeTools.extract(takeLine(trimmed), Some(s) => s), pos);
     }
 
-    public static var WHITESPACE = [" ", "\n", "\t"];
+    public static var _WHITESPACE = [" ", "\n", "\t"];
 
     // \r doesn't need to be considered whitespace because HStream removes \r before doing anything else
     // This function is more complicated than nextIsOneOf() because it needs to give longer strings precedence
@@ -294,19 +294,19 @@ class HStream {
     }
 
     public function dropWhitespace() {
-        dropWhileOneOf(WHITESPACE);
+        dropWhileOneOf(_WHITESPACE);
     }
 
     public function takeUntilWhitespace() {
-        return takeUntil(WHITESPACE, true, false);
+        return takeUntil(_WHITESPACE, true, false);
     }
 
     public function peekUntilWhitespace() {
-        return peekUntil(WHITESPACE, true, false);
+        return peekUntil(_WHITESPACE, true, false);
     }
 
     public function nextIsWhitespace() {
-        return rawString.length == 0 || WHITESPACE.indexOf(peek(1)) != -1;
+        return rawString.length == 0 || _WHITESPACE.indexOf(peek(1)) != -1;
     }
 
     public function nextIsOneOf(a:Array<String>) {

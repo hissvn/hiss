@@ -7,6 +7,7 @@ using Type;
 import Reflect;
 
 using Reflect;
+using Lambda;
 
 import Std;
 import haxe.CallStack;
@@ -120,137 +121,76 @@ class CCInterp {
     //     but also define an alias with a warning
     // functions and properties starting with an underscore will not be imported
     // TODO functions with 'a' in the metaSignature are asynchronous (only makes sense if they are also cc)
+    // TODO if a variable exists with the same name as a function but ending in _doc instead of a meta signature,
+    //     that variable will be imported as a docstring of the function.
+    // TODO argnames
     public function importClass(clazz:Class<Dynamic>, meta:ClassMeta) {
         if (debugClassImports) {
             trace('Import ${meta.name}');
         }
+        // TODO this just gives access to the constructor, which isn't always desirable:
         globals.put(meta.name, Object("Class", clazz));
 
         meta.addDefaultFields();
 
+        function shouldImport(field:String) {
+            return !(field.startsWith("_") || field.endsWith("_doc"));
+        }
+
+        function translateName(field:String, isStatic, isPredicate, destructive, meta) {
+            var translatedName = field;
+            if (field.contains("_")) {
+                translatedName = translatedName.substr(0, translatedName.indexOf("_"));
+            }
+            if (isPredicate)
+                translatedName = translatedName.substr(2); // drop the 'is'
+            translatedName = meta.convertNames(translatedName);
+            if (isPredicate)
+                translatedName += meta.predicateSuffix;
+            if (destructive)
+                translatedName += meta.sideEffectSuffix;
+            if (!isStatic && !meta.omitMemberPrefixes) {
+                translatedName = meta.name + ":" + translatedName;
+            }
+            if (isStatic && !meta.omitStaticPrefixes) {
+                translatedName = meta.name + ":" + translatedName;
+            }
+            return translatedName;
+        }
+
+        // Collect all class fields needing to be imported in a map so one for loop imports both static and non-static
+        var fieldsToImport:Map<String, Bool> = []; // The bool is true if the field is static
+
+        for (instanceField in clazz.getInstanceFields().filter(shouldImport)) {
+            fieldsToImport[instanceField] = false;
+        }
+
+        for (classField in clazz.getClassFields().filter(shouldImport)) {
+            fieldsToImport[classField] = true;
+        }
+
         var dummyInstance = clazz.createEmptyInstance();
-        for (instanceField in clazz.getInstanceFields()) {
-            if (instanceField.startsWith("_"))
-                continue;
-            var fieldValue = Reflect.getProperty(dummyInstance, instanceField);
+
+        for (field => isStatic in fieldsToImport) {
+            var fieldValue = Reflect.getProperty(isStatic ? clazz : dummyInstance, field);
             switch (Type.typeof(fieldValue)) {
                 // Import methods:
                 case TFunction:
-                    var metaSignature = "";
-                    var translatedName = instanceField;
-                    if (instanceField.contains("_")) {
-                        metaSignature = instanceField.split("_")[1];
-                        translatedName = translatedName.substr(0, translatedName.indexOf("_"));
-                    }
+                    var metaSignature = field.contains("_") ? field.split("_")[1] : "";
 
                     var bindInterpreter = metaSignature.contains("i");
                     var wrapArgs = if (metaSignature.contains("h")) T else Nil;
                     var destructive = metaSignature.contains("d");
-                    var isPredicate = (translatedName.toLowerHyphen().split("-")[0] == "is");
-                    if (isPredicate)
-                        translatedName = translatedName.substr(2); // drop the 'is'
-                    translatedName = meta.convertNames(translatedName);
-                    if (isPredicate)
-                        translatedName += meta.predicateSuffix;
-                    if (destructive)
-                        translatedName += meta.sideEffectSuffix;
-                    if (!meta.omitMemberPrefixes) {
-                        translatedName = meta.name + ":" + translatedName;
-                    }
-                    if (debugClassImports) {
-                        trace(translatedName);
-                    }
-                    globals.put(translatedName, Function((args, env, cc) -> {
-                        var instance = args.first().value(this);
-                        var argArray = args.rest_h().unwrapList(this, wrapArgs);
-
-                        if (bindInterpreter) {
-                            argArray.insert(0, this);
-                        }
-                        // We need an empty instance for checking the types of the properties.
-                        // BUT if we get our function pointers from the empty instance, the C++ target
-                        // will segfault when we try to call them, so getProperty has to be called every time
-                        var methodPointer = Reflect.getProperty(instance, instanceField);
-                        var returnValue:Dynamic = Reflect.callMethod(instance, methodPointer, argArray);
-                        cc(returnValue.toHValue());
-                    }, {name: translatedName}));
-                    if (destructive) {
-                        defDestructiveAlias(translatedName, meta.sideEffectSuffix);
-                    }
-                default:
-                    // generate getters and setters for instance fields
-                    // TODO this approach is naive. It only finds properties that are returned by getProperty() which hopefully
-                    // excludes ones that aren't publicly readable (TODO test that). It also generates setters for ALL publicly readable
-                    // properties, which may include some that aren't publicly writeable. Maybe trying setProperty() with a dummy
-                    // value to check if the write succeeds somehow, then setting it back, would catch that.
-
-                    // TODO One approach to privacy would be to just ignore properties with _ in front,
-                    // if I commit to saying importClass() is only for specially formed classes.
-
-                    // TODO test these imports
-                    var getterTranslatedName = meta.convertNames(instanceField);
-                    getterTranslatedName = meta.getterPrefix + getterTranslatedName;
-                    if (!meta.omitMemberPrefixes) {
-                        getterTranslatedName = meta.name + ":" + getterTranslatedName;
-                    }
-                    if (debugClassImports) {
-                        trace(getterTranslatedName);
-                    }
-                    globals.put(getterTranslatedName, Function((args, env, cc) -> {
-                        var instance = args.first().value(this);
-                        var value:Dynamic = Reflect.getProperty(instance, instanceField);
-                        cc(value.toHValue());
-                    }, {name: getterTranslatedName}));
-
-                    var setterTranslatedName = meta.convertNames(instanceField);
-                    setterTranslatedName = meta.setterPrefix + setterTranslatedName + meta.sideEffectSuffix;
-                    if (!meta.omitMemberPrefixes) {
-                        setterTranslatedName = meta.name + ":" + setterTranslatedName;
-                    }
-                    if (debugClassImports) {
-                        trace(setterTranslatedName);
-                    }
-                    globals.put(setterTranslatedName, Function((args, env, cc) -> {
-                        var instance = args.first().value(this);
-                        var value = args.second().value(this);
-                        Reflect.setProperty(instance, instanceField, value);
-                        cc(args.second());
-                    }, {name: setterTranslatedName}));
-                    // It can be confusing to forget the ! when trying to use a setter, so allow usage without ! but with a warning:
-                    defDestructiveAlias(setterTranslatedName, meta.sideEffectSuffix);
-            }
-        }
-
-        for (classField in clazz.getClassFields()) {
-            if (classField.startsWith("_"))
-                continue;
-            // TODO this logic is much-repeated from the above for-loop
-            var fieldValue = Reflect.getProperty(clazz, classField);
-            switch (Type.typeof(fieldValue)) {
-                case TFunction:
-                    var metaSignature = "";
-                    var translatedName = classField;
-                    if (classField.contains("_")) {
-                        metaSignature = classField.split("_")[1];
-                        translatedName = translatedName.substr(0, translatedName.indexOf("_"));
-                    }
-
-                    var bindInterpreter = metaSignature.contains("i");
-                    var wrapArgs = if (metaSignature.contains("h")) T else Nil;
-                    var destructive = metaSignature.contains("d");
+                    var isPredicate = (field.toLowerHyphen().split("-")[0] == "is");
                     var specialForm = metaSignature.contains("s");
                     var ccFunction = !specialForm && metaSignature.contains("cc");
-                    var isPredicate = (translatedName.toLowerHyphen().split("-")[0] == "is");
-                    if (isPredicate)
-                        translatedName = translatedName.substr(2); // drop the 'is'
-                    translatedName = meta.convertNames(translatedName);
-                    if (isPredicate)
-                        translatedName += meta.predicateSuffix;
-                    if (destructive)
-                        translatedName += meta.sideEffectSuffix;
-                    if (!meta.omitStaticPrefixes) {
-                        translatedName = meta.name + ":" + translatedName;
+
+                    if ((specialForm || ccFunction) && !isStatic) {
+                        throw '$field in ${meta.name} must be static to be a special form or ccfunction';
                     }
+
+                    var translatedName = translateName(field, isStatic, isPredicate, destructive, meta);
+
                     if (debugClassImports) {
                         trace(translatedName);
                     }
@@ -264,18 +204,70 @@ class CCInterp {
                         }, {name: translatedName});
                     } else {
                         globals.put(translatedName, Function((args, env, cc) -> {
+                            var callObject = clazz;
+                            if (!isStatic) {
+                                callObject = args.first().value(this);
+                                args = args.rest_h();
+                            }
                             var argArray = args.unwrapList(this, wrapArgs);
+
                             if (bindInterpreter) {
                                 argArray.insert(0, this);
                             }
-                            cc(Reflect.callMethod(clazz, fieldValue, argArray).toHValue());
+                            // We need an empty instance for checking the types of the properties.
+                            // BUT if we get our function pointers from the empty instance, the C++ target
+                            // will segfault when we try to call them, so getProperty has to be called every time
+                            var funcPointer = Reflect.getProperty(callObject, field);
+
+                            var returnValue:Dynamic = Reflect.callMethod(callObject, funcPointer, argArray);
+                            cc(returnValue.toHValue());
                         }, {name: translatedName}));
                     }
                     if (destructive) {
                         defDestructiveAlias(translatedName, meta.sideEffectSuffix);
                     }
+                // Import properties
                 default:
-                    // TODO generate getters and setters for static properties
+                    // generate getters and setters for property.
+                    // TODO every property currently gets a getter and a setter no matter what.
+                    // Private properties are imported and therefore made public unless they start with _.
+                    var getterTranslatedName = meta.convertNames(field);
+                    getterTranslatedName = meta.getterPrefix + getterTranslatedName;
+                    if (!meta.omitMemberPrefixes) {
+                        getterTranslatedName = meta.name + ":" + getterTranslatedName;
+                    }
+                    if (debugClassImports) {
+                        trace(getterTranslatedName);
+                    }
+                    globals.put(getterTranslatedName, Function((args, env, cc) -> {
+                        var callObject = clazz;
+                        if (!isStatic) {
+                            callObject = args.first().value(this);
+                        }
+                        var value:Dynamic = Reflect.getProperty(callObject, field);
+                        cc(value.toHValue());
+                    }, {name: getterTranslatedName}));
+
+                    var setterTranslatedName = meta.convertNames(field);
+                    setterTranslatedName = meta.setterPrefix + setterTranslatedName + meta.sideEffectSuffix;
+                    if (!meta.omitMemberPrefixes) {
+                        setterTranslatedName = meta.name + ":" + setterTranslatedName;
+                    }
+                    if (debugClassImports) {
+                        trace(setterTranslatedName);
+                    }
+                    globals.put(setterTranslatedName, Function((args, env, cc) -> {
+                        var callObject = clazz;
+                        if (!isStatic) {
+                            callObject = args.first().value(this);
+                            args = args.rest_h();
+                        }
+                        var value = args.first().value(this);
+                        Reflect.setProperty(callObject, field, value);
+                        cc(args.second());
+                    }, {name: setterTranslatedName}));
+                    // It can be confusing to forget the ! when trying to use a setter, so allow usage without ! but with a warning:
+                    defDestructiveAlias(setterTranslatedName, meta.sideEffectSuffix);
             }
         }
     }

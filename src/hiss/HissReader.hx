@@ -241,7 +241,7 @@ class HissReader {
     public function nextToken(str:HStream):String {
         str.dropWhitespace();
 
-        var whitespaceOrTerminator = HStream.WHITESPACE.concat(terminators);
+        var whitespaceOrTerminator = HStream._WHITESPACE.concat(terminators);
 
         var token = try {
             HaxeTools.extract(str.takeUntil(whitespaceOrTerminator, true, false, false), Some(s) => s, "next token").output;
@@ -283,11 +283,11 @@ class HissReader {
 
         // We want to skip any whitespace that follows a delimiter, but if the terminator is a whitespace character, that will
         // cause an error, so for these purposes, don't treat the terminator as whitespace no matter what.
-        var whitespaceForThesePurposes = HStream.WHITESPACE.copy();
+        var whitespaceForThesePurposes = HStream._WHITESPACE.copy();
         whitespaceForThesePurposes.remove(terminator);
 
         if (delimiters.length == 0) {
-            delimiters = HStream.WHITESPACE.copy();
+            delimiters = HStream._WHITESPACE.copy();
         } else {
             delimiters = delimiters.copy(); // TODO why?
             terminators = terminators.concat(delimiters);
