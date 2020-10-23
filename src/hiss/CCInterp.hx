@@ -36,6 +36,7 @@ import hiss.HissReader;
 import hiss.HissTools;
 
 using hiss.HissTools;
+using hiss.HTypes.ClassMetaTools;
 
 import hiss.Stdlib;
 
@@ -125,32 +126,7 @@ class CCInterp {
         }
         globals.put(meta.name, Object("Class", clazz));
 
-        if (meta.omitMemberPrefixes == null) {
-            meta.omitMemberPrefixes = false;
-        }
-        if (meta.omitStaticPrefixes == null) {
-            meta.omitStaticPrefixes = false;
-        }
-        // By default, convert names of functions and properties into the form name-to-lower-hyphen
-        if (meta.convertNames == null) {
-            meta.convertNames = Strings.toLowerHyphen;
-        }
-
-        if (meta.getterPrefix == null) {
-            meta.getterPrefix = "get-";
-        }
-        if (meta.setterPrefix == null) {
-            meta.setterPrefix = "set-";
-        }
-        if (meta.sideEffectSuffix == null) {
-            meta.sideEffectSuffix = "!";
-        }
-        if (meta.predicateSuffix == null) {
-            meta.predicateSuffix = "?";
-        }
-        if (meta.conversionInfix == null) {
-            meta.conversionInfix = "->";
-        }
+        meta.addDefaultFields();
 
         var dummyInstance = clazz.createEmptyInstance();
         for (instanceField in clazz.getInstanceFields()) {
