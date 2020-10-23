@@ -256,7 +256,7 @@ class CCInterp {
                         trace(setterTranslatedName);
                     }
                     globals.put(setterTranslatedName, Function((args, env, cc) -> {
-                        var callObject = clazz;
+                        var callObject:Dynamic = clazz;
                         if (!isStatic) {
                             callObject = args.first().value(this);
                             args = args.rest_h();
