@@ -46,11 +46,15 @@ class SpecialForms {
 
         var body = args.rest_h().toList();
 
+        var idx = 0;
         for (exp in body) {
             switch (exp) {
                 case String(d) | InterpString(d):
-                    meta.docstring = d;
-                    body.shift();
+                    // Unless the string is the only expression left in the body, use it as a docstring
+                    if (idx + 1 < body.length) {
+                        meta.docstring = d;
+                        body.shift();
+                    }
                 case Symbol("@deprecated"):
                     meta.deprecated = true;
                     body.shift();
@@ -60,6 +64,7 @@ class SpecialForms {
                 default:
                     break;
             }
+            idx += 1;
         }
 
         var hFun:HFunction = (fArgs, innerEnv, fCC) -> {
