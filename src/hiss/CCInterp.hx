@@ -673,6 +673,10 @@ class CCInterp {
         env = envWithReturn(env, returnCalled);
         var value = eval(exps.first(), env);
 
+        if (value == null) {
+            throw 'Expression ${exps.first()} returned null to trBegin. You must have called an async function without calling enable-cc!';
+        }
+
         if (returnCalled.b || !truthy(exps.rest_h())) {
             cc(value);
         } else {
@@ -756,7 +760,17 @@ class CCInterp {
         if (!truthy(args)) {
             cc(Nil);
         } else {
-            cc(List([for (arg in args.toList()) eval(arg, env)]));
+            var result = [];
+
+            for (arg in args.toList()) {
+                var val = eval(arg, env);
+                if (val == null) {
+                    throw 'Expression $arg returned null to trEvalAll. You must have called an async function without calling enable-cc!';
+                }
+                result.push(val);
+            };
+
+            cc(List(result));
         }
     }
 
@@ -978,6 +992,7 @@ class CCInterp {
                     nextValues = nextVals;
                 });
                 recurCalled = true;
+                cc(Nil);
             }
             var values = firstValues;
             var result = Nil;
