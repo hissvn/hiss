@@ -127,7 +127,7 @@ class HissReader {
     }
 
     public function readNumber(start:String, stream:HStream):HValue {
-        stream.putBack(start);
+        stream.putBack_d(start);
 
         var token = nextToken(stream);
         return if (token.indexOf('.') != -1) {
@@ -140,7 +140,7 @@ class HissReader {
     function readSymbolOrSign(start:String, stream:HStream):HValue {
         // Hyphen could either be a symbol (subraction), or the start of a negative numeral
         return if (stream.nextIsWhitespace() || stream.nextIsOneOf(terminators)) {
-            stream.putBack(start);
+            stream.putBack_d(start);
             readSymbol("", stream);
         } else {
             readNumber(start, stream);
@@ -148,24 +148,24 @@ class HissReader {
     }
 
     function readBlockComment(start:String, stream:HStream):HValue {
-        stream.takeUntil(["*/"]);
+        stream.takeUntil_d(["*/"]);
         return Comment;
     }
 
     function readLineComment(start:String, stream:HStream):HValue {
-        stream.takeLine();
+        stream.takeLine_d();
         return Comment;
     }
 
     function readRawString(start:String, str:HStream):HValue {
         var pounds = "#";
         while (str.peek(1) == "#") {
-            pounds += str.take(1);
+            pounds += str.take_d(1);
         }
-        str.drop('"');
+        str.drop_d('"');
         var terminator = '"$pounds';
 
-        switch (str.takeUntil([terminator], false, false)) {
+        switch (str.takeUntil_d([terminator], false, false)) {
             case Some(s):
                 return String(s.output);
             case None:
@@ -178,19 +178,19 @@ class HissReader {
 
         var literal = "";
         while (true) {
-            var outputInfo = HaxeTools.extract(str.takeUntil(['"', '\\$', '$', '\\\\'], false, true, false), Some(o) => o); // don't drop the terminator
+            var outputInfo = HaxeTools.extract(str.takeUntil_d(['"', '\\$', '$', '\\\\'], false, true, false), Some(o) => o); // don't drop the terminator
             // trace(outputInfo.terminator);
             switch (outputInfo.terminator) {
                 case '"':
                     literal += outputInfo.output;
-                    str.drop(outputInfo.terminator);
+                    str.drop_d(outputInfo.terminator);
                     break;
                 case "\\$":
                     literal += outputInfo.output + outputInfo.terminator;
-                    str.drop(outputInfo.terminator);
+                    str.drop_d(outputInfo.terminator);
                 case '$':
                     literal += outputInfo.output + outputInfo.terminator;
-                    str.drop(outputInfo.terminator);
+                    str.drop_d(outputInfo.terminator);
 
                     // There is a painful edge case where string literals could be inside an expression
                     // being interpolated into another string literal. The only way to make sure we're
@@ -203,8 +203,8 @@ class HissReader {
                     var startingLength = expStream.length();
 
                     if (expStream.peek(1) == "{") {
-                        expStream.drop("{");
-                        var braceContents = HaxeTools.extract(expStream.takeUntil(['}'], false, false, true), Some(o) => o).output;
+                        expStream.drop_d("{");
+                        var braceContents = HaxeTools.extract(expStream.takeUntil_d(['}'], false, false, true), Some(o) => o).output;
                         expStream = HStream.FromString(braceContents);
                         expLength = 2 + expStream.length();
                         exp = read("", expStream);
@@ -218,10 +218,10 @@ class HissReader {
                             expLength -= 1;
                         default:
                     }
-                    literal += str.take(expLength);
+                    literal += str.take_d(expLength);
                 case '\\\\':
                     literal += "\\";
-                    str.drop(outputInfo.terminator);
+                    str.drop_d(outputInfo.terminator);
             }
         }
 
@@ -239,12 +239,12 @@ class HissReader {
     }
 
     public function nextToken(str:HStream):String {
-        str.dropWhitespace();
+        str.dropWhitespace_d();
 
         var whitespaceOrTerminator = HStream._WHITESPACE.concat(terminators);
 
         var token = try {
-            HaxeTools.extract(str.takeUntil(whitespaceOrTerminator, true, false, false), Some(s) => s, "next token").output;
+            HaxeTools.extract(str.takeUntil_d(whitespaceOrTerminator, true, false, false), Some(s) => s, "next token").output;
         } catch (s:Dynamic) {
             "";
         };
@@ -305,15 +305,15 @@ class HissReader {
             } else {
                 values.push(read("", stream));
             }
-            stream.dropIfOneOf(delimiters);
-            stream.dropWhileOneOf(whitespaceForThesePurposes);
+            stream.dropIfOneOf_d(delimiters);
+            stream.dropWhileOneOf_d(whitespaceForThesePurposes);
         }
 
         // require the terminator unless eofTerminates
         if (eofTerminates && stream.isEmpty()) {} else {
             // Always drop the terminator if it's there
             try {
-                stream.drop(terminator);
+                stream.drop_d(terminator);
             } catch (s:Dynamic) {
                 throw 'terminator $terminator not found while reading $delimiters delimited list from $stream';
             }
@@ -325,7 +325,7 @@ class HissReader {
     }
 
     function callReadFunction(func:HValue, start:String, stream:HStream):HValue {
-        var pos = stream.position();
+        var pos = stream._position();
         var startingStream = stream.toString();
         try {
             var result = interp.eval(func.cons_h(List([String(start), Object("HStream", stream)])));
@@ -348,15 +348,15 @@ class HissReader {
     var terminators = [")", "/*", ";", "//"];
 
     public function read(start:String, stream:HStream):HValue {
-        stream.dropWhitespace();
+        stream.dropWhitespace_d();
 
         for (length in macroLengths) {
             if (stream.length() < length)
                 continue;
             var couldBeAMacro = stream.peek(length);
             if (readTable.exists_h(String(couldBeAMacro))) {
-                stream.drop(couldBeAMacro);
-                var pos = stream.position();
+                stream.drop_d(couldBeAMacro);
+                var pos = stream._position();
                 var expression = null;
 
                 expression = callReadFunction(readTable.get_h(String(couldBeAMacro)), couldBeAMacro, stream);
@@ -391,7 +391,7 @@ class HissReader {
         while (!stream.isEmpty()) {
             exprs.push(read("", stream));
             if (dropWhitespace != Nil) {
-                stream.dropWhitespace();
+                stream.dropWhitespace_d();
             }
         }
         return List(exprs);

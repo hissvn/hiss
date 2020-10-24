@@ -123,7 +123,8 @@ class CCInterp {
     // TODO functions with 'a' in the metaSignature are asynchronous (only makes sense if they are also cc)
     // TODO if a variable exists with the same name as a function but ending in _doc instead of a meta signature,
     //     that variable will be imported as a docstring of the function.
-    // TODO argnames
+    // TODO if a variable exists with the same name as a function but ending in _args instead of a meta signature,
+    //     that variable will be imported as the arg names of the function.
     public function importClass(clazz:Class<Dynamic>, meta:ClassMeta) {
         if (debugClassImports) {
             trace('Import ${meta.name}');
@@ -134,7 +135,7 @@ class CCInterp {
         meta.addDefaultFields();
 
         function shouldImport(field:String) {
-            return !(field.startsWith("_") || field.endsWith("_doc"));
+            return !(field.startsWith("_") || field.endsWith("_doc") || field.endsWith("_args"));
         }
 
         function translateName(field:String, isStatic, isPredicate, destructive, meta) {
@@ -360,7 +361,7 @@ class CCInterp {
         importFunction(reader, reader.readNumber, {name: "read-number!", argNames: ["start", "stream"]}, Nil);
         importFunction(reader, reader.readString, {name: "read-string!", argNames: ["start", "stream"]}, Nil);
         importFunction(reader, reader.readSymbol, {name: "read-symbol!", argNames: ["start", "stream"]}, Nil);
-        importFunction(reader, reader.nextToken, {name: "HStream:next-token!", argNames: ["stream"]}, Nil);
+        importFunction(reader, reader.nextToken, {name: "next-token!", argNames: ["stream"]}, Nil);
         importFunction(reader, reader.readDelimitedList, {
             name: "read-delimited-list!",
             argNames: [
@@ -829,6 +830,8 @@ class CCInterp {
         It can be nice to have things work without the !, but with a warning.
     **/
     public function defDestructiveAlias(destructiveName:String, suffix:String) {
+        // trace(destructiveName);
+        // trace(suffix);
         defAlias(List([
             Symbol(destructiveName),
             Symbol(destructiveName.substr(0, destructiveName.length - suffix.length)),
@@ -1125,8 +1128,8 @@ class CCInterp {
                     var exp = null;
                     var expLength = -1;
                     if (expStream.peek(1) == "{") {
-                        expStream.drop("{");
-                        var braceContents = HaxeTools.extract(expStream.takeUntil(['}'], false, false, true), Some(o) => o).output;
+                        expStream.drop_d("{");
+                        var braceContents = HaxeTools.extract(expStream.takeUntil_d(['}'], false, false, true), Some(o) => o).output;
                         expStream = HStream.FromString(braceContents);
                         expLength = 2 + expStream.length();
                         exp = reader.read("", expStream);

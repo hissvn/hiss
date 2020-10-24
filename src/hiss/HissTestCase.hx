@@ -243,6 +243,8 @@ class HissTestCase extends Test {
                     case Function(_, meta) | SpecialForm(_, meta) | Macro(_, meta):
                         if (!meta.deprecated && !functionsTested.exists(v.symbolName_h()))
                             functionsTested[v.symbolName_h()] = false;
+                        else
+                            trace(meta.name);
                     default:
                 }
             }

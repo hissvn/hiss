@@ -450,7 +450,7 @@
 (defalias use-readtable! use-readtable @deprecated)
 (defalias set-macro-string! set-macro-string @deprecated)
 (defalias set-default-read-function! set-default-read-function @deprecated)
-(defalias HStream:next-token! next-token @deprecated)
+(defalias next-token! next-token @deprecated)
 
 (defalias print! print @deprecated)
 (defalias message! message @deprecated)
