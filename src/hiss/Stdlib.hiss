@@ -70,6 +70,12 @@
 (register-method! "split" split)
 (register-method! "substr" substring)
 (defun char-at (str idx) (substring str idx 1))
+// Allow negative index for substring and char-at
+(defvar _substring substring)
+(defun substring (str idx &optional len)
+    (_substring str (index idx str) (or len null)))
+(defalias substring substr)
+
 
 (defun list (&rest args) args)
 (defun empty? (list-or-string) (or (nil? list-or-string) (= 0 (length list-or-string))))
