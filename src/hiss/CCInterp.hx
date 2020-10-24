@@ -74,6 +74,7 @@ class CCInterp {
         errorHandler = handler;
     }
 
+    // TODO if there is an errorhandler, code will still continue and try statements won't catch it.
     public function error(message:Dynamic) {
         if (errorHandler != null) {
             errorHandler(message);
@@ -368,8 +369,6 @@ class CCInterp {
 
         // Error handling
         importFunction(this, error, {name: "error!", argNames: ["message"]}, Nil);
-        importSpecialForm(throwsError, {name: "error?"});
-        importSpecialForm(hissTry, {name: "try"});
 
         // Running as a repl
         importFunction(this, repl, {name: "repl"});
@@ -483,33 +482,6 @@ class CCInterp {
         // disableTrace();
         load("Stdlib.hiss");
         // enableTrace();
-    }
-
-    // error? will have an implicit begin
-    function throwsError(args:HValue, env:HValue, cc:Continuation) {
-        try {
-            internalEval(Symbol("begin").cons_h(args), env, (val) -> {
-                cc(Nil); // If the continuation is called, there is no error
-            });
-        } catch (err:Dynamic) {
-            cc(T);
-        }
-    }
-
-    function hissTry(args:HValue, env:HValue, cc:Continuation) {
-        try {
-            // Try cannot have an implicit begin because the second argument is the catch
-            internalEval(args.first(), env, cc);
-        } catch (sig:HSignal) {
-            throw sig;
-        } catch (err:Dynamic) {
-            // TODO let the catch access the error message
-            if (args.length_h() > 1) {
-                internalEval(args.second(), env, cc);
-            } else {
-                cc(Nil);
-            }
-        }
     }
 
     // TODO make public enableCC() and disableCC()

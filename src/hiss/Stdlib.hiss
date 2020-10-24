@@ -21,6 +21,9 @@
 
 (defalias call-cc call/cc)
 
+// This just allows the try/catch implementation to be DRY but still readable 
+(defalias lambda catch)
+
 (defun first (l) (nth l 0))
 
 (defmacro register-method! (method name &optional call-on-reference keep-args-wrapped return-instance)
@@ -436,7 +439,6 @@
 (defvar _take HStream:take!)
 (defun HStream:take! (stream count) (try (_take! stream count) ""))
 (defalias HStream:take! HStream:take @deprecated)
-// TODO when catch statements change, those ^ will change
 
 (defmacro def-reader-macro (str arg-names &rest body)
     `(set-macro-string! ,str (lambda (,(first arg-names) ,(second arg-names)) ,@body)))

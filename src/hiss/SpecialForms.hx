@@ -147,4 +147,27 @@ class SpecialForms {
     public static function quote_s(interp:CCInterp, args:HValue, env:HValue, cc:Continuation) {
         cc(args.first());
     }
+
+    public static function try_s(interp:CCInterp, args:HValue, env:HValue, cc:Continuation) {
+        try {
+            // Try cannot have an implicit begin because the second argument is the catch expression
+            interp.evalCC(args.first(), cc, env);
+        } catch (sig:HSignal) {
+            throw sig;
+        } catch (err:Dynamic) {
+            if (args.length_h() > 1) {
+                interp.evalCC(args.second(), (catchExp) -> {
+                    switch (catchExp) {
+                        // (catch (error) ...) is actually just an alias for (lambda (error) ...)
+                        case Function(_, _):
+                            interp.evalCC(List([catchExp, err.toHValue()]), cc, env);
+                        default:
+                            cc(catchExp);
+                    }
+                }, env);
+            } else {
+                cc(Nil);
+            }
+        }
+    }
 }

@@ -326,8 +326,13 @@
 (test! use-readtable!)
 // TODO
 (test! unless)
-// TODO
-(test! try)
+
+(test! (try catch)
+    (eq 5 (try 5 nil))
+    (nil? (try (error! "error on purpose")))
+    (eq 5 (try (error! "error on purpose") 5))
+    (eq "Error: 5" (try (error! 5) (catch (e) "Error: $e")))) 
+
 // TODO
 (test! trim)
 // TODO
@@ -483,8 +488,10 @@
 
 // TODO
 (test! last)
-// TODO
+
+// TODO 
 (test! lambda)
+
 // TODO
 (test! iterator-to-iterable)
 // TODO
@@ -537,8 +544,6 @@
 (test! float)
 // TODO
 (test! filter)
-// TODO
-(test! error?)
 // TODO
 (test! error!)
 // TODO
