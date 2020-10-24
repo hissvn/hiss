@@ -52,6 +52,7 @@ class HHttp {
             cc(dataString.toHValue());
         };
 
+        // TODO if there is an error handler set, code will continue through an http error
         http.onError = interp.error;
 
         // TODO onStatus() might be important in some way although it doesn't fit into the Hiss CC model

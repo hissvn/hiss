@@ -74,7 +74,15 @@ class CCInterp {
         errorHandler = handler;
     }
 
-    // TODO if there is an errorhandler, code will still continue and try statements won't catch it.
+    private function errorCC(args:HValue, env:HValue, cc:Continuation) {
+        var message = args.first().value(this);
+        if (errorHandler != null) {
+            errorHandler(message);
+        } else {
+            throw message;
+        }
+    }
+
     public function error(message:Dynamic) {
         if (errorHandler != null) {
             errorHandler(message);
@@ -368,7 +376,7 @@ class CCInterp {
         importFunction(this, useFunctions.bind(begin, evalAll, iterateCC), {name: "enable-cc!"});
 
         // Error handling
-        importFunction(this, error, {name: "error!", argNames: ["message"]}, Nil);
+        importCCFunction(errorCC, {name: "error!", argNames: ["message"]});
 
         // Running as a repl
         importFunction(this, repl, {name: "repl"});
