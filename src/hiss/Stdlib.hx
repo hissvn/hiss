@@ -481,6 +481,6 @@ class Stdlib {
         var realIdx = idx;
         if (idx < 0) realIdx = listOrString.length + idx;
         if (realIdx < 0 || realIdx >= listOrString.length) throw 'Index out of range: $idx in $listOrString';
-        return idx;
+        return realIdx;
     }
 }

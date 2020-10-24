@@ -265,7 +265,8 @@
     (= 3 (index-of "heyy" "y" 3))
     (= 2 (index-of '(h e y y) 'y))
     (= 2 (index-of '(h e y y) 'y 2))
-    (= 3 (index-of '(h e y y) 'y 3)))
+    (= 3 (index-of '(h e y y) 'y 3))
+    (= 3 (index-of "heyy" "y" -1)))
 
 (test! contains
     (contains "heyy" "y")
@@ -463,10 +464,15 @@
 (test! lesser-equal)
 // TODO
 (test! lesser)
-// TODO
-(test! length)
-// TODO
-(test! last-index-of)
+
+(test! length
+    (eq 5 (length [1 2 3 4 5]))
+    (eq 5 (length "abcde")))
+
+(test! last-index-of
+    (eq 5 (last-index-of "abcabc" "c"))
+    (eq 2 (last-index-of "abcabc" "c" -2)))
+
 // TODO
 (test! last)
 // TODO
