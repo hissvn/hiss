@@ -175,13 +175,15 @@
         (cc cc))))
 
 (defmacro _case (value &rest case-list)
-    (let (case-first (first case-list)
-            case-rest (rest case-list))
-        (if case-first
-            `(if (or (eq ',(first case-first) 'default) (eq ,(first case-first) ,value))
-                (begin ,@(rest case-first))
-                (case ,value ,@case-rest))
-            nil)))
+    (if case-list
+        (let (case-first (first case-list)
+                case-rest (rest case-list))
+            (if case-first
+                `(if (or (eq ',(first case-first) 'default) (eq ,(first case-first) ,value))
+                    (begin ,@(rest case-first))
+                    (case ,value ,@case-rest))
+                nil))
+        nil))
 (defmacro case (form &rest case-list)
     `(let (value ,form) (_case value ,@case-list)))
 

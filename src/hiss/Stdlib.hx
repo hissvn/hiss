@@ -31,14 +31,15 @@ class Stdlib {
         return if (interp.truthy(v)) Nil else T;
     }
 
-    // Can't be ported to Hiss the Haxe reflection API doesn't allow array indexing
     public static function nth_h(list:HValue, idx:HValue):HValue {
-        return list.toList()[idx.toInt()];
+        var l = list.toList();
+        return l[index(idx.toInt(), l)];
     }
 
-    public static function setNth_hd(arr:HValue, idx:HValue, val:HValue) {
-        arr.toList()[idx.toInt()] = val;
-        return arr;
+    public static function setNth_hd(list:HValue, idx:HValue, val:HValue) {
+        var l = list.toList();
+        l[index(idx.toInt(), l)] = val;
+        return l;
     }
 
     public static function symbolName_h(v:HValue):String {

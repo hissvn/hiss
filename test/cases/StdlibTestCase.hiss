@@ -136,7 +136,8 @@
     (= 7 (seventh l))
     (= 8 (eighth l))
     (= 9 (ninth l))
-    (= 10 (tenth l)))
+    (= 10 (tenth l))
+    (= 10 (nth l -1)))
 
 (test! message
     (prints "Hello world" (message "Hello world")))
@@ -362,8 +363,14 @@
 (test! sleep!)
 // TODO
 (test! setlocal!)
-// TODO
-(test! set-nth!)
+
+(test! set-nth!
+    (setlocal! l [1 2 3 4])
+    (eq [1 2 6 4] (set-nth! l 2 6))
+    (eq [1 2 6 4] l)
+    (eq [1 2 6 7] (set-nth! l -1 7))
+    (eq [1 2 6 7] l))
+
 // TODO
 (test! set-macro-string!)
 // TODO
