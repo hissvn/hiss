@@ -205,17 +205,6 @@ class HStream {
         return num;
     }
 
-    /** If the given expression comes next in the buffer, take its contents. Otherwise, return None **/
-    /*public function expressionIfNext(o:String, c:String):Option<String> {
-        if (rawString.startsWith(o) && cleanBuffer.indexOf(c) != -1) {
-         drop(o);
-         var end = cleanBuffer.indexOf(c);
-         var content = take(end);
-         drop(c);
-         return Some(content);
-        }
-        return None;
-    }*/
     /** DRY Helper for peekLine() and takeLine() 
         @param trimmed String including 'l' (ltrim), and/or 'r' (rtrim)
     **/

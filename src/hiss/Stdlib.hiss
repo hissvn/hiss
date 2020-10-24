@@ -416,16 +416,18 @@
         (deftype ,name ,type-predicate-name))))
 
 // redefine take-until to return a list instead of an object
-(defvar _take-until HStream:take-until)
+(defvar _take-until! HStream:take-until!)
 // TODO it's weird that in order to make true the default for an imported function, we need to invert the calling convention like so:
-(defun HStream:take-until (stream terminators &optional no-eof-terminates no-escaped-terminators no-drop-terminator)
-    (let (output-object (_take-until stream terminators (not no-eof-terminates) (not no-escaped-terminators) (not no-drop-terminator)))
+(defun HStream:take-until! (stream terminators &optional no-eof-terminates no-escaped-terminators no-drop-terminator)
+    (let (output-object (_take-until! stream terminators (not no-eof-terminates) (not no-escaped-terminators) (not no-drop-terminator)))
         (list (get-property output-object "output") (get-property output-object "terminator"))))
+(defalias HStream:take-until! HStream:take-until @deprecated)
 // redefine peek and take to return empty string if the stream is empty
 (defvar _peek HStream:peek)
 (defun HStream:peek (stream count) (try (_peek stream count) ""))
-(defvar _take HStream:take)
-(defun HStream:take (stream count) (try (_take stream count) ""))
+(defvar _take HStream:take!)
+(defun HStream:take! (stream count) (try (_take! stream count) ""))
+(defalias HStream:take! HStream:take @deprecated)
 // TODO when catch statements change, those ^ will change
 
 (defmacro def-reader-macro (str arg-names &rest body)
