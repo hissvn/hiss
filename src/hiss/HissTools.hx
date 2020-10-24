@@ -143,12 +143,26 @@ class HissTools {
                         case List(nestedList):
                             bindings = bindings.dictExtend(destructuringBind(l1[idx], interp, l2[idx]));
                         case Symbol("&optional"):
-                            var numOptionalValues = l1.length - idx - 1;
-                            var remainingValues = l2.slice(idx);
+                            var endOfOptionalValues = l1.length;
+                            for (idx2 in idx+1...l1.length) {
+                                if (interp.truthy(interp.eq_ih(l1[idx2], Symbol("&rest")))) {
+                                    endOfOptionalValues = idx2;
+                                    break;
+                                }
+                            }
+                            if (endOfOptionalValues == -1) {
+                                endOfOptionalValues = l1.length;
+                                trace('not found');
+                            }
+                                
+                            var numOptionalValues = endOfOptionalValues - idx - 1;
+                            var remainingValues = l2.slice(idx, endOfOptionalValues);
                             while (remainingValues.length < numOptionalValues) {
                                 remainingValues.push(Nil);
                             }
                             bindings = bindings.dictExtend(destructuringBind(List(l1.slice(idx + 1)), interp, List(remainingValues)));
+                            if (endOfOptionalValues != l1.length)
+                                bindings = bindings.dictExtend(destructuringBind(List(l1.slice(endOfOptionalValues)), interp, List(l2.slice(endOfOptionalValues-1))));
                             break;
                         case Symbol("&rest"):
                             var remainingValues = l2.slice(idx);

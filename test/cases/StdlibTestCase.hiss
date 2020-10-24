@@ -775,4 +775,5 @@
     (defun eat (meal &optional drink &rest other-snacks)
         [meal drink other-snacks])
     (eq ["pizza" "slurm" ["anchovies" "whatever"]] (eat "pizza" "slurm" "anchovies" "whatever"))
+    (eq ["pizza" "slurm" []] (eat "pizza" "slurm"))
     (eq ["pizza" nil []] (eat "pizza")))
