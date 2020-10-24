@@ -120,10 +120,10 @@ class CCInterp {
     // functions with 'd' for destructive in the metaSignature will use sideEffectSuffix
     //     but also define an alias with a warning
     // functions and properties starting with an underscore will not be imported
-    // TODO functions with 'a' in the metaSignature are asynchronous (only makes sense if they are also cc)
-    // TODO if a variable exists with the same name as a function but ending in _doc instead of a meta signature,
+    // functions with 'a' in the metaSignature are asynchronous (only makes sense if they are also cc)
+    // if a variable exists with the same name as a function but ending in _doc instead of a meta signature,
     //     that variable will be imported as a docstring of the function.
-    // TODO if a variable exists with the same name as a function but ending in _args instead of a meta signature,
+    // if a variable exists with the same name as a function but ending in _args instead of a meta signature,
     //     that variable will be imported as the arg names of the function.
     public function importClass(clazz:Class<Dynamic>, meta:ClassMeta) {
         if (debugClassImports) {
@@ -177,7 +177,13 @@ class CCInterp {
             switch (Type.typeof(fieldValue)) {
                 // Import methods:
                 case TFunction:
-                    var metaSignature = field.contains("_") ? field.split("_")[1] : "";
+                    var nameWithoutSignature = field;
+                    var metaSignature = "";
+                    if (field.contains("_")) {
+                        var parts = field.split("_");
+                        nameWithoutSignature = parts[0];
+                        metaSignature = parts[1];
+                    }
 
                     var bindInterpreter = metaSignature.contains("i");
                     var wrapArgs = if (metaSignature.contains("h")) T else Nil;
@@ -185,6 +191,11 @@ class CCInterp {
                     var isPredicate = (field.toLowerHyphen().split("-")[0] == "is");
                     var specialForm = metaSignature.contains("s");
                     var ccFunction = !specialForm && metaSignature.contains("cc");
+                    var isAsync = metaSignature.contains("a");
+                    
+                    if (!ccFunction && isAsync) {
+                        throw '$field in ${meta.name} must be a ccfunction to be declared async';
+                    }
 
                     if ((specialForm || ccFunction) && !isStatic) {
                         throw '$field in ${meta.name} must be static to be a special form or ccfunction';
@@ -195,14 +206,25 @@ class CCInterp {
                     if (debugClassImports) {
                         trace(translatedName);
                     }
+
+                    var functionMeta:CallableMeta = { name: translatedName };
+
+                    if (Reflect.hasField(clazz, '${nameWithoutSignature}_doc')) {
+                        functionMeta.docstring = Reflect.getProperty(clazz, '${nameWithoutSignature}_doc');
+                    }
+
+                    if (Reflect.hasField(clazz, '${nameWithoutSignature}_args')) {
+                        functionMeta.argNames = Reflect.getProperty(clazz, '${nameWithoutSignature}_args');
+                    }
+
                     if (ccFunction) {
                         importCCFunction((args, env, cc) -> {
                             fieldValue(this, args, env, cc);
-                        }, {name: translatedName});
+                        }, functionMeta);
                     } else if (specialForm) {
                         importSpecialForm((args, env, cc) -> {
                             fieldValue(this, args, env, cc);
-                        }, {name: translatedName});
+                        }, functionMeta);
                     } else {
                         globals.put(translatedName, Function((args, env, cc) -> {
                             var callObject:Dynamic = clazz;
@@ -222,7 +244,7 @@ class CCInterp {
 
                             var returnValue:Dynamic = Reflect.callMethod(callObject, funcPointer, argArray);
                             cc(returnValue.toHValue());
-                        }, {name: translatedName}));
+                        }, functionMeta));
                     }
                     if (destructive) {
                         defDestructiveAlias(translatedName, meta.sideEffectSuffix);

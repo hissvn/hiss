@@ -415,6 +415,8 @@
         ,@field-setters
         (deftype ,name ,type-predicate-name))))
 
+// TODO these redefinitions won't take on the docstrings -- a function/macro for wrapping functions and keeping meta
+// would be better
 // redefine take-until to return a list instead of an object
 (defvar _take-until! HStream:take-until!)
 // TODO it's weird that in order to make true the default for an imported function, we need to invert the calling convention like so:
