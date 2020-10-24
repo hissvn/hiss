@@ -478,10 +478,12 @@ class Stdlib {
     }
 
     /** Convert a Hiss index that could be negative, to a Haxe-friendly index >= 0. **/
-    public static function index(idx: Int, listOrString) {
+    public static function index(idx:Int, listOrString) {
         var realIdx = idx;
-        if (idx < 0) realIdx = listOrString.length + idx;
-        if (realIdx < 0 || realIdx >= listOrString.length) throw 'Index out of range: $idx in $listOrString';
+        if (idx < 0)
+            realIdx = listOrString.length + idx;
+        if (realIdx < 0 || realIdx >= listOrString.length)
+            throw 'Index out of range: $idx in $listOrString';
         return realIdx;
     }
 }
