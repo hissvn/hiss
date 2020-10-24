@@ -762,3 +762,11 @@
 (test! <)
 // TODO
 (test! %)
+
+(enable-cc!)
+(test! "Issue #67"
+    (begin
+        (defun hey () (sleep! 1) "yo")
+        (defun you () (sleep! 1) "ho ho")
+        (eq "yo ho ho" "$(hey) $(you)")))
+(disable-cc!)

@@ -92,6 +92,7 @@ class HissTestCase extends Test {
         var functionsCoveredByUnit = switch (args.first()) {
             case Symbol(name): [name];
             case List(symbols): [for (symbol in symbols) symbol.symbolName_h()];
+            case String(_) | InterpString(_): [];
             default: throw 'Bad syntax for (test) statement';
         }
 
@@ -110,8 +111,9 @@ class HissTestCase extends Test {
             var failureMessage = 'Failure testing $functionsCoveredByUnit: ${ass.toPrint()} evaluated to: ';
             var errorMessage = 'Error testing $functionsCoveredByUnit: ${ass.toPrint()}: ';
             try {
-                var val = interp.eval(ass, freshEnv);
-                Assert.isTrue(interp.truthy(val), failureMessage + val.toPrint());
+                interp.evalCC(ass, (val) -> {
+                    Assert.isTrue(interp.truthy(val), failureMessage + val.toPrint());
+                }, freshEnv);
             }
             #if !throwErrors
             catch (err:Dynamic) {
