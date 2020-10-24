@@ -1121,6 +1121,38 @@ class CCInterp {
         }
     }
 
+    // Handle expression interpolation in Hiss strings
+    function interpolateString(raw:String, env:HValue, cc:Continuation, startingIndex = 0) {
+        var nextExpressionIndex = raw.indexOf("$", startingIndex);
+
+        if (nextExpressionIndex == -1) {
+            cc(String(raw));
+        } else if (raw.charAt(nextExpressionIndex - 1) == '\\') {
+            // Allow \$ for putting $ in string.
+            interpolateString(raw.substr(0, nextExpressionIndex - 1) + raw.substr(nextExpressionIndex), env, cc, nextExpressionIndex + 1);
+        } else {
+            var expStream = HStream.FromString(raw.substr(nextExpressionIndex + 1));
+
+            // Allow ${name} so a space isn't required to terminate the symbol
+            var exp = null;
+            var expLength = -1;
+            if (expStream.peek(1) == "{") {
+                expStream.drop_d("{");
+                var braceContents = HaxeTools.extract(expStream.takeUntil_d(['}'], false, false, true), Some(o) => o).output;
+                expStream = HStream.FromString(braceContents);
+                expLength = 2 + expStream.length();
+                exp = reader.read("", expStream);
+            } else {
+                var startingLength = expStream.length();
+                exp = reader.read("", expStream);
+                expLength = startingLength - expStream.length();
+            }
+            internalEval(exp, env, (val) -> {
+                interpolateString(raw.substr(0, nextExpressionIndex) + val.toMessage() + raw.substr(nextExpressionIndex + 1 + expLength), env, cc, nextExpressionIndex + 1 + val.toMessage().length);
+            });
+        }
+    }
+
     /** Core form of eval -- continuation-based, takes one expression **/
     private function internalEval(exp:HValue, env:HValue, cc:Continuation) {
         // TODO if there's an error handler, handle exceptions from haxe code through that
@@ -1130,44 +1162,8 @@ class CCInterp {
                 inline getVar(exp, env, cc);
             case Int(_) | Float(_) | String(_):
                 cc(exp);
-
             case InterpString(raw):
-                // Handle expression interpolation
-                var interpolated = raw;
-
-                var idx = 0;
-                while (interpolated.indexOf("$", idx) != -1) {
-                    idx = interpolated.indexOf("$", idx);
-                    // Allow \$ for putting $ in string.
-                    if (interpolated.charAt(idx - 1) == '\\') {
-                        interpolated = interpolated.substr(0, idx - 1) + interpolated.substr(idx++);
-                        continue;
-                    }
-
-                    var expStream = HStream.FromString(interpolated.substr(idx + 1));
-
-                    // Allow ${name} so a space isn't required to terminate the symbol
-                    var exp = null;
-                    var expLength = -1;
-                    if (expStream.peek(1) == "{") {
-                        expStream.drop_d("{");
-                        var braceContents = HaxeTools.extract(expStream.takeUntil_d(['}'], false, false, true), Some(o) => o).output;
-                        expStream = HStream.FromString(braceContents);
-                        expLength = 2 + expStream.length();
-                        exp = reader.read("", expStream);
-                    } else {
-                        var startingLength = expStream.length();
-                        exp = reader.read("", expStream);
-                        expLength = startingLength - expStream.length();
-                    }
-                    internalEval(exp, env, (val) -> {
-                        interpolated = interpolated.substr(0, idx) + val.toMessage() + interpolated.substr(idx + 1 + expLength);
-                        idx = idx + 1 + val.toMessage().length;
-                    });
-                }
-
-                cc(String(interpolated));
-
+                interpolateString(raw, env, cc);
             case Quote(e):
                 cc(e);
             case Unquote(e):
