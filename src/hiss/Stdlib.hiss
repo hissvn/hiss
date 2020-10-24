@@ -51,7 +51,7 @@
 (defalias drop! drop @deprecated)
 
 (defun slice (l start &optional end)
-    (call-haxe l "slice" (list (index start l) (or (index end l) null))))
+    (call-haxe l "slice" (list (index start l) (if end (index end l) null))))
 (defun peek (l num)
     (slice l 0 num))
 (defun last (l)
