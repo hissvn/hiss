@@ -340,8 +340,13 @@
 (test! symbol?)
 // TODO
 (test! subtract)
-// TODO
-(test! substring)
+
+(test! index)
+
+(test! (substring substr)
+    (eq "bcd" (substring "abcd" 1))
+    (eq "cd" (substring "abcd" -2)))
+
 // TODO
 (test! string?)
 // TODO
@@ -582,8 +587,12 @@
 (test! collect)
 // TODO
 (test! clear!)
-// TODO
-(test! char-at)
+
+(test! char-at
+    (eq "a" (char-at "abc" 0))
+    (eq "b" (char-at "abc" 1))
+    (eq "c" (char-at "abc" -1)))
+
 // TODO
 (test! callable?)
 // TODO

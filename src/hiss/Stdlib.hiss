@@ -76,7 +76,6 @@
     (_substring str (index idx str) (or len null)))
 (defalias substring substr)
 
-
 (defun list (&rest args) args)
 (defun empty? (list-or-string) (or (nil? list-or-string) (= 0 (length list-or-string))))
 
