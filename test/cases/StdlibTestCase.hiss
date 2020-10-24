@@ -770,3 +770,9 @@
         (defun you () (sleep! 1) "ho ho")
         (eq "yo ho ho" "$(hey) $(you)")))
 (disable-cc!)
+
+(test! "Issue #53"
+    (defun eat (meal &optional drink &rest other-snacks)
+        [meal drink other-snacks])
+    (eq ["pizza" "slurm" ["anchovies" "whatever"]] (eat "pizza" "slurm" "anchovies" "whatever"))
+    (eq ["pizza" nil []] (eat "pizza")))
