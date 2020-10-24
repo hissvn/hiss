@@ -192,7 +192,7 @@ class CCInterp {
                     var specialForm = metaSignature.contains("s");
                     var ccFunction = !specialForm && metaSignature.contains("cc");
                     var isAsync = metaSignature.contains("a");
-                    
+
                     if (!ccFunction && isAsync) {
                         throw '$field in ${meta.name} must be a ccfunction to be declared async';
                     }
@@ -207,7 +207,7 @@ class CCInterp {
                         trace(translatedName);
                     }
 
-                    var functionMeta:CallableMeta = { name: translatedName };
+                    var functionMeta:CallableMeta = {name: translatedName};
 
                     if (Reflect.hasField(clazz, '${nameWithoutSignature}_doc')) {
                         functionMeta.docstring = Reflect.getProperty(clazz, '${nameWithoutSignature}_doc');
@@ -1148,7 +1148,12 @@ class CCInterp {
                 expLength = startingLength - expStream.length();
             }
             internalEval(exp, env, (val) -> {
-                interpolateString(raw.substr(0, nextExpressionIndex) + val.toMessage() + raw.substr(nextExpressionIndex + 1 + expLength), env, cc, nextExpressionIndex + 1 + val.toMessage().length);
+                interpolateString(raw.substr(0, nextExpressionIndex)
+                    + val.toMessage()
+                    + raw.substr(nextExpressionIndex + 1 + expLength), env, cc,
+                    nextExpressionIndex
+                    + 1
+                    + val.toMessage().length);
             });
         }
     }
