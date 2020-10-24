@@ -63,14 +63,24 @@ class HissTestCase extends Test {
 
     var ignoreFunctions:Array<String> = [];
     var expressions:HValue = null;
+    var requireCoverage:Bool;
 
     static var printTestCommands:Bool = true; // Only enable this for debugging infinite loops and mysterious hangs
 
-    public function new(hissFile:String) {
+    public function new(hissFile:String, requireCoverage = false) {
         super();
         file = hissFile;
+        this.requireCoverage = requireCoverage;
 
         reallyTrace = Log.trace;
+
+        trace("Measuring time to construct the Hiss environment:");
+        interp = Timer.measure(function() {
+            failOnTrace();
+            var i = new CCInterp(hissPrintFail);
+            enableTrace(i);
+            return i;
+        });
     }
 
     public static function testAtRuntime(interp:CCInterp, args:HValue, env:HValue, cc:Continuation) {
@@ -231,13 +241,6 @@ class HissTestCase extends Test {
             hissTest(interp, expressions, interp.emptyEnv(), CCInterp.noCC);
         } else {
             // Full-blown test run
-            trace("Measuring time to construct the Hiss environment:");
-            interp = Timer.measure(function() {
-                failOnTrace();
-                var i = new CCInterp(hissPrintFail);
-                enableTrace(i);
-                return i;
-            });
 
             // Get a list of BUILT-IN functions to make sure they're covered by tests.
             for (v => val in interp.globals.toDict()) {
@@ -267,8 +270,8 @@ class HissTestCase extends Test {
 
             var functionsNotTested = [for (fun => tested in functionsTested) if (!tested && !fun.startsWith("_")) fun];
 
-            if (functionsNotTested.length != 0) {
-                Assert.fail('Warning: $functionsNotTested were never tested');
+            if (requireCoverage && functionsNotTested.length != 0) {
+                Assert.fail('These functions were never tested: $functionsNotTested');
             }
         }
     }
