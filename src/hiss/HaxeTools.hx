@@ -16,13 +16,12 @@ import haxe.extern.EitherType;
 #end
 
 class HaxeTools {
-    public static function callMethod(object:Dynamic, method:Dynamic, args:Array<Dynamic>, onError:(Dynamic) -> Void) {
+    public static function callMethod(object:Dynamic, method:Function, args:Array<Dynamic>, onError:(Dynamic) -> Void):Dynamic {
         try {
             return Reflect.callMethod(object, method, args);
         } catch (err:Dynamic) {
-            trace(err);
             onError(err);
-            return null;
+            return null; // TODO it's probably not great to be returning null here
         }
     }
 

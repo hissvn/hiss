@@ -2,6 +2,7 @@ package hiss;
 
 import haxe.io.Path;
 import haxe.Timer;
+import haxe.Constraints.Function;
 import hiss.HTypes;
 import uuid.Uuid;
 
@@ -422,9 +423,9 @@ class Stdlib {
             args.third().unwrapList(interp, keepArgsWrapped);
         };
 
-        var caller = args.first().value(interp, callOnReference);
+        var caller:Dynamic = args.first().value(interp, callOnReference);
         var methodName = args.second().toHaxeString();
-        var method = Reflect.getProperty(caller, methodName);
+        var method:Function = Reflect.getProperty(caller, methodName);
 
         if (method == null) {
             interp.error('There is no haxe method called $methodName on ${args.first().toPrint()}');
