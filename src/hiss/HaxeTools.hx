@@ -2,6 +2,8 @@ package hiss;
 
 import haxe.macro.Expr;
 import haxe.macro.ExprTools;
+import haxe.Constraints.Function;
+import Reflect;
 
 using StringTools;
 
@@ -14,6 +16,16 @@ import haxe.extern.EitherType;
 #end
 
 class HaxeTools {
+    public static function callMethod(object:Dynamic, method:Dynamic, args:Array<Dynamic>, onError:(Dynamic) -> Void) {
+        try {
+            return Reflect.callMethod(object, method, args);
+        } catch (err:Dynamic) {
+            trace(err);
+            onError(err);
+            return null;
+        }
+    }
+
     public static macro function extract(value:ExprOf<EnumValue>, pattern:Expr, ?hint:ExprOf<String>):Expr {
         switch (pattern) {
             case macro $a => $b:

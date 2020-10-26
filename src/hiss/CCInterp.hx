@@ -251,7 +251,7 @@ class CCInterp {
                             // will segfault when we try to call them, so getProperty has to be called every time
                             var funcPointer = Reflect.getProperty(callObject, field);
 
-                            var returnValue:Dynamic = Reflect.callMethod(callObject, funcPointer, argArray);
+                            var returnValue:Dynamic = HaxeTools.callMethod(callObject, funcPointer, argArray, error);
                             cc(returnValue.toHValue());
                         }, functionMeta));
                     }
@@ -305,7 +305,7 @@ class CCInterp {
 
     public function importFunction(instance:Dynamic, func:Function, meta:CallableMeta, keepArgsWrapped:HValue = Nil) {
         globals.put(meta.name, Function((args, env, cc) -> {
-            cc(Reflect.callMethod(instance, func, args.unwrapList(this, keepArgsWrapped)).toHValue());
+            cc(HaxeTools.callMethod(instance, func, args.unwrapList(this, keepArgsWrapped), error).toHValue());
         }, meta));
     }
 
@@ -315,14 +315,6 @@ class CCInterp {
 
     public function importSpecialForm(func:HFunction, meta:CallableMeta) {
         globals.put(meta.name, SpecialForm(func, meta));
-    }
-
-    // TODO this is like register-method but never used.
-    function importMethod(method:String, meta:CallableMeta, callOnReference:Bool, keepArgsWrapped:HValue, returnInstance:Bool) {
-        globals.put(meta.name, Function((args, env, cc) -> {
-            var instance = args.first().value(this, callOnReference);
-            cc(instance.callMethod(instance.getProperty(method), args.rest_h().unwrapList(this, keepArgsWrapped)).toHValue());
-        }, meta));
     }
 
     public static function noOp(args:HValue, env:HValue, cc:Continuation) {}
@@ -529,6 +521,12 @@ class CCInterp {
         }, {name: "quit!"});
         var locals = emptyEnv(); // This allows for top-level setlocal
 
+        var exp:HValue = null;
+        setErrorHandler((err) -> {
+            HaxeTools.println('Error type ${Type.typeof(err)}: $err from `${exp.toPrint()}`');
+            HaxeTools.println('Callstack depth ${CallStack.callStack().length}');
+        });
+
         HaxeTools.println('Hiss version ${CompileInfo.version()}');
         HaxeTools.println("Type (help) for a list of functions, or (quit) to quit the REPL");
 
@@ -546,7 +544,6 @@ class CCInterp {
             history.push(next);
 
             // interp.disableTrace();
-            var exp = null;
             try {
                 exp = read(next);
             } catch (err:Dynamic) {

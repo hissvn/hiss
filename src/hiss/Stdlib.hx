@@ -429,7 +429,7 @@ class Stdlib {
         if (method == null) {
             interp.error('There is no haxe method called $methodName on ${args.first().toPrint()}');
         } else {
-            cc(Reflect.callMethod(caller, method, haxeCallArgs).toHValue());
+            cc(HaxeTools.callMethod(caller, method, haxeCallArgs, interp.error).toHValue());
         }
     }
 

@@ -25,7 +25,7 @@ class ImportClassTestCase extends Test {
 class TestClass {
     public var field:String;
 
-    // TODO implement + test that private fields can't be accessed
+    // TODO test that _ fields can't be accessed
     public function new(?fieldValue = "default") {
         field = fieldValue;
     }
