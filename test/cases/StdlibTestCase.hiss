@@ -791,6 +791,9 @@
 // TODO
 (test! %)
 
+// TODO
+(test! shell-command!)
+
 (enable-cc!)
 (test! "Issue #67"
     (begin
