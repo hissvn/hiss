@@ -4,14 +4,17 @@
                     start 
             expression
                 (case (HStream:peek stream 1)
+                    //{} inserts the last expression
                     ("}" 
-                        (set! placeholder (+ placeholder (HStream:take stream 1)))
-                        (nth (history) 1))
+                        (set! placeholder (+ placeholder (HStream:take! stream 1)))
+                        (nth (history) -2))
+                    //{?} asks which previous expression to insert
                     ("?"
-                        (set! placeholder (+ placeholder (HStream:take stream 2)))
+                        (set! placeholder (+ placeholder (HStream:take! stream 2)))
                         (input-choice (history) "Recent expressions:"))
+                    //{[n]} inserts the nth expression
                     (default
-                        (let (take-pair (HStream:take-until stream (list "}")))
+                        (let (take-pair (HStream:take-until! stream (list "}")))
                             (set! placeholder (apply + (cons placeholder take-pair)))
                             (nth (history) (int (first take-pair)))))))
         (rewrite-history
@@ -19,5 +22,5 @@
                 (substring (last (history)) 0 (index-of (last (history)) placeholder))
                 expression 
                 (substring (last (history)) (+ (index-of (last (history)) placeholder) (length placeholder)))))
-        (message "Input expanded to $(last (history))")
+        (message! "Input expanded to $(last (history))")
         (read expression)))
