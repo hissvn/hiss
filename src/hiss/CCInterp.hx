@@ -405,6 +405,9 @@ class CCInterp {
 
         importClass(Stdlib, {name: "Stdlib", omitStaticPrefixes: true});
 
+        importFunction(HaxeTools, HaxeTools.shellCommand, {name: "shell-command!"});
+        defDestructiveAlias("shell-command!", "!");
+
         // Sometimes it's useful to provide the interpreter with your own target-native print function
         // so they will be used while the standard library is being loaded.
         if (printFunction != null) {
