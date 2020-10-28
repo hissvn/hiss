@@ -505,8 +505,13 @@ class CCInterp {
         importFunction(this, () -> history, {name: "history"});
         importFunction(this, (str) -> history[history.length - 1] = str, {name: "rewrite-history"});
         #if (sys || hxnodejs)
+        // Track our own history separate from the ConsoleReader, for {} macro reasons
         var historyFile = Path.join([Stdlib.homeDir(), ".hisstory"]);
-        history = sys.io.File.getContent(historyFile).split("\n");
+        history = try {
+            sys.io.File.getContent(historyFile).split("\n");
+        } catch (s:Dynamic) {
+            [];
+        }
 
         var cReader = null;
         if (useConsoleReader)
