@@ -84,11 +84,6 @@ class ClassMetaTools {
 
 typedef Continuation = (HValue) -> Void;
 typedef HFunction = (HValue, HValue, Continuation) -> Void;
-
-enum HSignal {
-    Quit;
-}
-
 typedef HList = Array<HValue>;
 
 class RefBool {

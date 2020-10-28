@@ -4,6 +4,7 @@ import haxe.macro.Expr;
 import haxe.macro.ExprTools;
 import haxe.Constraints.Function;
 import Reflect;
+import hiss.HSignal;
 
 using StringTools;
 
@@ -19,6 +20,8 @@ class HaxeTools {
     public static function callMethod(object:Dynamic, method:Function, args:Array<Dynamic>, onError:(Dynamic) -> Void):Dynamic {
         try {
             return Reflect.callMethod(object, method, args);
+        } catch (signal:HSignal) {
+            throw signal;
         } catch (err:Dynamic) {
             onError(err);
             return null; // TODO it's probably not great to be returning null here

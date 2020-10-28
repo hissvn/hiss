@@ -518,12 +518,14 @@ class CCInterp {
             cReader = new ConsoleReader(-1, historyFile);
         // The REPL needs to make sure its ConsoleReader actually saves the history on exit, so quit() is provided here
         // differently than the version in Stdlib.hiss :)
-        importFunction(this, () -> {
+        function replQuit() {
             if (useConsoleReader) {
                 cReader.saveHistory();
             }
             throw HSignal.Quit;
-        }, {name: "quit!"});
+        }
+        importFunction(this, replQuit, {name: "quit!"});
+        importFunction(this, replQuit, {name: "quit"});
         var locals = emptyEnv(); // This allows for top-level setlocal
 
         var exp:HValue = null;
