@@ -395,6 +395,15 @@ class Stdlib {
         cc(Reflect.getProperty(args.first().value(interp, true), args.second().toHaxeString()).toHValue());
     }
 
+    public static function setProperty_cc(interp:CCInterp, args:HValue, env:HValue, cc:Continuation) {
+        var object = args.first().value(interp, true);
+        var propertyName = args.second().toHaxeString();
+        var newValueHiss = args.third();
+        var newValueNative = newValueHiss.value(interp, true);
+        Reflect.setProperty(object, propertyName, newValueNative);
+        cc(newValueHiss);
+    }
+
     /**
         Special form for calling Haxe functions and methods from within Hiss.
 
