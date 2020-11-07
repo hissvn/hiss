@@ -193,16 +193,34 @@ class HStream {
         return data;
     }
 
-    /** Count consecutive occurrence of the given string at the current buffer position, dropping the counted sequence **/
-    public function countConsecutive_d(s:String) {
+    /** Count consecutive occurrence of the given string at the current buffer position **/
+    public function countConsecutive(s:String) {
         var num = 0;
-
-        while (_rawString.substr(0, s.length) == s) {
+        var idx = 0;
+        while (_rawString.substr(idx, s.length) == s) {
             num += 1;
-            drop_d(s);
+            idx += s.length;
         }
 
         return num;
+    }
+
+    /** Count consecutive occurrence of the given string at the current buffer position, dropping the counted sequence **/
+    public function countAndDropConsecutive_d(s:String) {
+        var num = countConsecutive(s);
+
+        _rawString = _rawString.substr(num * s.length);
+
+        return num;
+    }
+
+    // Keep taking lines as long as they start with the given number of consecutive instances of the given string
+    public function takeLinesWhileCountConsecutive_d(s:String, c:Int) {
+        var lines = "";
+        while (countConsecutive(s) == c) {
+            lines += HaxeTools.extract(takeLine_d(), Some(s) => s) + "\n";
+        }
+        return lines.substr(0, lines.length - 1); // Drop the last newline
     }
 
     /** DRY Helper for peekLine() and takeLine() 

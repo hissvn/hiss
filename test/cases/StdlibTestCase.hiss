@@ -740,8 +740,14 @@
 (test! HStream:drop-if-one-of!)
 // TODO
 (test! HStream:drop!)
+
 // TODO
-(test! HStream:count-consecutive!)
+(test! HStream:count-consecutive)
+// TODO
+(test! HStream:count-and-drop-consecutive!)
+(test! HStream:take-lines-while-count-consecutive!
+    (setlocal! ts  (HStream:from-string "***\n***\n***\n**"))
+    (eq "***\n***\n***" (HStream:take-lines-while-count-consecutive! ts "*" 3)))
 // TODO
 (test! HStream:copy)
 // TODO
