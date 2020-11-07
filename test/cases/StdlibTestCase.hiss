@@ -527,8 +527,6 @@
 // TODO
 (test! greater)
 // TODO
-(test! get-property)
-// TODO
 (test! get-env)
 // TODO
 (test! get-content)
@@ -814,3 +812,8 @@
     (eq ["pizza" "slurm" ["anchovies" "whatever"]] (eat "pizza" "slurm" "anchovies" "whatever"))
     (eq ["pizza" "slurm" []] (eat "pizza" "slurm"))
     (eq ["pizza" nil []] (eat "pizza")))
+
+(test! (object get-property set-property!)
+    (setlocal! ob (object))
+    (set-property! ob "fork" "knife")
+    (eq "knife" (get-property ob "fork")))
