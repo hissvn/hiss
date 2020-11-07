@@ -66,18 +66,6 @@
 
 (defun nil? (v) (eq nil v))
 
-// String functions:
-(register-method! "split" split)
-(register-method! "substr" substring)
-(defun char-at (str idx) (substring str idx 1))
-// Allow negative index for substring and char-at
-(defvar _substring substring)
-(defun substring (str idx &optional len)
-    (if (>= idx (length str))
-        ""
-        (_substring str (index idx str) (or len (length str)))))
-(defalias substring substr)
-
 (defun list (&rest args) args)
 (defun empty? (list-or-string) (or (nil? list-or-string) (= 0 (length list-or-string))))
 
@@ -274,12 +262,12 @@
                                                 (default (set! __next__ could-be-next) t)))))))
                 (iterable next has-next)))))
 
-(defun memoize (f)
-    "Return a version of the given function that caches return values for different argument lists"
-    (let (prior-args (dict))
-        (lambda (&rest args)
+(defmacro memoize! (f)
+    "Make the given function cache its return values"
+    `(let (prior-args (dict))
+        (decorate! ,f (&rest args)
             (or (dict-get prior-args args)
-                (let (result (apply f args))
+                (let (result (apply ,f args))
                     (dict-set! prior-args args result)
                     result)))))
 
@@ -343,6 +331,27 @@
                     (break)))
             found)
         (t (eq tree elem))))
+
+(defmacro decorate! (func args &rest body)
+    "Define new behavior for the given function, storing the old behavior as a generated symbol for internal use"
+    (let (s (symbol))
+        `(begin
+            (defvar ,s ,func)
+            (defun ,func ,args
+                ,(docs (eval func))
+                ,@(tree-replace body func s)))))
+(defalias decorate! decorate @deprecated)
+
+// String functions:
+(register-method! "split" split)
+(register-method! "substr" substring)
+// Allow negative index for substring and char-at
+(decorate! substring (str idx &optional len)
+    (if (>= idx (length str))
+        ""
+        (substring str (index idx str) (or len (length str)))))
+(defalias substring substr)
+(defun char-at (str idx) (substring str idx 1))
 
 (defvar *types* (dict))
 
@@ -426,20 +435,16 @@
         ,@field-setters
         (deftype ,name ,type-predicate-name))))
 
-// TODO these redefinitions won't take on the docstrings -- a function/macro for wrapping functions and keeping meta
-// would be better
 // redefine take-until to return a list instead of an object
-(defvar _take-until! HStream:take-until!)
-// TODO it's weird that in order to make true the default for an imported function, we need to invert the calling convention like so:
-(defun HStream:take-until! (stream terminators &optional no-eof-terminates no-escaped-terminators no-drop-terminator)
-    (let (output-object (_take-until! stream terminators (not no-eof-terminates) (not no-escaped-terminators) (not no-drop-terminator)))
+(decorate! HStream:take-until! (stream terminators &optional no-eof-terminates no-escaped-terminators no-drop-terminator)
+    // TODO it's weird that in order to make true the default for an imported function, we need to invert the calling convention like so:
+    (let (output-object (HStream:take-until! stream terminators (not no-eof-terminates) (not no-escaped-terminators) (not no-drop-terminator)))
         (list (get-property output-object "output") (get-property output-object "terminator"))))
 (defalias HStream:take-until! HStream:take-until @deprecated)
+
 // redefine peek and take to return empty string if the stream is empty
-(defvar _peek HStream:peek)
-(defun HStream:peek (stream count) (try (_peek stream count) ""))
-(defvar _take! HStream:take!)
-(defun HStream:take! (stream count) (try (_take! stream count) ""))
+(decorate! HStream:peek (stream count) (try (HStream:peek stream count) ""))
+(decorate! HStream:take! (stream count) (try (HStream:take! stream count) ""))
 (defalias HStream:take! HStream:take @deprecated)
 
 (defmacro def-reader-macro (str arg-names &rest body)
