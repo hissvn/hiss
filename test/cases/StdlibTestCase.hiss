@@ -813,7 +813,8 @@
     (eq ["pizza" "slurm" []] (eat "pizza" "slurm"))
     (eq ["pizza" nil []] (eat "pizza")))
 
-(test! (object get-property set-property!)
-    (setlocal! ob (object))
+(test! (decorate! object get-property set-property!)
+    (setlocal! ob (object "spoons" 0))
     (set-property! ob "fork" "knife")
+    (eq 0 (get-property ob "spoons"))
     (eq "knife" (get-property ob "fork")))

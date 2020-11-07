@@ -462,6 +462,12 @@
     `(if-let (,name ,expression)
         (begin ,@body)))
 
+(decorate! object (&rest properties)
+    (let (ob (object))
+        (while properties
+            (set-property! ob (shift! properties) (shift! properties)))
+        ob))
+
 (defalias sleep! sleep @deprecated)
 (defalias error! error @deprecated)
 (when (bound? quit!) (defalias quit! quit))
