@@ -11,7 +11,7 @@
                     //{?} asks which previous expression to insert
                     ("?"
                         (set! placeholder (+ placeholder (HStream:take! stream 2)))
-                        (input-choice (history) "Recent expressions:"))
+                        (input-choice! (history) "Recent expressions:"))
                     //{[n]} inserts the nth expression
                     (default
                         (let (take-pair (HStream:take-until! stream (list "}")))
