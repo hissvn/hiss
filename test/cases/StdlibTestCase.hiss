@@ -827,3 +827,5 @@
     (set-property! ob "fork" "knife")
     (eq 0 (get-property ob "spoons"))
     (eq "knife" (get-property ob "fork")))
+
+(test! (FileSystem:rename! FileSystem:read-directory FileSystem:full-path FileSystem:exists FileSystem:directory? FileSystem:delete-file! FileSystem:delete-directory! FileSystem:create-directory! FileSystem:absolute-path))
