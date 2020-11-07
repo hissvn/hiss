@@ -26,6 +26,7 @@ import hiss.HTypes;
 import hiss.SpecialForms;
 #if (sys || hxnodejs)
 import hiss.wrappers.HFile;
+import hiss.wrappers.HFileSystem;
 import sys.io.FileOutput;
 import ihx.ConsoleReader;
 #end
@@ -437,6 +438,7 @@ class CCInterp {
 
         #if (sys || hxnodejs)
         importClass(HFile, {name: "File"});
+        importClass(HFileSystem, {name: "FileSystem"});
         #end
 
         // command-line args
