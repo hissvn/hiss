@@ -491,6 +491,11 @@ class Stdlib {
         }, Math.round(args.second().toFloat() * 1000));
     }
 
+    public static function duration_scc(interp:CCInterp, args:HValue, env:HValue, cc:Continuation) {
+        var start = Timer.stamp();
+        interp.evalCC(Symbol("begin").cons_h(args), (_) -> cc(Float(Timer.stamp() - start)), env);
+    }
+
     /** Convert a Hiss index that could be negative, to a Haxe-friendly index >= 0. **/
     public static function index(idx:Int, listOrString:{var length(default, null):Int;}) {
         var realIdx = idx;
