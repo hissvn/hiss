@@ -537,6 +537,8 @@ class CCInterp {
         return Nil;
     }
 
+    var replExp:HValue = null;
+
     /** Run a Hiss REPL from this interpreter instance **/
     public function repl(useConsoleReader = true) {
         StaticFiles.compileWith("ReplLib.hiss");
@@ -571,9 +573,8 @@ class CCInterp {
         importFunction(this, replQuit, {name: "quit"});
         var locals = emptyEnv(); // This allows for top-level setlocal
 
-        var exp:HValue = null;
         setErrorHandler((err) -> {
-            HaxeTools.println('Error type ${Type.typeof(err)}: $err from `${exp.toPrint()}`');
+            HaxeTools.println('Error type ${Type.typeof(err)}: $err from `${replExp.toPrint()}`');
             HaxeTools.println('Callstack depth ${CallStack.callStack().length}');
         });
 
@@ -581,50 +582,59 @@ class CCInterp {
         HaxeTools.println("Type (help) for a list of functions, or (quit) to quit the REPL");
 
         profile();
-        while (true) {
-            HaxeTools.print(">>> ");
 
-            var next = "";
-            if (useConsoleReader) {
-                cReader.cmd.prompt = ">>> ";
-
-                next = cReader.readLine();
-            } else {
-                next = Sys.stdin().readLine();
-            }
-            history.push(next);
-
-            // interp.disableTrace();
-            try {
-                exp = read(next);
-            } catch (err:Dynamic) {
-                HaxeTools.println('Reader error: $err');
-                continue;
-            }
-            // interp.enableTrace();
-
-            try {
-                internalEval(exp, locals, Stdlib.print_hd);
-            } catch (e:HSignal) {
-                switch (e) {
-                    case Quit:
-                        return;
-                }
-            }
-            // TODO Errors from async functions won't be caught by the try, so they throw their errors via error().
-            // So this should use errorHandler instead of try-catch
-            #if (!throwErrors)
-            catch (s:String) {
-                HaxeTools.println('Error "$s" from `${exp.toPrint_h()}`');
-                HaxeTools.println('Callstack depth ${CallStack.callStack().length}');
-            } catch (err:Dynamic) {
-                HaxeTools.println('Error type ${Type.typeof(err)}: $err from `${exp.toPrint()}`');
-                HaxeTools.println('Callstack depth ${CallStack.callStack().length}');
-            }
-            #end
-        }
+        _repl(locals, history, cReader);
         #else
         error("This Hiss interpreter is not compiled with REPL support.");
+        #end
+    }
+
+    function _repl(locals, history, ?cReader:ConsoleReader) {
+        HaxeTools.print(">>> ");
+
+        var next = "";
+        if (cReader != null) {
+            cReader.cmd.prompt = ">>> ";
+
+            next = cReader.readLine();
+        } else {
+            next = Sys.stdin().readLine();
+        }
+        history.push(next);
+
+        // interp.disableTrace();
+        try {
+            replExp = read(next);
+        } catch (err:Dynamic) {
+            HaxeTools.println('Reader error: $err');
+            _repl(locals, history, cReader);
+            return;
+        }
+        // interp.enableTrace();
+
+        try {
+            internalEval(replExp, locals, (val) -> {
+                Stdlib.print_hd(val);
+                _repl(locals, history, cReader);
+            });
+        } catch (e:HSignal) {
+            switch (e) {
+                case Quit:
+                    return;
+            }
+        }
+        // TODO Errors from async functions won't be caught by the try, so they throw their errors via error().
+        // So this should use errorHandler instead of try-catch
+        #if (!throwErrors)
+        catch (s:String) {
+            HaxeTools.println('Error "$s" from `${replExp.toPrint_h()}`');
+            HaxeTools.println('Callstack depth ${CallStack.callStack().length}');
+            _repl(locals, history, cReader);
+        } catch (err:Dynamic) {
+            HaxeTools.println('Error type ${Type.typeof(err)}: $err from `${replExp.toPrint()}`');
+            HaxeTools.println('Callstack depth ${CallStack.callStack().length}');
+            _repl(locals, history, cReader);
+        }
         #end
     }
 
