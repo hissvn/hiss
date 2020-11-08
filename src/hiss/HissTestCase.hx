@@ -65,14 +65,10 @@ class HissTestCase extends Test {
     var expressions:HValue = null;
     var requireCoverage:Bool;
 
-    static var printTestCommands:Bool = true; // Only enable this for debugging infinite loops and mysterious hangs
-
     public function new(hissFile:String, requireCoverage = false) {
         super();
         file = hissFile;
         this.requireCoverage = requireCoverage;
-
-        reallyTrace = Log.trace;
 
         trace("Measuring time to construct the Hiss environment:");
         interp = Timer.measure(function() {
@@ -94,7 +90,13 @@ class HissTestCase extends Test {
         cc(Nil);
     }
 
-    public static var reallyTrace:(Dynamic, ?PosInfos) -> Void = null;
+    static var traceCalled = false;
+
+    public static function reallyTrace(s:Dynamic) {
+        var wasTraceCalled = traceCalled;
+        trace(s);
+        traceCalled = wasTraceCalled;
+    }
 
     public static function hissTest(interp:CCInterp, args:HValue, env:HValue, cc:Continuation) {
         failOnTrace(interp);
@@ -109,7 +111,7 @@ class HissTestCase extends Test {
         var testDescription:String = if (functionsCoveredByUnit.length > 0) {
             functionsCoveredByUnit.toString();
         } else {
-            args.first().value(interp);
+            args.first().toPrint_h();
         };
 
         interp.profile('testing $testDescription');
@@ -138,6 +140,7 @@ class HissTestCase extends Test {
             functionsTested[fun] = true;
         }
 
+        Assert.isFalse(traceCalled, "trace was called");
         enableTrace(interp);
 
         cc(Nil);
@@ -185,43 +188,27 @@ class HissTestCase extends Test {
     /**
         Any unnecessary printing is a bug, so replace print() with this function while running tests.
     **/
-    static function hissPrintFail(v:HValue) {
-        if (!printTestCommands) {
-            Assert.fail('Tried to print ${v.toPrint()} unnecessarily');
-        } else {
-            #if (sys || hxnodejs)
-            Sys.println(v.toPrint());
-            #else
-            tempTrace(v.toPrint(), null);
-            #end
-        }
+    static function hissPrintFail(v:Dynamic) {
+        traceCalled = true;
         return v;
     }
 
-    static var tempTrace:(Dynamic, ?PosInfos) -> Void = null;
+    static function printReplacement(v:Dynamic) {
+        return Stdlib.print_hd(v.toHValue());
+    }
+
+    static var originalTrace = Log.trace;
 
     /**
         Make all forms of unnecessary printing into test failures :)
     **/
     static function failOnTrace(?interp:CCInterp) {
-        tempTrace = Log.trace;
+        traceCalled = false;
 
-        // When running Hiss to throw errors, this whole situation gets untenable because `throw` relies on trace()
-        #if !throwErrors
         Log.trace = (str, ?posInfo) -> {
-            try {
-                if (!printTestCommands) {
-                    Assert.fail('Traced $str to console');
-                } else {
-                    tempTrace(str, posInfo);
-                }
-            } catch (_:Dynamic) {
-                // Because of asynchronous nonsense, this might be called out of context sometimes. When that happens,
-                // assume that things were SUPPOSED to trace normally.
-                tempTrace(str, posInfo);
-            }
+            originalTrace(str, posInfo);
+            traceCalled = true;
         };
-        #end
 
         if (interp != null) {
             interp.importFunction(HissTestCase, hissPrintFail, {name: "print"}, T); // TODO make it deprecated
@@ -231,11 +218,11 @@ class HissTestCase extends Test {
 
     static function enableTrace(interp:CCInterp) {
         #if !throwErrors
-        Log.trace = tempTrace;
+        Log.trace = originalTrace;
         #end
 
-        interp.importFunction(HissTools, Stdlib.print_hd, {name: "print"}, T); // TODO make it deprecated
-        interp.importFunction(HissTools, Stdlib.print_hd, {name: "print!"}, T);
+        interp.importFunction(HissTools, printReplacement, {name: "print"}, T); // TODO make it deprecated
+        interp.importFunction(HissTools, printReplacement, {name: "print!"}, T);
     }
 
     function testStdlib() {
@@ -263,11 +250,11 @@ class HissTestCase extends Test {
                 functionsTested[f] = true;
             }
 
-            trace("Measuring time taken to run the unit tests:");
+            reallyTrace("Measuring time taken to run the unit tests:");
 
             Timer.measure(function() {
                 interp.load(file);
-                trace("Total time to run tests:");
+                reallyTrace("Total time to run tests:");
             });
 
             var functionsNotTested = [for (fun => tested in functionsTested) if (!tested && !fun.startsWith("_")) fun];

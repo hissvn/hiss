@@ -77,15 +77,15 @@ class CCInterp {
     var alarmingAmountOfTime = 0.5;
 
     public function profile(?thing:String) {
+        #if profile
         if (thing == null)
             thing = "";
-        #if profile
         var time = Timer.stamp();
         var timeTook = time - lastThingStart;
         if (lastThing.length > 0) {
-            trace('$lastThing took ${timeTook} seconds');
+            HissTestCase.reallyTrace('$lastThing took ${timeTook} seconds');
         } else if (lastThingStart != 0 && timeTook > alarmingAmountOfTime) {
-            trace('profiling nothing for ${timeTook} seconds');
+            HissTestCase.reallyTrace('profiling nothing for ${timeTook} seconds');
         }
         lastThing = thing;
         lastThingStart = time;
@@ -362,8 +362,6 @@ class CCInterp {
 
     // TODO declutter the constructor by refactoring to allow importObject(this)
     public function new(?printFunction:(Dynamic) -> Dynamic) {
-        HissTestCase.reallyTrace = Log.trace;
-
         globals = emptyDict();
 
         importVar(Math.PI, "pi");
