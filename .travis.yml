@@ -8,10 +8,20 @@ haxe:
   - stable
   - development
 
-matrix:
+jobs:
+  fast_finish: true
+  include:
+    script: haxelib run formatter --check -s .
+    os: linux
+    haxe: stable
+
 # Allow Haxe development to fail.
 allow_failures:
   - haxe: development
+
+haxelib run formatter --check -s . $end
+
+
 
 install:
   - if [ "${TRAVIS_OS_NAME}" = "windows" ]; then
