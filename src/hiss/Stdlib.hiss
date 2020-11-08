@@ -92,7 +92,7 @@
 (defalias drop! drop @deprecated)
 
 (defun slice (l start &optional end)
-    (setlocal! end (if (not end) nil (if (= end (length l)) end (index end l))))
+    (setlocal! end (if (or (not end) (= end (length l))) (length l) (index end l)))
     (call-haxe l "slice" (list (index start l) end)))
 (defun peek (l num)
     (slice l 0 num))
@@ -133,7 +133,7 @@
 
 (defun groups (l group-size &optional take-remainder)
     (setlocal! len (length l))
-    (setlocal! num-groups (/ len group-size))
+    (setlocal! num-groups (floor (/ len group-size)))
     (if (and 
             take-remainder 
             (< (* group-size num-groups) len))
