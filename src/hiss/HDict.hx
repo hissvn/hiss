@@ -61,7 +61,7 @@ class HDict {
         return Nil;
     }
 
-    public function put_hd(key:HValue, value:HValue) {
+    public function put_hd(key:HValue, value:HValue):HValue {
         if (!_map.exists(key.toPrint()))
             _map[key.toPrint()] = [];
         var hashMatches = _map[key.toPrint()];
@@ -69,7 +69,7 @@ class HDict {
         for (match in hashMatches) {
             if (_interp.truthy(_interp.eq_ih(match.key, key))) {
                 match.value = value;
-                return;
+                return Dict(this);
             }
         }
 
@@ -77,6 +77,8 @@ class HDict {
             key: key,
             value: value
         });
+
+        return Dict(this);
     }
 
     public function exists_h(key:HValue) {

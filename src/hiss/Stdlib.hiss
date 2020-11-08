@@ -2,6 +2,11 @@
     Hiss standard library functions implemented in Hiss
 */
 
+(defmacro set-default! (var value)
+    `(if (or (not (bound? ,var)) (nil? ,var)) (set! ,var ,value)))
+
+(profile "aliases")
+
 (defalias add +)
 (defalias subtract -)
 (defalias divide /)
@@ -23,6 +28,39 @@
 
 // This just allows the try/catch implementation to be DRY but still readable 
 (defalias lambda catch)
+
+(defalias sleep! sleep @deprecated)
+(defalias error! error @deprecated)
+(if (bound? quit!) (defalias quit! quit))
+
+(defalias use-readtable! use-readtable @deprecated)
+(defalias set-macro-string! set-macro-string @deprecated)
+(defalias set-default-read-function! set-default-read-function @deprecated)
+(defalias next-token! next-token @deprecated)
+
+(defalias print! print @deprecated)
+(defalias message! message @deprecated)
+(defalias load! load @deprecated)
+
+(defalias enable-cc! enable-continuations @deprecated)
+(defalias enable-cc! disable-tail-recursion @deprecated)
+(defalias disable-cc! disable-continuations @deprecated)
+(defalias disable-cc! enable-tail-recursion @deprecated)
+
+(defalias dict-set! dict-set @deprecated)
+(defalias dict-erase! dict-erase @deprecated)
+(defalias delay! delay @deprecated)
+(defalias set-default! default! @deprecated)
+(defalias set-default! default @deprecated)
+
+(defalias clear! clear @deprecated)
+(defalias test! test @deprecated)
+
+(defalias setlocal! setlocal @deprecated)
+(defalias set! set @deprecated)
+(defalias set-nth! set-nth @deprecated) 
+
+(profile)
 
 (defun first (l) (nth l 0))
 
@@ -59,10 +97,6 @@
     (slice l 0 num))
 (defun last (l)
     (nth l (- (length l) 1)))
-
-(defalias setlocal! setlocal @deprecated)
-(defalias set! set @deprecated)
-(defalias set-nth! set-nth @deprecated) 
 
 (defun nil? (v) (eq nil v))
 
@@ -209,9 +243,6 @@
     (nth choices (input-int "> ")))
 (defalias input-choice! input-choice @deprecated)
 
-(defmacro set-default! (var value)
-    `(if (or (not (bound? ,var)) (nil? ,var)) (set! ,var ,value)))
-
 // (next) and (has-next) should work on Iterables AND Iterators, for convenience
 (defun iterator (iterable-or-iterator)
     (if (get-property iterable-or-iterator "iterator")
@@ -271,7 +302,6 @@
                     (dict-set! prior-args args result)
                     result)))))
 
-; TODO if it's neither a list nor string, throw an error
 ; In cases where a function name could reasonably be expected to work the same on EITHER a string or a list, Hiss should support both:
 (defun replace (string-or-list old new)
     (cond
@@ -385,6 +415,7 @@
         (nil t)
         (default nil)))
 
+(profile "defining types")
 (deftype bool bool?)
 (deftype int int?)
 (deftype float float?)
@@ -399,6 +430,7 @@
 (deftype callable callable?)
 (deftype object object?)
 (deftype any (lambda (v) t))
+(profile)
 
 (defmacro defstruct (name &rest fields)
     (let (make-function-name
@@ -467,30 +499,3 @@
         (while properties
             (set-property! ob (shift! properties) (shift! properties)))
         ob))
-
-(defalias sleep! sleep @deprecated)
-(defalias error! error @deprecated)
-(when (bound? quit!) (defalias quit! quit))
-
-(defalias use-readtable! use-readtable @deprecated)
-(defalias set-macro-string! set-macro-string @deprecated)
-(defalias set-default-read-function! set-default-read-function @deprecated)
-(defalias next-token! next-token @deprecated)
-
-(defalias print! print @deprecated)
-(defalias message! message @deprecated)
-(defalias load! load @deprecated)
-
-(defalias enable-cc! enable-continuations @deprecated)
-(defalias enable-cc! disable-tail-recursion @deprecated)
-(defalias disable-cc! disable-continuations @deprecated)
-(defalias disable-cc! enable-tail-recursion @deprecated)
-
-(defalias dict-set! dict-set @deprecated)
-(defalias dict-erase! dict-erase @deprecated)
-(defalias delay! delay @deprecated)
-(defalias set-default! default! @deprecated)
-(defalias set-default! default @deprecated)
-
-(defalias clear! clear @deprecated)
-(defalias test! test @deprecated)

@@ -69,6 +69,23 @@ class CCInterp {
     var readingProgram = false;
     var maxStackDepth = 0;
 
+    // poor coder's profiling
+    var lastThing = "";
+    var lastThingStart = 0.0;
+
+    function profile(?thing:String) {
+        if (thing == null)
+            thing = "";
+        #if profile
+        var time = Timer.stamp();
+        if (lastThing.length > 0) {
+            trace('$lastThing took ${time - lastThingStart} seconds');
+        }
+        lastThing = thing;
+        lastThingStart = time;
+        #end
+    }
+
     var errorHandler:(Dynamic) -> Void = null;
 
     public function setErrorHandler(handler:(Dynamic) -> Void) {
@@ -342,8 +359,11 @@ class CCInterp {
         HissTestCase.reallyTrace = Log.trace;
 
         globals = emptyDict();
+        profile("constructing HissReader");
         reader = new HissReader(this);
+        profile();
 
+        profile("importing functions");
         // convention: functions with side effects end with ! unless they start with def
 
         // When not a repl, use Sys.exit for quitting
@@ -371,6 +391,7 @@ class CCInterp {
         // Error handling
         importCCFunction(errorCC, {name: "error!", argNames: ["message"]});
 
+        importFunction(this, profile, {name: "profile"});
         // Running as a repl
         importFunction(this, repl, {name: "repl"});
 
@@ -415,6 +436,35 @@ class CCInterp {
             importFunction(this, printFunction, {name: "print!", argNames: ["value"]}, Nil);
         }
 
+        // command-line args
+        importFunction(this, () -> List(scriptArgs), {name: "args"});
+
+        importCCFunction(_load, {name: "load!", argNames: ["file"]});
+
+        // First-class unit testing:
+        importSpecialForm(HissTestCase.testAtRuntime.bind(this), {name: "test!"});
+        importCCFunction(HissTestCase.hissPrints.bind(this), {name: "prints"});
+
+        // Operating system
+        importFunction(StaticFiles, StaticFiles.getContent, {name: "get-content", argNames: ["file"]});
+
+        importSpecialForm(loop, {name: "loop"});
+
+        // TODO These functions do not use interp state, and could be defined in another class with the 's' meta
+        importFunction(this, () -> new HDict(this), {name: "empty-readtable"});
+
+        // TODO these classes should be wrapped and imported whole:
+        // Std
+        importFunction(Std, Std.random, {name: "random"});
+        importFunction(Std, Std.parseInt, {name: "int"});
+        importFunction(Std, Std.parseFloat, {name: "float"});
+
+        #if (sys || hxnodejs)
+        importFunction(Sys, Sys.sleep, {name: "sleep!", argNames: ["seconds"]});
+        importFunction(Sys, Sys.getEnv, {name: "get-env", argNames: ["var"]});
+        #end
+
+        profile("importing classes");
         importClass(VariadicFunctions, {name: "VariadicFunctions", omitStaticPrefixes: true});
 
         // Open Pandora's box if it's available:
@@ -441,9 +491,6 @@ class CCInterp {
         importClass(HFileSystem, {name: "FileSystem"});
         #end
 
-        // command-line args
-        importFunction(this, () -> List(scriptArgs), {name: "args"});
-
         // String functions:
         importClass(HStringTools, {name: "StringTools", omitStaticPrefixes: true});
 
@@ -455,32 +502,9 @@ class CCInterp {
 
         importClass(HType, {name: "Type"});
 
-        importCCFunction(_load, {name: "load!", argNames: ["file"]});
-
-        // First-class unit testing:
-        importSpecialForm(HissTestCase.testAtRuntime.bind(this), {name: "test!"});
-        importCCFunction(HissTestCase.hissPrints.bind(this), {name: "prints"});
-
-        // Operating system
-        importFunction(StaticFiles, StaticFiles.getContent, {name: "get-content", argNames: ["file"]});
-
         importClass(SpecialForms, {name: "SpecialForms", omitStaticPrefixes: true});
 
-        importSpecialForm(loop, {name: "loop"});
-
-        // TODO These functions do not use interp state, and could be defined in another class with the 's' meta
-        importFunction(this, () -> new HDict(this), {name: "empty-readtable"});
-
-        // TODO these classes should be wrapped and imported whole:
-        // Std
-        importFunction(Std, Std.random, {name: "random"});
-        importFunction(Std, Std.parseInt, {name: "int"});
-        importFunction(Std, Std.parseFloat, {name: "float"});
-
-        #if (sys || hxnodejs)
-        importFunction(Sys, Sys.sleep, {name: "sleep!", argNames: ["seconds"]});
-        importFunction(Sys, Sys.getEnv, {name: "get-env", argNames: ["var"]});
-        #end
+        profile();
 
         StaticFiles.compileWith("Stdlib.hiss");
 
@@ -646,9 +670,12 @@ class CCInterp {
     }
 
     function _load(args:HValue, env:HValue, cc:Continuation) {
+        var file = args.first().value(this);
+        profile('reading $file');
         readingProgram = true;
-        var exps = reader.readAll(String(StaticFiles.getContent(args.first().value(this))));
+        var exps = reader.readAll(String(StaticFiles.getContent(file)));
         readingProgram = false;
+        profile();
 
         // Let the user decide whether to load tail-recursively or not:
         currentBeginFunction(exps, env, cc);

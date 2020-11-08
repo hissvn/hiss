@@ -13,6 +13,7 @@ An embedded Lisp compatible with Haxe, C++, JavaScript, and Python.
 
 ### Debugging
 
+* profile - Print janky timing information on stuff
 * throwErrors - Instead of handling exceptions, Hiss will throw them immediately so you can see their original callstack
 * traceCallstack - Print info on the Haxe Callstack as your program runs
 * traceMacros - Print the macroexpansion whenever a macro is called
