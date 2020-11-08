@@ -79,8 +79,11 @@ class CCInterp {
             thing = "";
         #if profile
         var time = Timer.stamp();
+        var timeTook = time - lastThingStart;
         if (lastThing.length > 0) {
-            trace('$lastThing took ${time - lastThingStart} seconds');
+            trace('$lastThing took ${timeTook} seconds');
+        } else {
+            trace('profiling nothing for ${timeTook} seconds');
         }
         lastThing = thing;
         lastThingStart = time;
