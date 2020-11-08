@@ -1,7 +1,6 @@
 package hiss.wrappers;
 
 class HMath {
-    public static var PI = Math.PI;
     public static var abs = Math.abs;
     public static var acos = Math.acos;
     public static var atan = Math.atan;

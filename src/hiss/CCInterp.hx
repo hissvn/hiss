@@ -83,7 +83,6 @@ class CCInterp {
         var time = Timer.stamp();
         var timeTook = time - lastThingStart;
         if (lastThing.length > 0) {
-            // Don't ask why
             trace('$lastThing took ${timeTook} seconds');
         } else if (lastThingStart != 0 && timeTook > alarmingAmountOfTime) {
             trace('profiling nothing for ${timeTook} seconds');
@@ -366,6 +365,9 @@ class CCInterp {
         HissTestCase.reallyTrace = Log.trace;
 
         globals = emptyDict();
+
+        importVar(Math.PI, "pi");
+
         profile("constructing HissReader");
         reader = new HissReader(this);
         profile();
