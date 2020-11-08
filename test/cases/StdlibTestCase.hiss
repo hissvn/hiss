@@ -369,8 +369,6 @@
     (eq [3] (slice [1 2 3] 2 3)))
 
 // TODO
-(test! sleep!)
-// TODO
 (test! setlocal!)
 
 (test! set-nth!

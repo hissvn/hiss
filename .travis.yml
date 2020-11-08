@@ -13,8 +13,9 @@ jobs:
   allow_failures:
     - haxe: development
   fast_finish: true
+  # Check the formatting in a separate job so formatting failures don't hide more important ones
   include:
-    - script: haxelib run formatter --check -s .
+    - script: haxelib install formatter && haxelib run formatter --check -s .
       os: linux
       haxe: stable
 

@@ -6,7 +6,6 @@ haxelib install uuid
 haxelib install utest
 haxelib install hxnodejs
 haxelib install hxcpp
-haxelib install formatter
 
 # For travis builds, use && to fail as soon as any target fails a test
 ./test-all.sh yes
