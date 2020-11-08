@@ -130,18 +130,14 @@
                     ,@body))
                 (if ,cond (recur)))))))
 
-(defun groups (l size &optional take-remainder)
-    (setlocal! c (list-copy l))
-    (setlocal! g (list))
-    (while c
-        (cond
-            ((< (length c) size)
-                (when take-remainder
-                    (push! g (list-copy c)))
-                (clear! c))
-            (t
-                (push! g (take! c size)))))
-	g)
+(defun groups (l group-size &optional take-remainder)
+    (setlocal! len (length l))
+    (setlocal! num-groups (/ len group-size))
+    (if (and 
+            take-remainder 
+            (< (* group-size num-groups) len))
+        (setlocal! num-groups (+ 1 num-groups)))
+    (for i (range num-groups) (slice l (* i group-size))))
 
 (defmacro let (bindings &rest body)
     (setlocal! setlocal-exps 
