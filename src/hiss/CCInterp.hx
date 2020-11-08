@@ -21,6 +21,7 @@ using hx.strings.Strings;
 
 import hiss.wrappers.HHttp;
 import hiss.wrappers.HDate;
+import hiss.wrappers.HMath;
 import hiss.wrappers.HStringTools;
 import hiss.HTypes;
 import hiss.SpecialForms;
@@ -490,6 +491,11 @@ class CCInterp {
         importClass(HFile, {name: "File"});
         importClass(HFileSystem, {name: "FileSystem"});
         #end
+
+        importClass(HMath, {
+            name: "Math",
+            omitStaticPrefixes: true
+        });
 
         // String functions:
         importClass(HStringTools, {name: "StringTools", omitStaticPrefixes: true});
