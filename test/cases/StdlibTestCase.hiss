@@ -830,3 +830,7 @@
     (eq "knife" (get-property ob "fork")))
 
 (test! (FileSystem:rename! FileSystem:read-directory FileSystem:full-path FileSystem:exists FileSystem:directory? FileSystem:delete-file! FileSystem:delete-directory! FileSystem:create-directory! FileSystem:absolute-path))
+
+(test! profile)
+
+(test! (tan sqrt sin round pow min max log fround floor ffloor fceil exp cos ceil atan-2 atan asin acos abs))

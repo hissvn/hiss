@@ -106,13 +106,13 @@ class HissTestCase extends Test {
             default: throw 'Bad syntax for (test) statement';
         }
 
-        if (printTestCommands) {
-            #if (sys || hxnodejs)
-            Sys.println(functionsCoveredByUnit.toString());
-            #else
-            tempTrace(functionsCoveredByUnit.toString(), null);
-            #end
-        }
+        var testDescription:String = if (functionsCoveredByUnit.length > 0) {
+            functionsCoveredByUnit.toString();
+        } else {
+            args.first().value(interp);
+        };
+
+        interp.profile('testing $testDescription');
 
         var assertions = args.rest_h();
 
@@ -131,6 +131,8 @@ class HissTestCase extends Test {
             }
             #end
         }
+
+        interp.profile();
 
         for (fun in functionsCoveredByUnit) {
             functionsTested[fun] = true;

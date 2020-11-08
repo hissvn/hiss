@@ -74,15 +74,18 @@ class CCInterp {
     var lastThing = "";
     var lastThingStart = 0.0;
 
-    function profile(?thing:String) {
+    var alarmingAmountOfTime = 0.5;
+
+    public function profile(?thing:String) {
         if (thing == null)
             thing = "";
         #if profile
         var time = Timer.stamp();
         var timeTook = time - lastThingStart;
         if (lastThing.length > 0) {
+            // Don't ask why
             trace('$lastThing took ${timeTook} seconds');
-        } else {
+        } else if (lastThingStart != 0 && timeTook > alarmingAmountOfTime) {
             trace('profiling nothing for ${timeTook} seconds');
         }
         lastThing = thing;
@@ -539,6 +542,8 @@ class CCInterp {
         StaticFiles.compileWith("ReplLib.hiss");
         load("ReplLib.hiss");
 
+        profile("repl setup");
+
         var history = [];
         importFunction(this, () -> history, {name: "history"});
         importFunction(this, (str) -> history[history.length - 1] = str, {name: "rewrite-history"});
@@ -575,6 +580,7 @@ class CCInterp {
         HaxeTools.println('Hiss version ${CompileInfo.version()}');
         HaxeTools.println("Type (help) for a list of functions, or (quit) to quit the REPL");
 
+        profile();
         while (true) {
             HaxeTools.print(">>> ");
 
