@@ -92,7 +92,8 @@
 (defalias drop! drop @deprecated)
 
 (defun slice (l start &optional end)
-    (call-haxe l "slice" (list (index start l) (if end (index end l) (length l)))))
+    (setlocal! end (if (not end) nil (if (= end (length l)) end (index end l))))
+    (call-haxe l "slice" (list (index start l) end)))
 (defun peek (l num)
     (slice l 0 num))
 (defun last (l)
@@ -137,7 +138,7 @@
             take-remainder 
             (< (* group-size num-groups) len))
         (setlocal! num-groups (+ 1 num-groups)))
-    (for i (range num-groups) (slice l (* i group-size))))
+    (for i (range num-groups) (slice l (* i group-size) (min len (* (+ i 1) group-size)))))
 
 (defmacro let (bindings &rest body)
     (setlocal! setlocal-exps 
