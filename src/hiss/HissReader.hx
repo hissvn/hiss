@@ -330,7 +330,7 @@ class HissReader {
         try {
             var result = interp.eval(func.cons_h(List([String(start), Object("HStream", stream)])));
             #if traceReader
-            HissTools.print(result);
+            Stdlib.print_hd(result);
             #end
             return result;
         }
@@ -340,7 +340,7 @@ class HissReader {
             var consumed = startingStream.substr(0, startingStream.length - endingStream.length);
             if (s.indexOf("Reader error") == 0)
                 throw s;
-            throw 'Reader error `$s` after taking `$consumed` at ${pos.toString()}';
+            throw 'Reader error `$s` after taking `$consumed` at ${pos.toString()}. Get more info with -D traceReader or -D throwErrors!';
         }
         #end
     }

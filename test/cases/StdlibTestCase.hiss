@@ -457,15 +457,16 @@
 // TODO
 (test! message!)
 
+(enable-cc!)
 (test! (sleep! duration)
     (<= 5 (duration (sleep! 5))))
 
-// TODO do this with the sleep! example
 (test! memoize!
     (defun slow (i) (do-for n (range i) (sleep! 1)) i)
     (memoize! slow)
     (<= 5 (duration (slow 5)))
     (not (<= 5 (duration (slow 5)))))
+(disable-cc!)
 
 // TODO
 (test! macro?)

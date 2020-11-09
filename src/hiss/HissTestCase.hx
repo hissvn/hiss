@@ -254,7 +254,7 @@ class HissTestCase extends Test {
 
             Timer.measure(function() {
                 interp.load(file);
-                reallyTrace("Total time to run tests:");
+                reallyTrace('Total time to run tests on ${CompileInfo.version()}:');
             });
 
             var functionsNotTested = [for (fun => tested in functionsTested) if (!tested && !fun.startsWith("_")) fun];

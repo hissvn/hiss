@@ -360,9 +360,20 @@ class CCInterp {
         return List([emptyDict()]);
     }
 
+    public function disableCC() {
+        useFunctions(trBegin, trEvalAll, trIterate, trOr, trAnd);
+    }
+
+    public function enableCC() {
+        useFunctions(begin, evalAll, iterateCC, orCC, andCC);
+    }
+
     // TODO declutter the constructor by refactoring to allow importObject(this)
     public function new(?printFunction:(Dynamic) -> Dynamic) {
         globals = emptyDict();
+
+        // Use tail-recursive functions by default:
+        disableCC();
 
         importVar(Math.PI, "pi");
 
@@ -388,12 +399,10 @@ class CCInterp {
         importSpecialForm(_eval, {name: "eval"});
         importSpecialForm(funcall.bind(false), {name: "funcall"});
         importSpecialForm(funcall.bind(true), {name: "funcall-inline"});
-        // Use tail-recursive begin and iterate by default:
-        useFunctions(trBegin, trEvalAll, iterate);
 
         // Allow switching at runtime:
-        importFunction(this, useFunctions.bind(trBegin, trEvalAll, iterate), {name: "disable-cc!"});
-        importFunction(this, useFunctions.bind(begin, evalAll, iterateCC), {name: "enable-cc!"});
+        importFunction(this, disableCC, {name: "disable-cc!"});
+        importFunction(this, enableCC, {name: "enable-cc!"});
 
         // Error handling
         importCCFunction(errorCC, {name: "error!", argNames: ["message"]});
@@ -525,15 +534,16 @@ class CCInterp {
         // enableTrace();
     }
 
-    // TODO make public enableCC() and disableCC()
-    function useFunctions(beginFunction:HFunction, evalAllFunction:HFunction, iterateFunction:IterateFunction) {
+    function useFunctions(beginFunction:HFunction, evalAllFunction:HFunction, iterateFunction:IterateFunction, orFunction:HFunction, andFunction:HFunction) {
         currentBeginFunction = beginFunction;
         currentEvalAllFunction = evalAllFunction;
-        globals.put("begin", SpecialForm(beginFunction, {name: "begin"}));
+        importSpecialForm(beginFunction, {name: "begin"});
         importSpecialForm(iterateFunction.bind(true, true), {name: "for"});
         importSpecialForm(iterateFunction.bind(false, true), {name: "do-for"});
         importSpecialForm(iterateFunction.bind(true, false), {name: "map"});
         importSpecialForm(iterateFunction.bind(false, false), {name: "do-map"});
+        importSpecialForm(andFunction, {name: "and"});
+        importSpecialForm(orFunction, {name: "or"});
         return Nil;
     }
 
@@ -968,7 +978,7 @@ class CCInterp {
     /**
         Stack-safe implementation behind (for), (do-for), (map), and (do-map)
     **/
-    function iterate(collect:Bool, bodyForm:Bool, args:HValue, env:HValue, cc:Continuation) {
+    function trIterate(collect:Bool, bodyForm:Bool, args:HValue, env:HValue, cc:Continuation) {
         var it:HValue = Nil;
         iterable(bodyForm, args, env, (_iterable) -> {
             it = _iterable;
@@ -1079,6 +1089,71 @@ class CCInterp {
             } while (recurCalled);
             cc(result);
         });
+    }
+
+    function trAnd(args:HValue, env:HValue, cc:Continuation) {
+        var argVal = T; // For whatever Lisp historical reason, (and) is T
+        for (arg in args.toList()) {
+            argVal = null;
+            evalCC(arg, (val) -> {
+                argVal = val;
+            }, env);
+            if (argVal == null) {
+                error("Null returned to trAnd! Did you forget to (enable-cc!)?");
+                return;
+            }
+            if (!truthy(argVal)) {
+                cc(Nil);
+                return;
+            }
+        }
+        cc(argVal);
+    }
+
+    function trOr(args:HValue, env:HValue, cc:Continuation) {
+        for (arg in args.toList()) {
+            var argVal = null;
+            evalCC(arg, (val) -> {
+                argVal = val;
+            }, env);
+            if (argVal == null) {
+                error("Null returned to trOr! Did you forget to (enable-cc!)?");
+                return;
+            }
+            if (truthy(argVal)) {
+                cc(argVal);
+                return;
+            }
+        }
+        cc(Nil);
+    }
+
+    function andCC(args:HValue, env:HValue, cc:Continuation) {
+        if (args.length_h() == 0) {
+            cc(T);
+        } else {
+            evalCC(args.first(), (argVal) -> {
+                if (!truthy(argVal)) {
+                    cc(Nil);
+                } else {
+                    andCC(args.rest_h(), env, cc);
+                }
+            }, env);
+        }
+    }
+
+    function orCC(args:HValue, env:HValue, cc:Continuation) {
+        if (args.length_h() == 0) {
+            cc(Nil);
+        } else {
+            evalCC(args.first(), (argVal) -> {
+                if (truthy(argVal)) {
+                    cc(T);
+                } else {
+                    orCC(args.rest_h(), env, cc);
+                }
+            }, env);
+        }
     }
 
     // This breaks continuation-based signature rules because I just want it to work.

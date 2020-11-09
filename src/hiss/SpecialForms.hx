@@ -81,36 +81,6 @@ class SpecialForms {
         cc(callable);
     }
 
-    public static function and_s(interp:CCInterp, args:HValue, env:HValue, cc:Continuation) {
-        var argVal = T;
-        for (arg in args.toList()) {
-            // TODO this won't work for async calls as and arguments
-            interp.evalCC(arg, (val) -> {
-                argVal = val;
-            }, env);
-            if (!interp.truthy(argVal)) {
-                cc(Nil);
-                return;
-            }
-        }
-        cc(argVal);
-    }
-
-    public static function or_s(interp:CCInterp, args:HValue, env:HValue, cc:Continuation) {
-        for (arg in args.toList()) {
-            var argVal = Nil;
-            // TODO this won't work for async calls as or arguments
-            interp.evalCC(arg, (val) -> {
-                argVal = val;
-            }, env);
-            if (interp.truthy(argVal)) {
-                cc(argVal);
-                return;
-            }
-        }
-        cc(Nil);
-    }
-
     static var _ccNum = 0;
 
     public static function callCC_s(interp:CCInterp, args:HValue, env:HValue, cc:Continuation) {
