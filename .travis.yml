@@ -7,6 +7,12 @@ os:
 haxe:
   - stable
   - development
+env:
+  - HISS_TARGET=cpp
+  - HISS_TARGET=interp
+  - HISS_TARGET=js
+  - HISS_TARGET=nodejs
+  - HISS_TARGET=py3
 
 jobs:
   # Allow Haxe development to fail.
