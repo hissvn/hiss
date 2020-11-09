@@ -1,3 +1,0 @@
-build-scripts/all-script-args.hxml
-build-scripts/repl/all-repl-args.hxml
--cpp bin/cpp

@@ -1,4 +1,0 @@
-build-scripts/all-script-args.hxml
-build-scripts/repl/all-repl-args.hxml
--lib hxnodejs
---js bin/js/hiss-node-repl.js

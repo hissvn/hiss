@@ -1,2 +1,0 @@
-(test! "Code should not continue after error!, even with a handler set"
-    !(eq 5 (try (begin (error! "hey") 5))))

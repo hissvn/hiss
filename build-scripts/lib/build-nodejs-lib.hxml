@@ -1,4 +1,0 @@
-build-scripts/all-script-args.hxml
-build-scripts/lib/all-lib-args.hxml
--lib hxnodejs
---js bin/js/hiss-node.js

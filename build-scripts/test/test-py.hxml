@@ -1,4 +1,0 @@
-build-scripts/all-script-args.hxml
-build-scripts/test/all-test-args.hxml
---python bin/py/test-hiss.py
---cmd python bin/py/test-hiss.py

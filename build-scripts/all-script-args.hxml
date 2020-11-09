@@ -1,7 +1,0 @@
--lib ihx
--lib haxe-strings
--lib uuid
--lib utest
--cp src
--D analyzer-optimize
--D no-deprecation-warnings
