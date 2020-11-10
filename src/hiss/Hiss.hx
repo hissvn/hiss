@@ -76,7 +76,10 @@ class Hiss {
 								throw '$args[1] should be an argument list';
 						},
 						ret: null,
-						expr: readerExpToHaxeExpr(Call(Symbol("begin"), args.slice(2)))
+						expr: {
+							pos: Context.currentPos(),
+							expr: EReturn(readerExpToHaxeExpr(Call(Symbol("begin"), args.slice(2))))
+						}
 					}),
 					pos: Context.currentPos()
 				};
