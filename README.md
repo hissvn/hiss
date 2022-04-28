@@ -2,6 +2,8 @@
 
 [![Build Status](https://travis-ci.org/hissvn/hiss.svg?branch=master)](https://travis-ci.org/hissvn/hiss)
 
+**I AM NO LONGER ACTIVELY DEVELOPING HISS.** I have moved on to a similar project: [Kiss](https://github.com/hissvn/kisslang)
+
 An embedded Lisp compatible with Haxe, C++, JavaScript, and Python.
 
 ## Compile Options
