@@ -12,7 +12,7 @@ class CompileInfo {
         Based on https://code.haxe.org/category/macros/add-git-commit-hash-in-build.html
         but with bells and whistles for a nice Hiss versioning convention
     **/
-    public static macro function version():ExprOf<String> {
+    public static macro function version(): ExprOf<String> {
         #if !display
         var posInfos = Context.getPosInfos(Context.currentPos());
         var directory = Path.directory(posInfos.file);
